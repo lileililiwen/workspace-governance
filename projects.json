@@ -495,7 +495,8 @@
       "id": "ziban",
       "path": "ziban",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     }
   ]
 }
