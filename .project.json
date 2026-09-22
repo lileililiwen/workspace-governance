@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "workspace-governance",
+  "kind": "governance",
+  "profile": "governance",
+  "lifecycle": "active",
+  "verification": {
+    "command": "python3 -m unittest discover -s tests -v",
+    "gate_runtime": "driftwatchdog",
+    "evidence_status": "implemented"
+  },
+  "deployment": {
+    "deployable": false,
+    "jenkins_job": null,
+    "compose_file": null
+  }
+}

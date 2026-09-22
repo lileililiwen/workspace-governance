@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "id", "kind", "profile", "lifecycle", "verification", "deployment"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "kind": {"type": "string", "minLength": 1},
+    "profile": {"type": "string", "minLength": 1},
+    "lifecycle": {"enum": ["active", "planning", "reference", "inventory", "archived"]},
+    "verification": {
+      "type": "object",
+      "required": ["command", "gate_runtime", "evidence_status"],
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "gate_runtime": {"type": "string", "minLength": 1},
+        "evidence_status": {"type": "string", "minLength": 1}
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "required": ["deployable", "jenkins_job", "compose_file"],
+      "properties": {
+        "deployable": {"type": "boolean"},
+        "jenkins_job": {"type": ["string", "null"]},
+        "compose_file": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

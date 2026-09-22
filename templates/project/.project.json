@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "replace-with-project-id",
+  "kind": "product",
+  "profile": "replace-with-profile",
+  "lifecycle": "active",
+  "verification": {
+    "command": "./scripts/verify.sh",
+    "gate_runtime": "driftwatchdog",
+    "evidence_status": "planned"
+  },
+  "deployment": {
+    "deployable": false,
+    "jenkins_job": null,
+    "compose_file": null
+  }
+}

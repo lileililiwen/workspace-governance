@@ -1,0 +1,451 @@
+{
+  "schema_version": 1,
+  "workspace_root": null,
+  "discovery": {
+    "mode": "explicit-plus-immediate-directories",
+    "unregistered_policy": "fail"
+  },
+  "projects": [
+    {
+      "id": "workspace-governance",
+      "path": "workspace-governance",
+      "profile": "governance",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "actoria",
+      "path": "actoria",
+      "profile": "typescript-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "aegify",
+      "path": "aegify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "aesthra",
+      "path": "aesthra",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "alethefy",
+      "path": "alethefy",
+      "profile": "python-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "alltools-platform",
+      "path": "alltools-platform",
+      "profile": "platform",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "argoset",
+      "path": "argoset",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "ariadex",
+      "path": "ariadex",
+      "profile": "python-runtime",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "arivio",
+      "path": "arivio",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "bargora",
+      "path": "bargora",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "byok-translator",
+      "path": "byok-translator",
+      "profile": "typescript-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "cargo-audit-boost",
+      "path": "cargo-audit-boost",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "cargo-matrix-boost",
+      "path": "cargo-matrix-boost",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "cargo-sonar",
+      "path": "cargo-sonar",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "catchen",
+      "path": "catchen",
+      "profile": "inventory",
+      "lifecycle": "inventory"
+    },
+    {
+      "id": "chinago",
+      "path": "chinago",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "crossalheart",
+      "path": "crossalheart",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "crossify",
+      "path": "crossify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "cvunify",
+      "path": "cvunify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "dharmatlas",
+      "path": "dharmatlas",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "dotnet-platform-libs",
+      "path": "dotnet-platform-libs",
+      "profile": "dotnet-library",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "dotnet-starter-kit",
+      "path": "dotnet-starter-kit",
+      "profile": "dotnet-template",
+      "lifecycle": "reference"
+    },
+    {
+      "id": "driftwatchdog",
+      "path": "driftwatchdog",
+      "profile": "rust-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "fonacetool",
+      "path": "fonacetool",
+      "profile": "inventory",
+      "lifecycle": "inventory"
+    },
+    {
+      "id": "forge",
+      "path": "forge",
+      "profile": "rust-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "fotofy",
+      "path": "fotofy",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "gradevia",
+      "path": "gradevia",
+      "profile": "typescript-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "hermexa",
+      "path": "hermexa",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "hermora",
+      "path": "hermora",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "hestia-lab",
+      "path": "hestiaLab",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "hookit",
+      "path": "hookit",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "hypora",
+      "path": "hypora",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "jenkins-bootstrap",
+      "path": "jenkins-bootstrap",
+      "profile": "deployment",
+      "lifecycle": "inventory"
+    },
+    {
+      "id": "jenkins-local",
+      "path": "jenkins-local",
+      "profile": "deployment",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "kairosa",
+      "path": "kairosa",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "labrys",
+      "path": "labrys",
+      "profile": "rust-platform",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "learningcsharp",
+      "path": "learningcsharp",
+      "profile": "inventory",
+      "lifecycle": "inventory"
+    },
+    {
+      "id": "lexora",
+      "path": "lexora",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "lileililiwen-site",
+      "path": "lileililiwen.github.io",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "linglitch",
+      "path": "linglitch",
+      "profile": "typescript-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "lore-mix",
+      "path": "loreMix",
+      "profile": "typescript-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "metiscope",
+      "path": "metiscope",
+      "profile": "python-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "mnemyx",
+      "path": "mnemyx",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "mortalect",
+      "path": "mortalect",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "namevia",
+      "path": "namevia",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "openaccounting",
+      "path": "openaccounting",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "opendockify",
+      "path": "opendockify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "openlearning",
+      "path": "openlearning",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "openpanel",
+      "path": "openpanel",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "orphevia",
+      "path": "orphevia",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "pangoman",
+      "path": "pangoman",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "ploutify",
+      "path": "ploutify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "pluggify",
+      "path": "pluggify",
+      "profile": "typescript-monorepo",
+      "lifecycle": "planning"
+    },
+    {
+      "id": "reelio",
+      "path": "reelio",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "rostera",
+      "path": "rostera",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "rust-ecommerce",
+      "path": "rust-ecommerce",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "rust-learning",
+      "path": "rust-learning",
+      "profile": "inventory",
+      "lifecycle": "inventory"
+    },
+    {
+      "id": "shopifireman",
+      "path": "shopifireman",
+      "profile": "typescript-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "singleatee",
+      "path": "singleatee",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "sisyphusfy",
+      "path": "sisyphusfy",
+      "profile": "python-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "skillbuilder",
+      "path": "skillbuilder",
+      "profile": "tooling",
+      "lifecycle": "active"
+    },
+    {
+      "id": "smotoox",
+      "path": "smotoox",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "somodanote",
+      "path": "somodanote",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "stylify",
+      "path": "stylify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "sutravia",
+      "path": "sutravia",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "tantalyn",
+      "path": "tantalyn",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "testify",
+      "path": "testify",
+      "profile": "dotnet-product",
+      "lifecycle": "planning"
+    },
+    {
+      "id": "testss",
+      "path": "testss",
+      "profile": "inventory",
+      "lifecycle": "inventory"
+    },
+    {
+      "id": "transitfy",
+      "path": "transitfy",
+      "profile": "rust-product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "triplanify",
+      "path": "triplanify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "trippify",
+      "path": "trippify",
+      "profile": "product",
+      "lifecycle": "active"
+    },
+    {
+      "id": "ziban",
+      "path": "ziban",
+      "profile": "product",
+      "lifecycle": "active"
+    }
+  ]
+}
