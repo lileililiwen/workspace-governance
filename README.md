@@ -24,6 +24,7 @@ only at invocation time:
 ```bash
 python3 scripts/workspace_check.py --self-check
 python3 scripts/workspace_check.py --root .. --audit --json
+python3 scripts/auto_gate.py --root .. --report auto-gate-report.json
 python3 -m unittest discover -s tests -v
 ```
 
@@ -31,6 +32,11 @@ With `explicit-plus-immediate-directories`, immediate child folders containing
 common project markers are discovered automatically. New folders are reported
 as `DISCOVERED_UNREGISTERED`; they do not require a registry edit and are not
 treated as adopted or deployable until their local metadata and evidence pass.
+
+`auto_gate.py` is the unattended entry point. It fails on governance or
+deployment errors, writes a machine-readable report when requested, and is
+scheduled by the repository workflow. Jenkins should run the same command
+before project verification or deployment; no manual audit request is needed.
 
 ## Onboard a project
 
