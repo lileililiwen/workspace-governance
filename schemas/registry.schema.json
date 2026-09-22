@@ -5,7 +5,15 @@
   "properties": {
     "schema_version": {"const": 1},
     "workspace_root": {"type": ["string", "null"]},
-    "discovery": {"type": "object", "required": ["mode", "unregistered_policy"]},
+    "discovery": {
+      "type": "object",
+      "required": ["mode", "unregistered_policy"],
+      "properties": {
+        "mode": {"enum": ["explicit", "immediate-directories", "explicit-plus-immediate-directories"]},
+        "unregistered_policy": {"enum": ["report", "fail"]},
+        "exclude": {"type": "array", "items": {"type": "string"}}
+      }
+    },
     "projects": {
       "type": "array",
       "items": {

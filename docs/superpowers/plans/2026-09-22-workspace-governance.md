@@ -79,7 +79,7 @@
 ### Task 6: Verify and hand off
 
 - [ ] Run `python3 -m unittest discover -s tests -v`.
-- [ ] Run `python3 scripts/workspace_check.py --root /home/paul/code --registry projects.json --json`.
+- [ ] Run `python3 scripts/workspace_check.py --root .. --registry projects.json --json` from a checkout where sibling projects are present.
 - [ ] Run `python3 scripts/jenkins_manifest.py --check`.
 - [ ] Run `git diff --check` and inspect the final status.
 - [ ] Record exact evidence and known migration gaps in `HANDOFF.md`.

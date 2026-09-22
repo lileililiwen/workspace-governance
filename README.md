@@ -1,7 +1,8 @@
 # Workspace Governance
 
-Workspace Governance coordinates the repositories under `/home/paul/code`.
-It owns the project registry, governance profiles, bootstrap templates, evidence vocabulary, and deployment declarations.
+Workspace Governance coordinates a portable workspace selected at invocation
+time. It owns the project registry, governance profiles, bootstrap templates,
+evidence vocabulary, and deployment declarations.
 
 It does not own product source code, language runtimes, shared gate runtimes, or production execution.
 
@@ -16,23 +17,27 @@ It does not own product source code, language runtimes, shared gate runtimes, or
 
 ## Mandatory command
 
-Run from this repository. The registry is portable; pass the actual workspace root when auditing a checkout:
+Run from this repository. The registry never stores a machine-specific root;
+pass a workspace root relative to the current checkout, or an absolute path
+only at invocation time:
 
 ```bash
 python3 scripts/workspace_check.py --self-check
-python3 scripts/workspace_check.py --root /home/paul/code --audit --json
+python3 scripts/workspace_check.py --root .. --audit --json
 python3 -m unittest discover -s tests -v
 ```
 
-The audit intentionally reports existing projects that have not yet adopted `.project.json`.
-Those projects are migration work, not silently treated as compliant.
+With `explicit-plus-immediate-directories`, immediate child folders containing
+common project markers are discovered automatically. New folders are reported
+as `DISCOVERED_UNREGISTERED`; they do not require a registry edit and are not
+treated as adopted or deployable until their local metadata and evidence pass.
 
 ## Onboard a project
 
 ```bash
 python3 scripts/init_project.py /path/to/project \
   --id my-project --profile rust-product --kind product
-python3 scripts/workspace_check.py --root /home/paul/code --project my-project
+python3 scripts/workspace_check.py --root .. --project my-project
 ```
 
 The initializer is non-destructive and writes only missing governance declarations and rules.

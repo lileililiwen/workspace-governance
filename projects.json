@@ -3,7 +3,8 @@
   "workspace_root": null,
   "discovery": {
     "mode": "explicit-plus-immediate-directories",
-    "unregistered_policy": "fail"
+    "unregistered_policy": "report",
+    "exclude": ["build", "dist", "node_modules", "target", "vendor"]
   },
   "projects": [
     {

@@ -2,7 +2,8 @@
 
 ## Goal
 
-Create a language-neutral coordination project for the repositories under `/home/paul/code`.
+Create a language-neutral coordination project for repositories in a workspace
+selected at invocation time; do not encode a user's filesystem prefix.
 It owns project identity, governance profiles, evidence vocabulary, and deployment declarations.
 It does not own product source, language runtimes, or deployment execution.
 

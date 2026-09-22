@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import sys
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
-from workspace_check import run
+from workspace_check import discover_projects, run
 
 
 BASE_DECLARATION = {
@@ -33,7 +33,7 @@ class WorkspaceCheckTests(unittest.TestCase):
         project = root / "demo-project"
         project.mkdir()
         write_json(project / ".project.json", BASE_DECLARATION)
-        registry = {"schema_version": 1, "workspace_root": str(root), "discovery": {"mode": "explicit", "unregistered_policy": "fail"}, "projects": [{"id": "demo-project", "path": "demo-project", "profile": "inventory", "lifecycle": "inventory", "adoption": "adopted"}]}
+        registry = {"schema_version": 1, "workspace_root": None, "discovery": {"mode": "explicit", "unregistered_policy": "fail"}, "projects": [{"id": "demo-project", "path": "demo-project", "profile": "inventory", "lifecycle": "inventory", "adoption": "adopted"}]}
         registry_path = root / "projects.json"
         write_json(registry_path, registry)
         return temp, root, registry_path
@@ -84,6 +84,31 @@ class WorkspaceCheckTests(unittest.TestCase):
         findings, summary = run(SimpleNamespace(registry=str(registry), root=str(root), project=None, audit=False, self_check=False, as_json=False))
         self.assertGreater(summary["errors"], 0)
         self.assertTrue(any(item.code == "OPENSPEC_NAME" for item in findings))
+
+    def test_new_project_folder_is_discovered_without_registry_edit(self):
+        temp, root, registry = self.make_workspace()
+        self.addCleanup(temp.cleanup)
+        candidate = root / "new-project"
+        candidate.mkdir()
+        (candidate / "README.md").write_text("# New project\n", encoding="utf-8")
+        write_json(candidate / ".project.json", {**BASE_DECLARATION, "id": "new-project"})
+        data = json.loads(registry.read_text())
+        data["discovery"] = {"mode": "immediate-directories", "unregistered_policy": "report"}
+        write_json(registry, data)
+
+        findings, summary = run(SimpleNamespace(registry=str(registry), root=str(root), project=None, audit=True, self_check=False, as_json=False))
+
+        self.assertEqual(summary["errors"], 0, findings)
+        self.assertTrue(any(item.code == "DISCOVERED_UNREGISTERED" and item.project == "new-project" for item in findings))
+
+    def test_discovery_uses_relative_folder_names(self):
+        temp, root, registry = self.make_workspace()
+        self.addCleanup(temp.cleanup)
+        (root / "new-project").mkdir()
+        (root / "new-project" / "README.md").write_text("# New project\n", encoding="utf-8")
+        discovered = discover_projects(root, {"discovery": {"mode": "immediate-directories"}})
+        self.assertEqual(discovered[0]["path"], "demo-project")
+        self.assertEqual(discovered[1]["path"], "new-project")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -53,7 +54,7 @@ def main() -> int:
     registry = load_json(registry_path, [], "REGISTRY")
     if registry is None:
         return 1
-    root = Path(args.root or registry.get("workspace_root") or here.parent).resolve()
+    root = Path(args.root or os.environ.get("WORKSPACE_ROOT") or registry.get("workspace_root") or Path.cwd()).expanduser().resolve()
     check_args = argparse.Namespace(registry=str(registry_path), root=str(root), project=None, audit=False, self_check=True, as_json=False)
     findings, summary = run(check_args)
     for entry in registry.get("projects", []):

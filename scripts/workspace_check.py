@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass, asdict
@@ -31,6 +32,44 @@ def finding(findings: list[Finding], level: str, code: str, message: str, projec
     findings.append(Finding(level, code, message, project))
 
 
+PROJECT_MARKERS = (
+    ".project.json",
+    ".git",
+    "README.md",
+    "Cargo.toml",
+    "package.json",
+    "pyproject.toml",
+    "pubspec.yaml",
+    "go.mod",
+    "pom.xml",
+    "Dockerfile",
+    "docker-compose.yml",
+    "compose.yml",
+    "Jenkinsfile",
+)
+
+
+def discover_projects(workspace_root: Path, registry: dict[str, Any]) -> list[dict[str, str]]:
+    """Discover immediate child projects without persisting a machine path."""
+    discovery = registry.get("discovery") or {}
+    mode = discovery.get("mode", "explicit")
+    if mode not in {"immediate-directories", "explicit-plus-immediate-directories"}:
+        return []
+    excluded = {str(item) for item in discovery.get("exclude", []) if isinstance(item, str)}
+    projects: list[dict[str, str]] = []
+    try:
+        children = sorted(workspace_root.iterdir(), key=lambda item: item.name)
+    except OSError:
+        return projects
+    for child in children:
+        if child.name.startswith(".") or child.name in excluded or not child.is_dir() or child.is_symlink():
+            continue
+        if not any((child / marker).exists() for marker in PROJECT_MARKERS):
+            continue
+        projects.append({"id": child.name, "path": child.relative_to(workspace_root).as_posix()})
+    return projects
+
+
 def load_json(path: Path, findings: list[Finding], code: str) -> dict[str, Any] | None:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -46,7 +85,7 @@ def load_json(path: Path, findings: list[Finding], code: str) -> dict[str, Any] 
     return value
 
 
-def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding]) -> list[dict[str, Any]]:
+def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding], check_paths: bool = True) -> list[dict[str, Any]]:
     if registry.get("schema_version") != 1:
         finding(findings, "ERROR", "REGISTRY_SCHEMA", "registry schema_version must be 1")
     projects = registry.get("projects")
@@ -68,7 +107,7 @@ def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: 
         seen.add(project_id)
         if not isinstance(path_value, str) or Path(path_value).is_absolute() or ".." in Path(path_value).parts:
             finding(findings, "ERROR", "PROJECT_PATH", f"project path must be repository-relative: {path_value!r}", project_id)
-        else:
+        elif check_paths:
             project_path = workspace_root / path_value
             if not project_path.is_dir():
                 finding(findings, "ERROR", "PROJECT_MISSING", f"registered project directory missing: {project_path}", project_id)
@@ -112,10 +151,12 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
     declaration_path = project_path / ".project.json"
-    declaration = load_json(declaration_path, findings, "PROJECT_DECLARATION")
-    if declaration is None:
+    if not declaration_path.exists():
         if strict:
             finding(findings, "ERROR", "DECLARATION_MISSING", "adopted project must contain .project.json", project_id)
+        return
+    declaration = load_json(declaration_path, findings, "PROJECT_DECLARATION")
+    if declaration is None:
         return
     if declaration.get("schema_version") != 1:
         finding(findings, "ERROR", "DECLARATION_SCHEMA", "project declaration schema_version must be 1", project_id)
@@ -169,24 +210,54 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
     registry = load_json(registry_path, findings, "REGISTRY_FILE")
     if registry is None:
         return findings, {"errors": len(findings), "warnings": 0}
-    configured_root = args.root or registry.get("workspace_root")
-    workspace_root = Path(configured_root or (governance_root.parent if args.self_check else Path.cwd())).resolve()
-    projects = validate_registry(registry, workspace_root, findings)
-    scan_for_secrets(registry, findings)
+    configured_root = getattr(args, "root", None) or os.environ.get("WORKSPACE_ROOT") or registry.get("workspace_root")
     if args.self_check:
-        selected = [entry for entry in projects if entry.get("id") == "workspace-governance"]
+        workspace_root = governance_root
+    elif configured_root:
+        workspace_root = Path(configured_root).expanduser().resolve()
+    else:
+        workspace_root = Path.cwd().resolve()
+    projects = validate_registry(registry, workspace_root, findings, check_paths=not args.self_check)
+    scan_for_secrets(registry, findings)
+    effective_projects = list(projects)
+    explicit_paths = {str(entry.get("path")) for entry in projects}
+    discovery = registry.get("discovery") or {}
+    if discovery.get("mode") in {"immediate-directories", "explicit-plus-immediate-directories"} and not args.self_check:
+        policy = discovery.get("unregistered_policy", "report")
+        for discovered in discover_projects(workspace_root, registry):
+            if discovered["path"] in explicit_paths:
+                continue
+            level = "ERROR" if policy == "fail" else "WARNING"
+            finding(findings, level, "DISCOVERED_UNREGISTERED", "project folder is discovered but not registered; local metadata is the source of truth", discovered["id"])
+            declaration_path = workspace_root / discovered["path"] / ".project.json"
+            if declaration_path.is_file():
+                try:
+                    declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    declaration = {}
+                if isinstance(declaration, dict):
+                    effective_projects.append({
+                        "id": discovered["id"],
+                        "path": discovered["path"],
+                        "profile": declaration.get("profile", "inventory"),
+                        "lifecycle": declaration.get("lifecycle", "inventory"),
+                        "adoption": "pending",
+                    })
+    if args.self_check:
+        selected = [{**entry, "path": "."} for entry in projects if entry.get("id") == "workspace-governance"]
         for entry in selected:
             validate_project(entry, workspace_root, findings)
     else:
-        selected = projects
+        selected = effective_projects
         if args.project:
-            selected = [entry for entry in projects if entry.get("id") == args.project or entry.get("path") == args.project]
+            selected = [entry for entry in effective_projects if entry.get("id") == args.project or entry.get("path") == args.project]
             if not selected:
                 finding(findings, "ERROR", "PROJECT_UNKNOWN", f"project not found in registry: {args.project}")
         for entry in selected:
             adopted = entry.get("adoption", "pending") == "adopted"
+            discovered_only = entry.get("path") not in explicit_paths
             if args.audit or args.project or adopted:
-                validate_project(entry, workspace_root, findings, strict=True)
+                validate_project(entry, workspace_root, findings, strict=not discovered_only)
             else:
                 finding(findings, "WARNING", "ADOPTION_PENDING", "project is registered but not yet adopted", str(entry.get("id")))
     summary = {"errors": sum(item.level == "ERROR" for item in findings), "warnings": sum(item.level == "WARNING" for item in findings)}
