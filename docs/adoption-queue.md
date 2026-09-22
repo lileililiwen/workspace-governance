@@ -27,6 +27,17 @@ The next deployment-capable batch now has declarations and profile checks:
 
 These projects are structurally adopted, but remain non-deployable until their declared verification commands and release evidence are run and reviewed.
 
+## Third batch adopted
+
+- `hermora`
+- `hestia-lab`
+- `lore-mix`
+- `metiscope`
+- `mortalect`
+- `opendockify`
+
+These projects are also structurally adopted and remain non-deployable pending runtime evidence.
+
 ## Remaining work
 
 The workspace audit still fails for repositories without `.project.json`. This is intentional: registration alone is not adoption. For each remaining active project:
