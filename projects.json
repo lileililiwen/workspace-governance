@@ -7,9 +7,23 @@
   },
   "projects": [
     {
+      "id": "alethefy",
+      "path": "alethefy",
+      "profile": "python-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
       "id": "workspace-governance",
       "path": "workspace-governance",
       "profile": "governance",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "crossify",
+      "path": "crossify",
+      "profile": "product",
       "lifecycle": "active",
       "adoption": "adopted"
     },
@@ -20,10 +34,24 @@
       "lifecycle": "active"
     },
     {
+      "id": "cvunify",
+      "path": "cvunify",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
       "id": "aegify",
       "path": "aegify",
       "profile": "product",
       "lifecycle": "active"
+    },
+    {
+      "id": "hermexa",
+      "path": "hermexa",
+      "profile": "rust-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "aesthra",
@@ -32,15 +60,30 @@
       "lifecycle": "active"
     },
     {
-      "id": "alethefy",
-      "path": "alethefy",
-      "profile": "python-product",
-      "lifecycle": "active"
+      "id": "hypora",
+      "path": "hypora",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "lexora",
+      "path": "lexora",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "alltools-platform",
       "path": "alltools-platform",
       "profile": "platform",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "openaccounting",
+      "path": "openaccounting",
+      "profile": "rust-product",
       "lifecycle": "active",
       "adoption": "adopted"
     },
@@ -112,18 +155,6 @@
       "lifecycle": "active"
     },
     {
-      "id": "crossify",
-      "path": "crossify",
-      "profile": "product",
-      "lifecycle": "active"
-    },
-    {
-      "id": "cvunify",
-      "path": "cvunify",
-      "profile": "product",
-      "lifecycle": "active"
-    },
-    {
       "id": "dharmatlas",
       "path": "dharmatlas",
       "profile": "product",
@@ -175,12 +206,6 @@
       "lifecycle": "active"
     },
     {
-      "id": "hermexa",
-      "path": "hermexa",
-      "profile": "rust-product",
-      "lifecycle": "active"
-    },
-    {
       "id": "hermora",
       "path": "hermora",
       "profile": "product",
@@ -196,12 +221,6 @@
       "id": "hookit",
       "path": "hookit",
       "profile": "rust-product",
-      "lifecycle": "active"
-    },
-    {
-      "id": "hypora",
-      "path": "hypora",
-      "profile": "product",
       "lifecycle": "active"
     },
     {
@@ -235,12 +254,6 @@
       "path": "learningcsharp",
       "profile": "inventory",
       "lifecycle": "inventory"
-    },
-    {
-      "id": "lexora",
-      "path": "lexora",
-      "profile": "product",
-      "lifecycle": "active"
     },
     {
       "id": "lileililiwen-site",
@@ -282,12 +295,6 @@
       "id": "namevia",
       "path": "namevia",
       "profile": "product",
-      "lifecycle": "active"
-    },
-    {
-      "id": "openaccounting",
-      "path": "openaccounting",
-      "profile": "rust-product",
       "lifecycle": "active"
     },
     {

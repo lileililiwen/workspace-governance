@@ -13,6 +13,20 @@ These projects now have `.project.json`, a selected governance profile, and a re
 7. `jenkins-local` — deployment execution layer.
 8. `alltools-platform` — application-specific platform.
 
+## Second batch adopted
+
+The next deployment-capable batch now has declarations and profile checks:
+
+- `alethefy`
+- `crossify`
+- `cvunify`
+- `hermexa`
+- `hypora`
+- `lexora`
+- `openaccounting`
+
+These projects are structurally adopted, but remain non-deployable until their declared verification commands and release evidence are run and reviewed.
+
 ## Remaining work
 
 The workspace audit still fails for repositories without `.project.json`. This is intentional: registration alone is not adoption. For each remaining active project:
