@@ -38,6 +38,17 @@ These projects are structurally adopted, but remain non-deployable until their d
 
 These projects are also structurally adopted and remain non-deployable pending runtime evidence.
 
+## Fourth batch adopted
+
+- `actoria`
+- `argoset`
+- `byok-translator`
+- `mnemyx`
+- `openpanel`
+- `pluggify`
+
+These projects are structurally adopted and remain non-deployable pending runtime evidence.
+
 ## Remaining work
 
 The workspace audit still fails for repositories without `.project.json`. This is intentional: registration alone is not adoption. For each remaining active project:

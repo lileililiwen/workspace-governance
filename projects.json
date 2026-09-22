@@ -7,6 +7,48 @@
   },
   "projects": [
     {
+      "id": "actoria",
+      "path": "actoria",
+      "profile": "typescript-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "argoset",
+      "path": "argoset",
+      "profile": "rust-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "byok-translator",
+      "path": "byok-translator",
+      "profile": "typescript-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "mnemyx",
+      "path": "mnemyx",
+      "profile": "rust-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "openpanel",
+      "path": "openpanel",
+      "profile": "rust-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "pluggify",
+      "path": "pluggify",
+      "profile": "typescript-monorepo",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
       "id": "hermora",
       "path": "hermora",
       "profile": "product",
@@ -70,12 +112,6 @@
       "adoption": "adopted"
     },
     {
-      "id": "actoria",
-      "path": "actoria",
-      "profile": "typescript-product",
-      "lifecycle": "active"
-    },
-    {
       "id": "cvunify",
       "path": "cvunify",
       "profile": "product",
@@ -130,12 +166,6 @@
       "adoption": "adopted"
     },
     {
-      "id": "argoset",
-      "path": "argoset",
-      "profile": "rust-product",
-      "lifecycle": "active"
-    },
-    {
       "id": "ariadex",
       "path": "ariadex",
       "profile": "python-runtime",
@@ -152,12 +182,6 @@
       "id": "bargora",
       "path": "bargora",
       "profile": "product",
-      "lifecycle": "active"
-    },
-    {
-      "id": "byok-translator",
-      "path": "byok-translator",
-      "profile": "typescript-product",
       "lifecycle": "active"
     },
     {
@@ -298,12 +322,6 @@
       "lifecycle": "active"
     },
     {
-      "id": "mnemyx",
-      "path": "mnemyx",
-      "profile": "rust-product",
-      "lifecycle": "active"
-    },
-    {
       "id": "namevia",
       "path": "namevia",
       "profile": "product",
@@ -313,12 +331,6 @@
       "id": "openlearning",
       "path": "openlearning",
       "profile": "product",
-      "lifecycle": "active"
-    },
-    {
-      "id": "openpanel",
-      "path": "openpanel",
-      "profile": "rust-product",
       "lifecycle": "active"
     },
     {
@@ -338,12 +350,6 @@
       "path": "ploutify",
       "profile": "product",
       "lifecycle": "active"
-    },
-    {
-      "id": "pluggify",
-      "path": "pluggify",
-      "profile": "typescript-monorepo",
-      "lifecycle": "planning"
     },
     {
       "id": "reelio",
