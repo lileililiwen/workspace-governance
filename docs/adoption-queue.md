@@ -49,6 +49,19 @@ These projects are also structurally adopted and remain non-deployable pending r
 
 These projects are structurally adopted and remain non-deployable pending runtime evidence.
 
+## Large clean-worktree batch adopted
+
+The following clean repositories were adopted in one guarded wave:
+
+`aegify`, `aesthra`, `arivio`, `bargora`, `cargo-audit-boost`,
+`cargo-matrix-boost`, `cargo-sonar`, `catchen`, `chinago`, `fotofy`,
+`gradevia`, `kairosa`, `linglitch`, `namevia`, `orphevia`, `pangoman`,
+`ploutify`, `reelio`, `rostera`, `rust-ecommerce`, `shopifireman`,
+`singleatee`, `smotoox`, `somodanote`, `stylify`, `sutravia`, `tantalyn`,
+`testify`, `transitfy`, `triplanify`, `trippify`, and `ziban`.
+
+Dirty, locked, and non-Git repositories were not modified.
+
 ## Remaining work
 
 The workspace audit still fails for repositories without `.project.json`. This is intentional: registration alone is not adoption. For each remaining active project:

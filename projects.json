@@ -122,7 +122,8 @@
       "id": "aegify",
       "path": "aegify",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "hermexa",
@@ -135,7 +136,8 @@
       "id": "aesthra",
       "path": "aesthra",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "hypora",
@@ -176,43 +178,50 @@
       "id": "arivio",
       "path": "arivio",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "bargora",
       "path": "bargora",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "cargo-audit-boost",
       "path": "cargo-audit-boost",
-      "profile": "rust-product",
-      "lifecycle": "active"
+      "profile": "tooling",
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "cargo-matrix-boost",
       "path": "cargo-matrix-boost",
-      "profile": "rust-product",
-      "lifecycle": "active"
+      "profile": "tooling",
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "cargo-sonar",
       "path": "cargo-sonar",
-      "profile": "rust-product",
-      "lifecycle": "active"
+      "profile": "tooling",
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "catchen",
       "path": "catchen",
       "profile": "inventory",
-      "lifecycle": "inventory"
+      "lifecycle": "inventory",
+      "adoption": "adopted"
     },
     {
       "id": "chinago",
       "path": "chinago",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "crossalheart",
@@ -263,13 +272,15 @@
       "id": "fotofy",
       "path": "fotofy",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "gradevia",
       "path": "gradevia",
       "profile": "typescript-product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "hookit",
@@ -294,7 +305,8 @@
       "id": "kairosa",
       "path": "kairosa",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "labrys",
@@ -319,13 +331,15 @@
       "id": "linglitch",
       "path": "linglitch",
       "profile": "typescript-product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "namevia",
       "path": "namevia",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "openlearning",
@@ -337,37 +351,43 @@
       "id": "orphevia",
       "path": "orphevia",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "pangoman",
       "path": "pangoman",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "ploutify",
       "path": "ploutify",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "reelio",
       "path": "reelio",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "rostera",
       "path": "rostera",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "rust-ecommerce",
       "path": "rust-ecommerce",
       "profile": "rust-product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "rust-learning",
@@ -379,13 +399,15 @@
       "id": "shopifireman",
       "path": "shopifireman",
       "profile": "typescript-product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "singleatee",
       "path": "singleatee",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "sisyphusfy",
@@ -404,37 +426,43 @@
       "id": "smotoox",
       "path": "smotoox",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "somodanote",
       "path": "somodanote",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "stylify",
       "path": "stylify",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "sutravia",
       "path": "sutravia",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "tantalyn",
       "path": "tantalyn",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "testify",
       "path": "testify",
       "profile": "dotnet-product",
-      "lifecycle": "planning"
+      "lifecycle": "planning",
+      "adoption": "adopted"
     },
     {
       "id": "testss",
@@ -446,19 +474,22 @@
       "id": "transitfy",
       "path": "transitfy",
       "profile": "rust-product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "triplanify",
       "path": "triplanify",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "trippify",
       "path": "trippify",
       "profile": "product",
-      "lifecycle": "active"
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "ziban",

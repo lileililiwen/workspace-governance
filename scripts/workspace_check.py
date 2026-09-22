@@ -86,6 +86,8 @@ def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: 
 def profile_requirements(profile: str) -> tuple[list[str], bool, bool, bool]:
     if profile == "inventory":
         return [".project.json"], False, False, False
+    if profile == "tooling":
+        return ["README.md", ".project.json"], False, False, True
     if profile == "deployment":
         return ["README.md", ".project.json"], False, False, True
     if profile == "dotnet-template":
