@@ -243,23 +243,11 @@
       "adoption": "adopted"
     },
     {
-      "id": "dotnet-starter-kit",
-      "path": "dotnet-starter-kit",
-      "profile": "dotnet-template",
-      "lifecycle": "reference"
-    },
-    {
       "id": "driftwatchdog",
       "path": "driftwatchdog",
       "profile": "rust-product",
       "lifecycle": "active",
       "adoption": "adopted"
-    },
-    {
-      "id": "fonacetool",
-      "path": "fonacetool",
-      "profile": "inventory",
-      "lifecycle": "inventory"
     },
     {
       "id": "forge",
@@ -314,12 +302,6 @@
       "profile": "rust-platform",
       "lifecycle": "active",
       "adoption": "adopted"
-    },
-    {
-      "id": "learningcsharp",
-      "path": "learningcsharp",
-      "profile": "inventory",
-      "lifecycle": "inventory"
     },
     {
       "id": "lileililiwen-site",
@@ -390,12 +372,6 @@
       "adoption": "adopted"
     },
     {
-      "id": "rust-learning",
-      "path": "rust-learning",
-      "profile": "inventory",
-      "lifecycle": "inventory"
-    },
-    {
       "id": "shopifireman",
       "path": "shopifireman",
       "profile": "typescript-product",
@@ -415,12 +391,6 @@
       "profile": "python-product",
       "lifecycle": "active",
       "adoption": "adopted"
-    },
-    {
-      "id": "skillbuilder",
-      "path": "skillbuilder",
-      "profile": "tooling",
-      "lifecycle": "active"
     },
     {
       "id": "smotoox",
@@ -463,12 +433,6 @@
       "profile": "dotnet-product",
       "lifecycle": "planning",
       "adoption": "adopted"
-    },
-    {
-      "id": "testss",
-      "path": "testss",
-      "profile": "inventory",
-      "lifecycle": "inventory"
     },
     {
       "id": "transitfy",
