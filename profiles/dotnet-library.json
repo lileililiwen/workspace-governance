@@ -4,5 +4,6 @@
   "requires_ci": true,
   "requires_openspec": true,
   "requires_verification_command": true,
-  "architecture": "framework-neutral contracts must not depend on product code"
+  "architecture": "framework-neutral contracts must not depend on product code",
+  "supported_capabilities": ["identity", "tenancy", "storage", "release"]
 }

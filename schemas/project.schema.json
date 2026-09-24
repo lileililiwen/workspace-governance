@@ -1,5 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace-governance.local/schemas/project.schema.json",
+  "title": "Workspace Governance project declaration",
   "type": "object",
   "required": ["schema_version", "id", "kind", "profile", "lifecycle", "verification", "deployment"],
   "properties": {
@@ -24,6 +26,62 @@
         "deployable": {"type": "boolean"},
         "jenkins_job": {"type": ["string", "null"]},
         "compose_file": {"type": ["string", "null"]}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Optional capability declarations. Each key is a capability name (e.g. identity, admin, tenancy, billing, jobs, storage, release). Declarations are intent, not implementation evidence.",
+      "additionalProperties": {"$ref": "#/$defs/capability"},
+      "propertyNames": {"pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"}
+    },
+    "release_evidence": {
+      "type": "object",
+      "description": "Optional release evidence record. Each field is one of revision, version, toolchain, artifacts, digests, sbom, provenance, checks, publication. Missing or unverified fields do not satisfy a deployable gate.",
+      "additionalProperties": {"$ref": "#/$defs/evidence_field"},
+      "propertyNames": {
+        "enum": ["revision", "version", "toolchain", "artifacts", "digests", "sbom", "provenance", "checks", "publication"]
+      }
+    }
+  },
+  "$defs": {
+    "evidence_state": {
+      "type": "string",
+      "enum": ["declared", "configured", "verified", "unverified", "blocked"],
+      "description": "Lifecycle state of a capability or evidence field. declared: project intends to provide it. configured: artefacts exist locally. verified: native evidence recorded with a ref. unverified: missing or invalid evidence. blocked: explicit non-goal."
+    },
+    "release_evidence_state": {
+      "type": "string",
+      "enum": ["declared", "configured", "verified", "unverified"],
+      "description": "Lifecycle state of a release-evidence field. The 'blocked' state is reserved for capability declarations."
+    },
+    "capability": {
+      "type": "object",
+      "required": ["owner", "evidence_state"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Who owns the implementation: a platform repo id, a product name, or 'shared'."
+        },
+        "evidence_state": {"$ref": "#/$defs/evidence_state"},
+        "evidence_ref": {
+          "type": "string",
+          "description": "Repository-relative path to the native evidence artefact when evidence_state is 'configured' or 'verified'."
+        }
+      }
+    },
+    "evidence_field": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": {"$ref": "#/$defs/release_evidence_state"},
+        "value": {
+          "description": "Field value: a string for revision/version/toolchain/provenance, an array of strings for checks, a list of digest references for digests/sbom, or omitted when only state is known."
+        },
+        "evidence_ref": {
+          "type": "string",
+          "description": "Repository-relative path to the native evidence artefact when state is 'configured' or 'verified'."
+        }
       }
     }
   }

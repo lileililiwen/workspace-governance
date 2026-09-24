@@ -19,6 +19,23 @@ PROFILES = {"governance", "product", "dotnet-library", "dotnet-template", "deplo
 LIFECYCLES = {"active", "planning", "reference", "inventory", "archived"}
 SECRET_WORDS = re.compile(r"(password|secret|token|api[_-]?key|private[_-]?key|credential)", re.I)
 
+# Capability and release-evidence vocabulary (additive, opt-in per project).
+CAPABILITY_OWNERS = {"platform", "product", "shared", "external"}
+CAPABILITY_EVIDENCE_STATES = {"declared", "configured", "verified", "unverified", "blocked"}
+RELEASE_EVIDENCE_STATES = {"declared", "configured", "verified", "unverified"}
+RELEASE_EVIDENCE_FIELDS = (
+    "revision",
+    "version",
+    "toolchain",
+    "artifacts",
+    "digests",
+    "sbom",
+    "provenance",
+    "checks",
+    "publication",
+)
+DEPLOYABLE_RELEASE_REQUIRED_FIELDS = ("revision", "artifacts", "digests", "provenance", "checks", "publication")
+
 
 @dataclass
 class Finding:
@@ -136,6 +153,143 @@ def profile_requirements(profile: str) -> tuple[list[str], bool, bool, bool]:
     return ["README.md", "ROADMAP.md", "HANDOFF.md", "AGENTS.md", ".ai-rules/workflow.md", ".ai-rules/completion.md", ".project.json"], True, True, True
 
 
+def load_profile_spec(governance_root: Path, profile: str) -> dict[str, Any] | None:
+    """Load the profile JSON next to the governance checker, if present.
+
+    Profiles are documentation by default. The checker only reads them to
+    surface a soft warning when a project declares a capability its profile
+    does not list as supported.
+    """
+    path = governance_root / "profiles" / f"{profile}.json"
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(value, dict):
+        return None
+    return value
+
+
+def validate_capabilities(capabilities: Any, project_path: Path, findings: list[Finding], project_id: str, supported: set[str] | None = None) -> None:
+    """Audit a project's optional capability declarations.
+
+    Declarations describe intent, not implementation. Governance records the
+    declared state and the presence/absence of native evidence; it never
+    promotes a capability to verified on its own.
+
+    When `supported` is provided, capabilities not listed there are surfaced
+    as a WARNING so profile owners can keep the supported set intentional.
+    """
+    if not isinstance(capabilities, dict):
+        finding(findings, "ERROR", "CAPABILITIES_SHAPE", "capabilities must be an object", project_id)
+        return
+    for name, entry in capabilities.items():
+        if not isinstance(name, str) or not PROJECT_ID.fullmatch(name):
+            finding(findings, "ERROR", "CAPABILITY_NAME", f"invalid capability name: {name!r}", project_id)
+            continue
+        if supported is not None and name not in supported:
+            finding(findings, "WARNING", "CAPABILITY_UNSUPPORTED", f"capability {name!r} is not declared as supported by the project profile", project_id)
+        if not isinstance(entry, dict):
+            finding(findings, "ERROR", "CAPABILITY_SHAPE", f"capability {name!r} must be an object", project_id)
+            continue
+        owner = entry.get("owner")
+        if not isinstance(owner, str) or not owner:
+            finding(findings, "ERROR", "CAPABILITY_OWNER", f"capability {name!r} requires a non-empty owner", project_id)
+        elif owner not in CAPABILITY_OWNERS and not PROJECT_ID.fullmatch(owner):
+            finding(findings, "WARNING", "CAPABILITY_OWNER", f"capability {name!r} owner is not a known platform, product, or shared id: {owner!r}", project_id)
+        state = entry.get("evidence_state")
+        if state not in CAPABILITY_EVIDENCE_STATES:
+            finding(findings, "ERROR", "CAPABILITY_STATE", f"capability {name!r} has invalid evidence_state: {state!r}", project_id)
+            continue
+        ref = entry.get("evidence_ref")
+        if ref is not None and not isinstance(ref, str):
+            finding(findings, "ERROR", "CAPABILITY_REF", f"capability {name!r} evidence_ref must be a string when present", project_id)
+            ref = None
+        if state in {"configured", "verified"}:
+            if not isinstance(ref, str) or not ref:
+                finding(findings, "WARNING", "CAPABILITY_PENDING", f"capability {name!r} is {state} but has no evidence_ref", project_id)
+            elif (project_path / ref).is_file():
+                continue
+            else:
+                level = "ERROR" if state == "verified" else "WARNING"
+                code = "CAPABILITY_STALE" if state == "verified" else "CAPABILITY_PENDING"
+                finding(findings, level, code, f"capability {name!r} evidence_ref missing: {ref}", project_id)
+        elif state == "unverified":
+            finding(findings, "WARNING", "CAPABILITY_PENDING", f"capability {name!r} is unverified; native evidence required", project_id)
+        elif state == "blocked":
+            finding(findings, "WARNING", "CAPABILITY_BLOCKED", f"capability {name!r} is declared blocked; verify the non-goal is recorded", project_id)
+
+
+def validate_release_evidence(release_evidence: Any, project_path: Path, findings: list[Finding], project_id: str) -> None:
+    """Audit a project's optional release evidence record.
+
+    Release evidence is a producer-neutral record of source revision, version,
+    toolchain, artifacts, digests, SBOM, provenance, checks, and publication.
+    """
+    if not isinstance(release_evidence, dict):
+        finding(findings, "ERROR", "RELEASE_EVIDENCE_SHAPE", "release_evidence must be an object", project_id)
+        return
+    seen: set[str] = set()
+    for field, entry in release_evidence.items():
+        if not isinstance(field, str):
+            finding(findings, "ERROR", "RELEASE_EVIDENCE_FIELD", f"release evidence field must be a string, got {type(field).__name__}", project_id)
+            continue
+        if field in seen:
+            finding(findings, "WARNING", "RELEASE_EVIDENCE_DUPLICATE", f"release evidence field repeated: {field}", project_id)
+        seen.add(field)
+        if field not in RELEASE_EVIDENCE_FIELDS:
+            finding(findings, "WARNING", "RELEASE_EVIDENCE_FIELD", f"unknown release evidence field: {field}", project_id)
+        if not isinstance(entry, dict):
+            finding(findings, "ERROR", "RELEASE_EVIDENCE_SHAPE", f"release evidence {field!r} must be an object", project_id)
+            continue
+        state = entry.get("state")
+        if state not in RELEASE_EVIDENCE_STATES:
+            finding(findings, "ERROR", "RELEASE_EVIDENCE_STATE", f"release evidence {field!r} has invalid state: {state!r}", project_id)
+            continue
+        ref = entry.get("evidence_ref")
+        if ref is not None and not isinstance(ref, str):
+            finding(findings, "ERROR", "RELEASE_EVIDENCE_REF", f"release evidence {field!r} evidence_ref must be a string when present", project_id)
+            ref = None
+        if state in {"configured", "verified"} and isinstance(ref, str) and ref and not (project_path / ref).is_file():
+            level = "ERROR" if state == "verified" else "WARNING"
+            code = "RELEASE_EVIDENCE_STALE" if state == "verified" else "RELEASE_EVIDENCE_PENDING"
+            finding(findings, level, code, f"release evidence {field!r} evidence_ref missing: {ref}", project_id)
+
+
+def validate_deployment_evidence(deployment: Any, declaration: dict[str, Any], project_path: Path, findings: list[Finding], project_id: str) -> None:
+    """For projects that opt in to deployment, require complete release evidence.
+
+    A deployable project must carry a release_evidence block whose required
+    fields (revision, artifacts, digests, provenance, checks, publication) are
+    either verified or configured with a present evidence_ref. Anything else
+    is an ERROR that blocks the deployable gate; metadata alone is never
+    sufficient to flip deployment.deployable to true.
+    """
+    if not isinstance(deployment, dict) or not deployment.get("deployable"):
+        return
+    declaration_release = declaration.get("release_evidence")
+    if not isinstance(declaration_release, dict):
+        finding(findings, "ERROR", "RELEASE_EVIDENCE_REQUIRED", "deployable project must declare release_evidence", project_id)
+        return
+    for field in DEPLOYABLE_RELEASE_REQUIRED_FIELDS:
+        entry = declaration_release.get(field)
+        if not isinstance(entry, dict):
+            finding(findings, "ERROR", "RELEASE_EVIDENCE_INSUFFICIENT", f"deployable project must declare release_evidence.{field}", project_id)
+            continue
+        state = entry.get("state")
+        if state == "verified":
+            continue
+        if state == "configured":
+            ref = entry.get("evidence_ref")
+            if isinstance(ref, str) and ref and (project_path / ref).is_file():
+                continue
+            finding(findings, "ERROR", "RELEASE_EVIDENCE_INSUFFICIENT", f"deployable project release_evidence.{field} configured but evidence_ref missing: {ref!r}", project_id)
+            continue
+        finding(findings, "ERROR", "RELEASE_EVIDENCE_INSUFFICIENT", f"deployable project release_evidence.{field} state is {state!r}; verified or configured+ref is required", project_id)
+
+
 def validate_change_names(project_path: Path, findings: list[Finding], project_id: str) -> None:
     changes = project_path / "openspec" / "changes"
     if not changes.is_dir():
@@ -147,7 +301,7 @@ def validate_change_names(project_path: Path, findings: list[Finding], project_i
             finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {child.name}", project_id)
 
 
-def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list[Finding], strict: bool = True) -> None:
+def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list[Finding], strict: bool = True, governance_root: Path | None = None) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
     declaration_path = project_path / ".project.json"
@@ -188,6 +342,21 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
             finding(findings, "ERROR", "DEPLOYMENT_COMPOSE", f"declared Compose file is missing: {compose}", project_id)
         if not isinstance(job, str) or not job:
             finding(findings, "ERROR", "DEPLOYMENT_JOB", "deployable project must declare jenkins_job", project_id)
+    capabilities = declaration.get("capabilities")
+    supported: set[str] | None = None
+    if capabilities is not None and governance_root is not None:
+        spec = load_profile_spec(governance_root, profile)
+        if spec is not None:
+            raw = spec.get("supported_capabilities")
+            if isinstance(raw, list):
+                supported = {item for item in raw if isinstance(item, str)}
+    if capabilities is not None:
+        validate_capabilities(capabilities, project_path, findings, project_id, supported=supported)
+    release_evidence = declaration.get("release_evidence")
+    if release_evidence is not None:
+        validate_release_evidence(release_evidence, project_path, findings, project_id)
+    if isinstance(deployment, dict) and deployment.get("deployable"):
+        validate_deployment_evidence(deployment, declaration, project_path, findings, project_id)
 
 
 def scan_for_secrets(value: Any, findings: list[Finding], location: str = "registry") -> None:
@@ -246,7 +415,7 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
     if args.self_check:
         selected = [{**entry, "path": "."} for entry in projects if entry.get("id") == "workspace-governance"]
         for entry in selected:
-            validate_project(entry, workspace_root, findings)
+            validate_project(entry, workspace_root, findings, governance_root=governance_root)
     else:
         selected = effective_projects
         if args.project:
@@ -257,7 +426,7 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
             adopted = entry.get("adoption", "pending") == "adopted"
             discovered_only = entry.get("path") not in explicit_paths
             if args.audit or args.project or adopted:
-                validate_project(entry, workspace_root, findings, strict=not discovered_only)
+                validate_project(entry, workspace_root, findings, strict=not discovered_only, governance_root=governance_root)
             else:
                 finding(findings, "WARNING", "ADOPTION_PENDING", "project is registered but not yet adopted", str(entry.get("id")))
     summary = {"errors": sum(item.level == "ERROR" for item in findings), "warnings": sum(item.level == "WARNING" for item in findings)}

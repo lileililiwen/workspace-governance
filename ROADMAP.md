@@ -19,6 +19,9 @@
 - Make `forge` consume `projects.json` and checker reports.
 - Import OpenSpec status and `HANDOFF.md` pointers.
 - Track maturity and evidence without claiming runtime completion from planning artifacts.
+- Adopt the `capabilities` and `release_evidence` blocks (see
+  `docs/capabilities.md`) so Forge observations can carry the same vocabulary
+  as the workspace audit.
 
 ## Phase 4 — Deployment coordination
 

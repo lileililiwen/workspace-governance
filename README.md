@@ -15,6 +15,25 @@ It does not own product source code, language runtimes, shared gate runtimes, or
 - `dotnet-platform-libs` is the reusable .NET library platform.
 - `jenkins-local` performs Jenkins/Mac deployment execution.
 
+## Capability and release evidence
+
+Projects may add two optional blocks to `.project.json`:
+
+- `capabilities` — declares reusable platform capabilities (identity, admin,
+  tenancy, billing, jobs, storage, release, and project-defined names) with
+  an owner and an evidence state. Declarations are intent, not implementation
+  evidence. See `docs/capabilities.md` for the canonical vocabulary.
+- `release_evidence` — a producer-neutral record (revision, version,
+  toolchain, artifacts, digests, SBOM, provenance, checks, publication) that
+  backs a deployment. A `deployable: true` project must carry a complete
+  `release_evidence` block; otherwise `workspace_check.py` fails the project
+  closed with `RELEASE_EVIDENCE_INSUFFICIENT` and `jenkins_manifest.py` will
+  not emit the entry.
+
+Both blocks are additive. Existing declarations without them remain valid;
+the audit only surfaces findings for projects that opt in. The new fields do
+not, and never will, promote a project to deployable on their own.
+
 ## Mandatory command
 
 Run from this repository. The registry never stores a machine-specific root;

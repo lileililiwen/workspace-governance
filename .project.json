@@ -13,5 +13,37 @@
     "deployable": false,
     "jenkins_job": null,
     "compose_file": null
+  },
+  "capabilities": {
+    "registry": {
+      "owner": "platform",
+      "evidence_state": "verified",
+      "evidence_ref": "projects.json"
+    },
+    "policy": {
+      "owner": "platform",
+      "evidence_state": "verified",
+      "evidence_ref": "scripts/workspace_check.py"
+    },
+    "evidence": {
+      "owner": "platform",
+      "evidence_state": "configured",
+      "evidence_ref": "docs/capabilities.md"
+    },
+    "release": {
+      "owner": "platform",
+      "evidence_state": "declared"
+    }
+  },
+  "release_evidence": {
+    "revision": {"state": "declared", "value": "n/a (governance repo, not deployed)"},
+    "version": {"state": "declared", "value": "schema_version 1"},
+    "toolchain": {"state": "declared", "value": "python-3.11"},
+    "artifacts": {"state": "unverified"},
+    "digests": {"state": "unverified"},
+    "sbom": {"state": "unverified"},
+    "provenance": {"state": "unverified"},
+    "checks": {"state": "configured", "value": ["python3 -m unittest discover -s tests -v", "python3 scripts/workspace_check.py --self-check"]},
+    "publication": {"state": "unverified"}
   }
 }
