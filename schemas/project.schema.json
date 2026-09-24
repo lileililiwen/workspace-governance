@@ -41,9 +41,50 @@
       "propertyNames": {
         "enum": ["revision", "version", "toolchain", "artifacts", "digests", "sbom", "provenance", "checks", "publication"]
       }
+    },
+    "quality": {
+      "type": "object",
+      "description": "Optional product-code quality policy consumed by scripts/product_code_quality.py. Declares product source roots, supported languages, exclusions, and the placeholder marker threshold.",
+      "required": ["product_roots", "languages"],
+      "additionalProperties": false,
+      "properties": {
+        "product_roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "description": "Repository-relative directories that count as product source. Each must exist and be a directory."
+        },
+        "languages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/language"},
+          "uniqueItems": true
+        },
+        "exclude": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "Repository-relative paths under any product root to exclude (generated, vendor, fixture, etc.). Exclusions must not escape the project root."
+        },
+        "placeholder_threshold": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Maximum number of placeholder markers (TODO, FIXME, etc.) tolerated across all product files before the check fails."
+        },
+        "placeholder_markers": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "Override the default placeholder marker vocabulary. Words are matched case-insensitively with word boundaries."
+        }
+      }
     }
   },
   "$defs": {
+    "language": {
+      "type": "string",
+      "enum": ["rust", "python", "typescript", "javascript", "csharp", "go", "generic"],
+      "description": "A language profile supported by the product-code quality checker."
+    },
     "evidence_state": {
       "type": "string",
       "enum": ["declared", "configured", "verified", "unverified", "blocked"],

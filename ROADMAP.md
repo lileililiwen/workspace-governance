@@ -13,6 +13,9 @@
 - Add the shared `driftwatchdog` gate declaration to each adopted project.
 - Add repository-local `verify` commands and CI parity.
 - Classify learning, scratch, archived, and deployment-only directories with lighter profiles.
+- Add the `quality` block (see `docs/product-code-quality.md`) and bind the
+  product-code quality checker in each adopted product's `.ai-gate/gate.yaml`.
+  Missing migration metadata stays `REVIEW_REQUIRED`.
 
 ## Phase 3 — Control-plane integration
 

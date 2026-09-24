@@ -290,6 +290,36 @@ def validate_deployment_evidence(deployment: Any, declaration: dict[str, Any], p
         finding(findings, "ERROR", "RELEASE_EVIDENCE_INSUFFICIENT", f"deployable project release_evidence.{field} state is {state!r}; verified or configured+ref is required", project_id)
 
 
+def validate_product_quality(declaration: dict[str, Any], project_path: Path, findings: list[Finding], project_id: str) -> None:
+    """Run the product-code quality checker on a project that opts in.
+
+    The checker is imported in-process. The audit translates its findings into
+    the existing Finding vocabulary: FAIL becomes ERROR, REVIEW_REQUIRED
+    becomes WARNING, PASS produces no finding.
+    """
+    import product_code_quality  # local import to keep workspace_check importable without the checker
+    try:
+        policy = product_code_quality.load_policy(declaration)
+    except product_code_quality.ConfigError as exc:
+        finding(findings, "WARNING", "QUALITY_POLICY", f"product quality policy invalid: {exc}", project_id)
+        return
+    try:
+        report = product_code_quality.evaluate(policy.with_root(project_path))
+    except product_code_quality.ConfigError as exc:
+        finding(findings, "WARNING", "QUALITY_POLICY", f"product quality check cannot run: {exc}", project_id)
+        return
+    for note in report.notes:
+        if report.status == "REVIEW_REQUIRED":
+            finding(findings, "WARNING", "QUALITY_REVIEW_REQUIRED", note, project_id)
+        elif report.status == "FAIL":
+            finding(findings, "ERROR", "QUALITY_FAILURE", note, project_id)
+    for item in report.findings:
+        level = "ERROR" if item.level == "ERROR" or report.status == "FAIL" else "WARNING"
+        code = "QUALITY_TEST_CODE" if item.rule_id == "product-test-code" else "QUALITY_PLACEHOLDER"
+        message = f"{item.file}:{item.line} {item.marker}".strip()
+        finding(findings, level, code, message, project_id)
+
+
 def validate_change_names(project_path: Path, findings: list[Finding], project_id: str) -> None:
     changes = project_path / "openspec" / "changes"
     if not changes.is_dir():
@@ -357,6 +387,8 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
         validate_release_evidence(release_evidence, project_path, findings, project_id)
     if isinstance(deployment, dict) and deployment.get("deployable"):
         validate_deployment_evidence(deployment, declaration, project_path, findings, project_id)
+    if isinstance(declaration.get("quality"), dict):
+        validate_product_quality(declaration, project_path, findings, project_id)
 
 
 def scan_for_secrets(value: Any, findings: list[Finding], location: str = "registry") -> None:

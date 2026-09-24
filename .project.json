@@ -45,5 +45,16 @@
     "provenance": {"state": "unverified"},
     "checks": {"state": "configured", "value": ["python3 -m unittest discover -s tests -v", "python3 scripts/workspace_check.py --self-check"]},
     "publication": {"state": "unverified"}
+  },
+  "quality": {
+    "product_roots": ["scripts"],
+    "languages": ["python"],
+    "exclude": [
+      "scripts/workspace-check",
+      "scripts/__pycache__",
+      "scripts/product_code_quality.py",
+      "tests"
+    ],
+    "placeholder_threshold": 0
   }
 }

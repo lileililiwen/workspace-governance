@@ -1,0 +1,16 @@
+version: 1
+runtime: driftwatchdog
+profile: governance
+rule_pack: workspace-governance@1
+checks:
+  repository: true
+  build: false
+  tests: true
+  security: true
+  product_quality: true
+blocking:
+  - FAIL
+  - REVIEW_REQUIRED
+notes:
+  - The product_quality check runs `python3 scripts/product_code_quality.py .` from this repository root.
+  - Driftwatchdog Gate bindings are not yet active for this bootstrap; the declaration does not constitute a Gate run.

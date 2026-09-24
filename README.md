@@ -34,6 +34,19 @@ Both blocks are additive. Existing declarations without them remain valid;
 the audit only surfaces findings for projects that opt in. The new fields do
 not, and never will, promote a project to deployable on their own.
 
+## Product-code quality gate
+
+Projects may opt in to the product-code quality gate by adding a `quality`
+block to `.project.json` and binding `python3 scripts/product_code_quality.py
+<dir>` in their `.ai-gate/gate.yaml`. The gate detects two failure modes
+the structural audit cannot: test code in product scope (including lexical
+Rust `#[cfg(test)]` containment) and placeholder debt across product files
+(TODO, FIXME, XXX, HACK, placeholder, stub, unimplemented!, todo!). The
+checker is fail-closed: missing or invalid policy, unsupported language,
+traversal in exclusions, or an unreadable product file is REVIEW_REQUIRED,
+never a guessed pass. See `docs/product-code-quality.md` for the full
+contract, JSON schema, and per-language rules.
+
 ## Mandatory command
 
 Run from this repository. The registry never stores a machine-specific root;
@@ -44,6 +57,7 @@ only at invocation time:
 python3 scripts/workspace_check.py --self-check
 python3 scripts/workspace_check.py --root .. --audit --json
 python3 scripts/auto_gate.py --root .. --report auto-gate-report.json
+python3 scripts/product_code_quality.py <project_dir> --json
 python3 -m unittest discover -s tests -v
 ```
 
