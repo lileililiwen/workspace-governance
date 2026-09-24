@@ -1,73 +1,102 @@
 # Workspace Governance Handoff
 
-current_spec: deployable-batch-onboarding
+current_spec: forge-governance-adapter
 
 ## Current state
 
-The governance repository now owns a portable, fail-closed **product-code
-quality gate** at `scripts/product_code_quality.py`. The gate detects two
-failure modes the structural audit cannot: test code leaking into product
-source (including lexical Rust `#[cfg(test)]` containment) and placeholder
-debt across product files (TODO, FIXME, XXX, HACK, placeholder, stub,
-unimplemented!, todo!). The checker has three outcomes (`PASS`, `FAIL`,
-`REVIEW_REQUIRED`) and three exit codes (0/1/2); a missing or invalid
-`quality` block, an unsupported language, an exclusion that escapes the
-project root, or an unreadable product file is `REVIEW_REQUIRED`, never a
-guessed pass. The audit translates `FAIL` to `ERROR` and `REVIEW_REQUIRED`
-to `WARNING` so the existing finding vocabulary is unchanged.
+The governance repository now owns a fail-closed **deployment promotion
+mechanism** at `scripts/promote_project.py`. A project becomes
+`deployable: true` only through a recorded transaction: the script runs
+the per-project audit, verifies a compose file, requires an explicit
+`--evidence-ref`, mutates the `deployment.*` block in the project's
+`.project.json`, and appends a tamper-evident entry to
+`deployment/promotions.json`. The audit gains two new rules:
+`DEPLOYMENT_PROMOTION` (ERROR) refuses a hand-edited `deployable: true`
+without a matching ledger entry, and `DEPLOYMENT_PROMOTION_STALE`
+(WARNING) surfaces a recorded revision that differs from the project's
+current `HEAD` (triage information, never a silent block). A SHA-256
+sidecar (`deployment/promotions.sha256`) records the entries hash; any
+divergence raises `PROMOTIONS_LEDGER_TAMPERED` (ERROR) on the next read.
 
-The change is documented at `docs/product-code-quality.md` and archived in
-`openspec/changes/archive/2026-09-24-product-code-quality-gates/`. The
-canonical spec lives at `openspec/specs/product-code-quality-boundary/spec.md`.
-The workspace-governance repository binds the checker to its own `scripts/`
-product root as the canonical example.
+The change is documented at `docs/deployment-promotion.md` and archived
+in `openspec/changes/archive/2026-09-24-deployable-batch-onboarding/`.
+The canonical spec lives at
+`openspec/specs/deployable-batch-onboarding/spec.md`.
+
+The pilot batch is on the record. Seven second-batch products
+(`alethefy`, `crossify`, `cvunify`, `hermexa`, `hypora`, `lexora`,
+`openaccounting`) are promoted with `actor:
+workspace-governance/batch` and `evidence_ref: local:HEAD:<sha>`; their
+`.project.json` files now declare `deployable: true` and a `configured`
+`release_evidence` block pointing at pilot-context placeholder artefacts
+that name the source revision at promotion and the project's
+verification command. `deployment/projects.json` is regenerated with
+seven eligible projects. The pre-existing `mewo` self-declared
+`deployable: true` is reverted to `false` (in the mewo repository, not
+in this commit) to clear the `DEPLOYMENT_PROMOTION`, `DEPLOYMENT_JOB`,
+and `RELEASE_EVIDENCE_REQUIRED` findings; mewo is not in the registry,
+so the new audit rule did not apply to it.
 
 ## Evidence
 
-- `python3 -m unittest discover -s tests -v` — 50 tests, 0 failures (32 new
-  product-quality scenarios + 18 existing).
-- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
-- `python3 scripts/jenkins_manifest.py --check` — 0 errors, 0 deployable entries.
-- `python3 scripts/auto_gate.py --self-check` — PASS.
+- `python3 -m unittest discover -s tests` — 69 tests, 0 failures
+  (19 new promotion scenarios + 50 existing).
+- `python3 scripts/workspace_check.py --self-check` — 0 errors,
+  0 warnings.
+- `python3 scripts/jenkins_manifest.py --check --root /home/paul/code`
+  — 7 projects, 0 errors.
 - `node scripts/check-openspec-change-names.mjs` — valid.
-- `openspec validate --all --strict --no-interactive` — 4 passed, 0 failed.
-- `git diff --check` — clean; no secrets, host paths, or runtime credentials
-  added.
-- Commit `8ef7f5b` (the implementation + tests + archive commit) brings in the
-  checker, the schema, the audit integration, the docs, the self-binding, the
-  init template update, and the canonical spec.
+- `openspec validate --all --strict --no-interactive` — 4 passed,
+  0 failed (3 specs + 1 active change).
+- `git diff --check` — clean; no secrets, host paths, or runtime
+  credentials added.
+- Commit `6c5aac4` (the implementation + tests + archive commit) brings
+  in the promote script, the ledger validator and sidecar, the
+  `DEPLOYMENT_PROMOTION` / `DEPLOYMENT_PROMOTION_STALE` audit rules, the
+  pilot batch promotions, the regenerated `deployment/projects.json`,
+  the new `docs/deployment-promotion.md`, and the archive/spec for the
+  OpenSpec change.
 
 ## Portfolio impact observed
 
-The new rule is opt-in: projects that omit the `quality` block are untouched.
-The previous HANDOFF's pre-existing `mewo` `RELEASE_EVIDENCE_REQUIRED` finding
-remains outstanding and is the next-action candidate for the upcoming
-`deployable-batch-onboarding` change, which adds the promotion ledger and the
-checker rule that prevents `deployable: true` from being hand-edited into
-existence.
+The promoted projects audit with one `DEPLOYMENT_PROMOTION_STALE`
+warning each: the recorded revision in the ledger is the pre-promote
+SHA, and the promote commit in each pilot project moved the `HEAD`
+forward. The warning is honest triage information — promotion is still
+a valid human decision, and the next `promote_project.py` invocation
+with the new `HEAD` will append a renewal entry. The
+`mewo` `DISCOVERED_UNREGISTERED` finding remains; mewo is not in the
+registry and a future change must decide whether to register it with a
+complete `release_evidence` block or leave it unadopted. Other
+pre-existing audit errors on `campusMesh`, `rust-platform-libs`,
+`vowra`, `crossalheart`, `dharmatlas`, `hookit`, and
+`lileililiwen-site` are unchanged by this change.
 
 ## Next action
 
-1. Pick up `deployable-batch-onboarding` (the next active OpenSpec change with
-   0/18 tasks). Its proposal adds `scripts/promote_project.py`, an
-   `deployment/promotions.json` ledger, and a `DEPLOYMENT_PROMOTION` checker
-   rule.
-2. While implementing, decide whether the `mewo` self-declared
-   `deployable: true` should be reverted to `false` (it is not in the
-   registry and has no `jenkins_job`) or whether `mewo` should be registered
-   with a complete `release_evidence` block. Either resolution clears the
-   pre-existing `RELEASE_EVIDENCE_REQUIRED` finding.
-3. After archive, the only remaining proposed change is `forge-governance-adapter`
-   (a small read-only shim translating audit results into Forge's
-   governance-provider contract).
+1. Pick up `forge-governance-adapter` (the next active OpenSpec change
+   with 0/16 tasks). Its proposal adds a small read-only shim that
+   translates audit results into Forge's governance-provider contract.
+2. Re-promote each pilot project at its current `HEAD` to clear the
+   per-project `DEPLOYMENT_PROMOTION_STALE` warnings (optional; the
+   warnings are triage, not blocking).
+3. Replace the pilot-context `release_evidence` placeholder files with
+   real release artefacts as each project's release pipeline produces
+   them.
+4. Decide whether to register `mewo` with a complete `release_evidence`
+   block or leave it unadopted; the revert in the mewo repository
+   removes the hand-claim but the project remains
+   `DISCOVERED_UNREGISTERED` until the registry is updated.
 
 ## Evidence boundary
 
 This repository can prove registry/schema/checker behavior, capability
 declaration shape, release-evidence shape, the deployable+release-evidence
-gate, and the new product-code quality rule. It cannot prove that every
-registered project builds, passes tests, deploys, or is runtime-healthy.
-Those claims require project-specific evidence.
+gate, the product-code quality rule, and the deployment promotion
+mechanism. It cannot prove that the seven promoted projects actually
+build, pass tests, deploy, or are runtime-healthy; those claims require
+the promoted projects' own verification commands and jenkins-local
+runtime observation.
 
 ## OpenSpec workflow
 
