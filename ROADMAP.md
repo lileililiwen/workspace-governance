@@ -31,6 +31,10 @@
 - Make `jenkins-local` consume `deployment/projects.json`.
 - Require governance PASS before project job generation or deployment.
 - Add per-project rollback and release evidence links.
+- Record every `deployable: true` declaration in `deployment/promotions.json`
+  via `scripts/promote_project.py`; the audit refuses hand-edited flags
+  (`DEPLOYMENT_PROMOTION`) and surfaces stale revisions as a triage warning
+  (`DEPLOYMENT_PROMOTION_STALE`).
 
 ## Explicit non-goals
 

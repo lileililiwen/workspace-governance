@@ -5,6 +5,7 @@
   "properties": {
     "schema_version": {"const": 1},
     "generated_by": {"type": "string"},
+    "generated_at": {"type": "string"},
     "projects": {"type": "array"}
   }
 }

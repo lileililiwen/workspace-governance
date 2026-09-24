@@ -1,6 +1,56 @@
 {
   "schema_version": 1,
   "generated_by": "workspace-governance/scripts/jenkins_manifest.py",
-  "generated_at": "2026-09-22T04:40:16.879492+00:00",
-  "projects": []
+  "generated_at": "2026-09-24T07:52:52.545450+00:00",
+  "projects": [
+    {
+      "id": "alethefy",
+      "path": "alethefy",
+      "jenkins_job": "alethefy",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "bash scripts/container-smoke-test.sh"
+    },
+    {
+      "id": "crossify",
+      "path": "crossify",
+      "jenkins_job": "crossify",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "./scripts/verify.sh"
+    },
+    {
+      "id": "cvunify",
+      "path": "cvunify",
+      "jenkins_job": "cvunify",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "dotnet test"
+    },
+    {
+      "id": "hermexa",
+      "path": "hermexa",
+      "jenkins_job": "hermexa",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "cargo test --workspace"
+    },
+    {
+      "id": "hypora",
+      "path": "hypora",
+      "jenkins_job": "hypora",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "dotnet test Hypora.sln"
+    },
+    {
+      "id": "lexora",
+      "path": "lexora",
+      "jenkins_job": "lexora",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "dotnet test"
+    },
+    {
+      "id": "openaccounting",
+      "path": "openaccounting",
+      "jenkins_job": "openaccounting",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "cargo test --features test-support"
+    }
+  ]
 }

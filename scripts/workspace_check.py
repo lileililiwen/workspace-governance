@@ -290,6 +290,76 @@ def validate_deployment_evidence(deployment: Any, declaration: dict[str, Any], p
         finding(findings, "ERROR", "RELEASE_EVIDENCE_INSUFFICIENT", f"deployable project release_evidence.{field} state is {state!r}; verified or configured+ref is required", project_id)
 
 
+def load_promotion_ledger(governance_root: Path, findings: list[Finding]) -> dict[str, dict[str, Any]]:
+    """Load the deployment-promo ledger if present, with tamper detection.
+
+    Returns a map of project_id -> latest promote entry. Missing ledger
+    returns an empty map (no error). Tampered entries produce a single
+    `PROMOTIONS_LEDGER_TAMPERED` ERROR on the findings list; the function
+    still returns the on-disk entries so the audit can keep reporting.
+    """
+    try:
+        import promote_project  # local import to keep this module standalone
+    except ImportError:
+        return {}
+    path = promote_project.ledger_path(governance_root)
+    sidecar = promote_project.ledger_sidecar_path(governance_root)
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        entries = payload.get("entries", [])
+    except (OSError, json.JSONDecodeError) as exc:
+        finding(findings, "ERROR", "PROMOTIONS_LEDGER_TAMPERED", f"cannot parse ledger: {exc}")
+        return {}
+    if sidecar.is_file():
+        try:
+            expected = sidecar.read_text(encoding="utf-8").strip()
+            actual = promote_project.compute_ledger_hash(entries)
+        except OSError:
+            expected = ""
+            actual = ""
+        if expected and expected != actual:
+            finding(findings, "ERROR", "PROMOTIONS_LEDGER_TAMPERED", f"ledger entries do not match recorded sidecar at {sidecar}")
+    latest: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        project_id = entry.get("project_id")
+        if not isinstance(project_id, str):
+            continue
+        if entry.get("kind") == "promote":
+            latest[project_id] = entry
+    return latest
+
+
+def validate_deployment_promotion(deployment: Any, project_path: Path, project_id: str, governance_root: Path | None, findings: list[Finding]) -> None:
+    """For projects with `deployable: true`, the audit must find a matching
+    promotion ledger entry; a stale entry is a WARNING so the project still
+    ships while the operator is asked to re-run promotion.
+    """
+    if not isinstance(deployment, dict) or not deployment.get("deployable"):
+        return
+    if governance_root is None:
+        return
+    ledger = load_promotion_ledger(governance_root, findings)
+    entry = ledger.get(project_id)
+    if entry is None:
+        finding(findings, "ERROR", "DEPLOYMENT_PROMOTION", "deployable project has no matching entry in deployment/promotions.json", project_id)
+        return
+    recorded_revision = entry.get("revision")
+    head_file = project_path / ".git" / "HEAD"
+    if not head_file.is_file():
+        return
+    head = head_file.read_text(encoding="utf-8").strip()
+    if head.startswith("ref:"):
+        ref_name = head.split(":", 1)[1].strip()
+        ref_path = project_path / ".git" / ref_name
+        head = ref_path.read_text(encoding="utf-8").strip() if ref_path.is_file() else head
+    if isinstance(recorded_revision, str) and head and recorded_revision != head and recorded_revision != "unknown":
+        finding(findings, "WARNING", "DEPLOYMENT_PROMOTION_STALE", f"promoted revision {recorded_revision!r} differs from project HEAD {head!r}", project_id)
+
+
 def validate_product_quality(declaration: dict[str, Any], project_path: Path, findings: list[Finding], project_id: str) -> None:
     """Run the product-code quality checker on a project that opts in.
 
@@ -387,6 +457,7 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
         validate_release_evidence(release_evidence, project_path, findings, project_id)
     if isinstance(deployment, dict) and deployment.get("deployable"):
         validate_deployment_evidence(deployment, declaration, project_path, findings, project_id)
+        validate_deployment_promotion(deployment, project_path, project_id, governance_root, findings)
     if isinstance(declaration.get("quality"), dict):
         validate_product_quality(declaration, project_path, findings, project_id)
 

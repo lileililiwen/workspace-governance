@@ -13,9 +13,10 @@ These projects now have `.project.json`, a selected governance profile, and a re
 7. `jenkins-local` — deployment execution layer.
 8. `alltools-platform` — application-specific platform.
 
-## Second batch adopted
+## Second batch adopted and promoted
 
-The next deployment-capable batch now has declarations and profile checks:
+The next deployment-capable batch now has declarations, profile checks,
+and a recorded promotion in `deployment/promotions.json`:
 
 - `alethefy`
 - `crossify`
@@ -25,7 +26,10 @@ The next deployment-capable batch now has declarations and profile checks:
 - `lexora`
 - `openaccounting`
 
-These projects are structurally adopted, but remain non-deployable until their declared verification commands and release evidence are run and reviewed.
+Each project also carries a `release_evidence` block in `configured`
+state pointing at pilot-context placeholder artefacts (the promotion
+ledger records the actual decision; artefacts will be replaced when the
+project's release pipeline produces them).
 
 ## Third batch adopted
 

@@ -82,6 +82,29 @@ python3 scripts/workspace_check.py --root .. --project my-project
 The initializer is non-destructive and writes only missing governance declarations and rules.
 It never copies gate runtimes, installers, credentials, or universal rule implementations into a product repository.
 
+## Deployment promotion
+
+A project becomes `deployable: true` only through a recorded promotion
+transaction. The script `scripts/promote_project.py` runs the project
+audit, verifies the compose file, requires an explicit evidence reference,
+mutates the `deployment.*` block in `.project.json`, and appends a
+tamper-evident entry to `deployment/promotions.json`. Hand-edits that set
+`deployable: true` without a matching ledger entry fail the audit with
+`DEPLOYMENT_PROMOTION`; a stale revision (the project's HEAD moved after
+promotion) raises the triage-only `DEPLOYMENT_PROMOTION_STALE` warning.
+
+```bash
+python3 scripts/promote_project.py <project-id> \
+  --evidence-ref "<revision-or-build pointer>" \
+  [--compose-file <name>] [--jenkins-job <name>] [--actor <name>] [--force]
+
+python3 scripts/promote_project.py <project-id> --demote
+```
+
+The script never runs a project verification itself; it records the
+evidence reference the operator supplies, so the audit boundary stays
+with the project's own verification pipeline.
+
 ## Jenkins
 
 `deployment/projects.json` is the safe handoff to `jenkins-local`. Generate it only after the governance check:
@@ -90,8 +113,11 @@ It never copies gate runtimes, installers, credentials, or universal rule implem
 python3 scripts/jenkins_manifest.py --check
 ```
 
-Jenkins still owns synchronization, secrets, Compose, database provisioning, job registration, and deployment.
-The governance project only says which projects are eligible and which verification command must pass.
+The manifest enumerates only projects with a current `deployable: true`
+declaration backed by a promotion ledger entry. Jenkins still owns
+synchronization, secrets, Compose, database provisioning, job registration,
+and deployment. The governance project only says which projects are
+eligible and which verification command must pass.
 
 ## Status boundary
 
