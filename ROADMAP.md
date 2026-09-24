@@ -25,6 +25,10 @@
 - Adopt the `capabilities` and `release_evidence` blocks (see
   `docs/capabilities.md`) so Forge observations can carry the same vocabulary
   as the workspace audit.
+- Ship the `forge-governance-adapter` shim (see
+  `openspec/specs/forge-governance-adapter/spec.md`) so a Forge control-plane
+  can translate the per-project audit into a v0.1.0 governance observation
+  without this repository gaining any UI or export surface of its own.
 
 ## Phase 4 — Deployment coordination
 

@@ -61,6 +61,35 @@ python3 scripts/product_code_quality.py <project_dir> --json
 python3 -m unittest discover -s tests -v
 ```
 
+### Optional: Forge governance-provider adapter
+
+This repository ships a read-only shim that exposes the per-project audit
+through Forge's published v0.1.0 governance-provider contract. The
+adapter is not a CI surface — it only answers a single `check` request
+on stdin and prints one observation document on stdout:
+
+```bash
+echo '{"contract":"0.1.0","action":"check","project_id":"<id>","project_path":"<path>"}' \
+  | WORKSPACE_ROOT=<workspace-root> \
+    python3 scripts/forge_governance_adapter.py
+```
+
+The exit code is `0` for every answerable evaluation (including `fail`,
+`blocked`, and `unknown`), `2` for a malformed request, and `3` for an
+audit crash (which Forge classifies as `unavailable`). The adapter never
+writes, registers, adopts, or mutates anything in this repository, and
+redacts secret-shaped substrings from every evidence line. Point Forge
+at the script with:
+
+```text
+forge governance use workspace-governance <workspace-root> \
+  --adapter <repo>/scripts/forge_governance_adapter.py
+```
+
+See `openspec/specs/forge-governance-adapter/spec.md` for the contract
+shape and `tests/test_forge_governance_adapter.py` for the mapping
+matrix.
+
 With `explicit-plus-immediate-directories`, immediate child folders containing
 common project markers are discovered automatically. New folders are reported
 as `DISCOVERED_UNREGISTERED`; they do not require a registry edit and are not
