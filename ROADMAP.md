@@ -1,6 +1,13 @@
 # Workspace Governance Roadmap
 
-## Phase 1 — Registry and mandatory checks — current
+> **Status (as of 2026-09-24):** Phases 1–4 are all shipped. The current
+> open items are the post-promotion follow-ups (re-promote pilots at
+> their current `HEAD`, replace pilot-context `release_evidence`
+> placeholders, decide the registry status of `mewo`) and the authoring
+> of the next OpenSpec change. The HANDOFF.md `current_spec` line is
+> `none` until the next change is proposed.
+
+## Phase 1 — Registry and mandatory checks
 
 - Register the existing project portfolio.
 - Define project metadata and governance profiles.

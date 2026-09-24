@@ -81,4 +81,13 @@ Learning, scratch, archived, and deployment-support directories should use the `
 
 ## Deployment readiness
 
-No project is emitted into `deployment/projects.json` until its declaration sets `deployment.deployable: true`, names an existing Compose file and Jenkins job, and passes the project checker. The initial generated manifest is therefore empty by design.
+A project is emitted into `deployment/projects.json` only when its
+declaration sets `deployment.deployable: true`, names an existing
+Compose file and Jenkins job, and passes the project checker (which
+includes a matching `promote` entry in `deployment/promotions.json`).
+Promotions are recorded exclusively through
+`scripts/promote_project.py <id> --evidence-ref "<pointer>"`, and the
+current manifest carries the seven pilot projects promoted with
+`actor: workspace-governance/batch`; the next batch of promotions will
+append new entries without overwriting prior ones. See
+`docs/deployment-promotion.md` for the full transaction contract.

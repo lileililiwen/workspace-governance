@@ -8,7 +8,14 @@ A governance change is complete only when:
 - missing or invalid projects fail closed;
 - `python3 -m unittest discover -s tests -v` passes;
 - `python3 scripts/workspace_check.py --self-check` passes;
+- `python3 scripts/auto_gate.py --self-check --no-deployment` passes
+  (the unattended entry point — also runs the Jenkins manifest when a
+  workspace root is supplied);
 - deployment-related changes pass `python3 scripts/jenkins_manifest.py --check`;
+- `node scripts/check-openspec-change-names.mjs` passes (the active
+  OpenSpec change name matches `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`);
+- `openspec validate --all --strict --no-interactive` passes (every
+  canonical spec and every active change validates);
 - `git diff --check` passes;
 - no secrets appear in tracked files;
 - `HANDOFF.md` records exact evidence and unresolved adoption gaps.
