@@ -32,20 +32,18 @@ The read-only **Forge governance adapter**
 
 ## Authored, not yet implemented
 
-Two packages are fully authored as OpenSpec changes and are ready to implement
-in a fresh conversation:
+Six packages are fully authored as OpenSpec changes and are ready to implement
+in a fresh conversation. Each lives in the repository that owns the work:
 
-- `openspec/changes/portfolio-vocabulary-normalization/` (package 3) — canonical
-  `kind`/`profile` sets plus a single `vocabulary.json` sourcing the placeholder
-  and secret word lists.
-- `openspec/changes/governance-front-door/` (package 8) — one auto-triggering
-  skill that routes to the governance references.
+- `openspec/changes/portfolio-vocabulary-normalization/` (package 3, here).
+- `openspec/changes/governance-front-door/` (package 8, here).
+- `driftwatchdog/openspec/changes/gate-evidence-export/` (package 4).
+- `dotnet-platform-libs/openspec/changes/platform-consumer-bootstrap/` (package 5).
+- `rust-platform-libs/openspec/changes/rust-platform-consumer-baseline/` (package 6).
+- `platform-contracts/openspec/changes/contracts-consumer-parity/` (package 7).
 
-Four cross-repo packages are specified implementation-ready in
-`docs/package-backlog.md`: 4 `gate-run-evidence` (`driftwatchdog`), 5
-`platform-adoption-dotnet`, 6 `platform-adoption-rust`, 7
-`contracts-single-source`. Each is authored and implemented in its own
-repository, never from here.
+`docs/package-backlog.md` is the index and the coordination rules; the detail
+lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
 
