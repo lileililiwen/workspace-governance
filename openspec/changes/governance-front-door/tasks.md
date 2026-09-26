@@ -1,5 +1,27 @@
 # Tasks: One front-door skill that routes to the governance references
 
+## 0. Caveats and confirmations
+
+- [ ] **Package 3 must land first.** The vocabulary reference links
+  `vocabulary.json`, which package 3 (`portfolio-vocabulary-normalization`)
+  creates. Implement 3 before 8, or the reference check fails on a missing path.
+- [ ] **Build the reference check before the references.** The check is what
+  proves the routes; add it early so each reference is validated as written.
+- [ ] **Links, never restatements.** A reference that copies a requirement out of
+  a canonical spec creates a second source of truth and will drift; link the spec
+  instead.
+- [ ] **One door only.** Do not add a second skill per concern; the routing
+  table's value is that it is the single entry point.
+- [ ] **No destructive instructions.** The skill must not instruct pushing,
+  deploying or promoting; those stay behind the existing explicit-approval
+  boundary.
+- [ ] **Installation is documented, not automated.** The skill lives in this
+  repository, versioned with the scripts it cites; `README.md` documents the
+  install path.
+- [ ] **Stage only this change directory.** The pre-existing uncommitted
+  `.project.json` and untracked `MATURITY_PROGRESS_SUMMARY.md` must not be swept
+  into the commits.
+
 ## 1. BFS — Baseline and impact coverage
 
 - [ ] Inventory every governance entry point (scripts, specs, docs) and the

@@ -32,10 +32,13 @@ the *export*, not the guard).
    package; implement one change at a time.
 3. Read the change's `proposal.md`, `design.md`, `tasks.md` and
    `specs/<capability>/spec.md`.
-4. Follow that repository's `AGENTS.md`: BFS → DFS → BFS, two commits
+4. **Read `## 0. Caveats and confirmations` in `tasks.md` first.** Every change
+   records there the non-obvious intent and the decisions a reviewer must confirm
+   before implementing; the task groups below it assume those caveats are read.
+5. Follow that repository's `AGENTS.md`: BFS → DFS → BFS, two commits
    (implementation + archive, then a `HANDOFF.md`-only commit), strict OpenSpec
    validation, no push.
-5. Never implement a cross-repo package from another repository.
+6. Never implement a cross-repo package from another repository.
 
 ## Dependency order
 

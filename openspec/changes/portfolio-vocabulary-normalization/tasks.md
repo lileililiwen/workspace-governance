@@ -1,5 +1,32 @@
 # Tasks: Normalize the portfolio vocabulary
 
+## 0. Caveats and confirmations
+
+- [ ] **Confirm the canonical vocabulary before enforcing it.** The 15-profile and
+  12-kind sets in the design are a proposal derived from the values observed on
+  2026-09-26, not a measurement. Enforcement turns non-canonical values into
+  ERROR/WARNING, so review and agree the sets first.
+- [ ] **Extend the remap tables, do not special-case.** The table lists only the
+  values seen at authoring time; scan every declaration for any other
+  non-canonical value and add it to the table rather than adding a code branch.
+- [ ] **Prove no project changes its required-file outcome.**
+  `profile_requirements` reads the registry profile only, but verify per project
+  that normalizing a declaration `kind`/`profile` changes no required file, CI or
+  OpenSpec outcome.
+- [ ] **The secret list must never narrow.** It must stay a superset of today's
+  `SECRET_WORDS` and of `platform-contracts/schemas/registry.json`'s
+  `secret_field_substrings`; dropping a term silently weakens the audit.
+- [ ] **Reconcile the profile documents.** `profiles/*.json` covers only 6 of the
+  profiles in use; `PROFILE_DOC_UNKNOWN` must not fire for the canonical set, so
+  add or rename documents as part of this change.
+- [ ] **`kind` stays descriptive.** Do not make it drive requirements or
+  deployment; only `profile` does that.
+- [ ] **Do not touch the other copies.** `platform-contracts` and
+  `rust-platform-libs` own their secret lists; reconciliation is package 7's job.
+- [ ] **Stage only this change directory.** This repository has a pre-existing
+  uncommitted `.project.json` edit and an untracked `MATURITY_PROGRESS_SUMMARY.md`;
+  they must not be swept into the change's commits.
+
 ## 1. BFS — Baseline and impact coverage
 
 - [ ] Record the baseline: enumerate every distinct registry `profile` (13) and
