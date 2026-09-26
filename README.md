@@ -47,6 +47,29 @@ traversal in exclusions, or an unreadable product file is REVIEW_REQUIRED,
 never a guessed pass. See `docs/product-code-quality.md` for the full
 contract, JSON schema, and per-language rules.
 
+## Registry and declaration integrity
+
+`projects.json` is the single source of project identity, and the audit fails
+closed on:
+
+- a declaration whose `id` differs from its registry `id` (`DECLARATION_ID`);
+- a declaration missing `schema_version: 1` or the required `verification` and
+  `deployment` blocks (`DECLARATION_SCHEMA`);
+- a real command supplied under a non-schema key (`VERIFICATION_COMMAND`);
+- an adopted registry entry with no `.project.json` (`DECLARATION_MISSING`);
+- a discovered declaration with no registry entry (`DISCOVERED_UNREGISTERED`);
+- two registry entries sharing an `id` (`PROJECT_DUPLICATE`) or a `path`
+  (`PROJECT_PATH_DUPLICATE`).
+
+The canonical `id` is derived from the directory name (`hestiaLab` →
+`hestia-lab`). `init_project.py` refuses an explicit `--id` that conflicts with
+the derived id; a directory name that is not convertible (for example a dotted
+host name) may use an explicitly recorded alias.
+
+`scripts/maturity_audit.py` reports the error and warning counts produced by
+`workspace_check.py`; it never computes a second, independent result, so the
+two views cannot disagree.
+
 ## Mandatory command
 
 Run from this repository. The registry never stores a machine-specific root;
@@ -91,9 +114,12 @@ shape and `tests/test_forge_governance_adapter.py` for the mapping
 matrix.
 
 With `explicit-plus-immediate-directories`, immediate child folders containing
-common project markers are discovered automatically. New folders are reported
-as `DISCOVERED_UNREGISTERED`; they do not require a registry edit and are not
-treated as adopted or deployable until their local metadata and evidence pass.
+common project markers are discovered automatically. The registry's
+`discovery.unregistered_policy` decides the level: this workspace sets `fail`,
+so an unregistered declaration is `DISCOVERED_UNREGISTERED` **ERROR** and must
+be registered (or explicitly classified) before the audit passes. A discovered
+folder is never treated as adopted or deployable until its local metadata and
+evidence pass.
 
 `auto_gate.py` is the unattended entry point. It fails on governance or
 deployment errors, writes a machine-readable report when requested, and is
@@ -104,9 +130,12 @@ before project verification or deployment; no manual audit request is needed.
 
 ```bash
 python3 scripts/init_project.py /path/to/project \
-  --id my-project --profile rust-product --kind product
+  --profile rust-product --kind product
 python3 scripts/workspace_check.py --root .. --project my-project
 ```
+
+`--id` is optional and defaults to the kebab-case directory name; an explicit
+`--id` must match the derived id unless the directory name is not convertible.
 
 The initializer is non-destructive and writes only missing governance declarations and rules.
 It never copies gate runtimes, installers, credentials, or universal rule implementations into a product repository.

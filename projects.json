@@ -3,7 +3,7 @@
   "workspace_root": null,
   "discovery": {
     "mode": "explicit-plus-immediate-directories",
-    "unregistered_policy": "report",
+    "unregistered_policy": "fail",
     "exclude": ["build", "dist", "node_modules", "target", "vendor"]
   },
   "projects": [
@@ -308,8 +308,9 @@
     {
       "id": "lileililiwen-site",
       "path": "lileililiwen.github.io",
-      "profile": "product",
-      "lifecycle": "active"
+      "profile": "deployment",
+      "lifecycle": "active",
+      "adoption": "adopted"
     },
     {
       "id": "linglitch",
@@ -463,6 +464,83 @@
       "path": "ziban",
       "profile": "product",
       "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "campus-mesh",
+      "path": "campusMesh",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "care-bridge",
+      "path": "careBridge",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "citylens",
+      "path": "citylens",
+      "profile": "product",
+      "lifecycle": "planning",
+      "adoption": "adopted"
+    },
+    {
+      "id": "mewo",
+      "path": "mewo",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "open-teacher-kit",
+      "path": "openTeacherKit",
+      "profile": "product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
+      "id": "platform-contracts",
+      "path": "platform-contracts",
+      "profile": "tooling",
+      "lifecycle": "planning",
+      "adoption": "adopted"
+    },
+    {
+      "id": "retake-kit",
+      "path": "retakeKit",
+      "profile": "product",
+      "lifecycle": "planning",
+      "adoption": "adopted"
+    },
+    {
+      "id": "rust-platform-libs",
+      "path": "rust-platform-libs",
+      "profile": "rust-platform",
+      "lifecycle": "planning",
+      "adoption": "adopted"
+    },
+    {
+      "id": "therapist-commons",
+      "path": "therapist-commons",
+      "profile": "product",
+      "lifecycle": "planning",
+      "adoption": "adopted"
+    },
+    {
+      "id": "trail-crew",
+      "path": "trailCrew",
+      "profile": "product",
+      "lifecycle": "planning",
+      "adoption": "adopted"
+    },
+    {
+      "id": "vowra",
+      "path": "vowra",
+      "profile": "product",
+      "lifecycle": "archived",
       "adoption": "adopted"
     }
   ]

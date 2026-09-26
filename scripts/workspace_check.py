@@ -110,6 +110,7 @@ def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: 
         finding(findings, "ERROR", "REGISTRY_PROJECTS", "registry projects must be an array")
         return []
     seen: set[str] = set()
+    seen_paths: set[str] = set()
     for entry in projects:
         if not isinstance(entry, dict):
             finding(findings, "ERROR", "REGISTRY_ENTRY", "each registry project must be an object")
@@ -124,10 +125,14 @@ def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: 
         seen.add(project_id)
         if not isinstance(path_value, str) or Path(path_value).is_absolute() or ".." in Path(path_value).parts:
             finding(findings, "ERROR", "PROJECT_PATH", f"project path must be repository-relative: {path_value!r}", project_id)
-        elif check_paths:
-            project_path = workspace_root / path_value
-            if not project_path.is_dir():
-                finding(findings, "ERROR", "PROJECT_MISSING", f"registered project directory missing: {project_path}", project_id)
+        else:
+            if path_value in seen_paths:
+                finding(findings, "ERROR", "PROJECT_PATH_DUPLICATE", f"duplicate project path: {path_value}", project_id)
+            seen_paths.add(path_value)
+            if check_paths:
+                project_path = workspace_root / path_value
+                if not project_path.is_dir():
+                    finding(findings, "ERROR", "PROJECT_MISSING", f"registered project directory missing: {project_path}", project_id)
         profile = entry.get("profile")
         if not isinstance(profile, str) or not profile:
             finding(findings, "ERROR", "PROFILE_MISSING", "project profile is required", project_id)
@@ -357,7 +362,7 @@ def validate_deployment_promotion(deployment: Any, project_path: Path, project_i
         ref_path = project_path / ".git" / ref_name
         head = ref_path.read_text(encoding="utf-8").strip() if ref_path.is_file() else head
     if isinstance(recorded_revision, str) and head and recorded_revision != head and recorded_revision != "unknown":
-        finding(findings, "WARNING", "DEPLOYMENT_PROMOTION_STALE", f"promoted revision {recorded_revision!r} differs from project HEAD {head!r}", project_id)
+        finding(findings, "WARNING", "DEPLOYMENT_PROMOTION_STALE", f"promoted revision {recorded_revision!r} differs from project HEAD {head!r}; re-promote at HEAD with scripts/promote_project.py {project_id} --evidence-ref <ref>", project_id)
 
 
 def validate_product_quality(declaration: dict[str, Any], project_path: Path, findings: list[Finding], project_id: str) -> None:

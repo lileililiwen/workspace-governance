@@ -91,3 +91,18 @@ current manifest carries the seven pilot projects promoted with
 `actor: workspace-governance/batch`; the next batch of promotions will
 append new entries without overwriting prior ones. See
 `docs/deployment-promotion.md` for the full transaction contract.
+
+## Stale promotion triage (2026-09-26)
+
+The seven promoted pilots (`alethefy`, `crossify`, `cvunify`, `hermexa`,
+`hypora`, `lexora`, `openaccounting`) now report
+`DEPLOYMENT_PROMOTION_STALE` because their recorded promotion revision
+predates the current `HEAD`. Re-promotion was deliberately **not** performed:
+recording a deployable decision at the current revision without a new release
+would manufacture a promotion record rather than produce evidence. The
+warnings are triage-only and name the remedy. Re-promote each project once its
+release pipeline produces real artifacts:
+
+```bash
+python3 scripts/promote_project.py <id> --evidence-ref "<artefact pointer>"
+```

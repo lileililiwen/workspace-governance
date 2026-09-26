@@ -1,11 +1,13 @@
 # Workspace Governance Roadmap
 
-> **Status (as of 2026-09-24):** Phases 1–4 are all shipped. The current
-> open items are the post-promotion follow-ups (re-promote pilots at
-> their current `HEAD`, replace pilot-context `release_evidence`
-> placeholders, decide the registry status of `mewo`) and the authoring
-> of the next OpenSpec change. The HANDOFF.md `current_spec` line is
-> `none` until the next change is proposed.
+> **Status (as of 2026-09-26):** Phases 1–4 are all shipped. The active change
+> is `registry-and-declaration-integrity`, which registers the discovered
+> declarations, corrects declaration identity/format drift, and makes
+> `maturity_audit.py` report the authoritative audit counts. The remaining
+> open items are the post-promotion follow-ups (re-promote pilots at their
+> current `HEAD`, replace pilot-context `release_evidence` placeholders,
+> decide the registry status of `mewo`) and the next governance package after
+> this one.
 
 ## Phase 1 — Registry and mandatory checks
 
