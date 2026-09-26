@@ -1,13 +1,15 @@
 # Workspace Governance Roadmap
 
-> **Status (as of 2026-09-26):** Phases 1–4 are all shipped. The active change
-> is `registry-and-declaration-integrity`, which registers the discovered
-> declarations, corrects declaration identity/format drift, and makes
-> `maturity_audit.py` report the authoritative audit counts. The remaining
-> open items are the post-promotion follow-ups (re-promote pilots at their
-> current `HEAD`, replace pilot-context `release_evidence` placeholders,
-> decide the registry status of `mewo`) and the next governance package after
-> this one.
+> **Status (as of 2026-09-26):** Phases 1–4 are shipped and the workspace audit
+> is at 0 errors. Packages 1 (`registry-and-declaration-integrity`) and 2
+> (`shared-rules-single-source`) are archived. Package 3
+> (`portfolio-vocabulary-normalization`) and package 8 (`governance-front-door`)
+> are authored and ready to implement. Packages 4–7 are specified
+> implementation-ready in `docs/package-backlog.md` and are owned by
+> `driftwatchdog`, `dotnet-platform-libs`, `rust-platform-libs` and
+> `platform-contracts` respectively. Remaining follow-ups: re-promote the pilot
+> projects at their current `HEAD`, replace the pilot-context `release_evidence`
+> placeholders, and replace the 11 scaffold `HANDOFF.md` bodies.
 
 ## Phase 1 — Registry and mandatory checks
 

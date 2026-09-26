@@ -30,6 +30,23 @@ The read-only **Forge governance adapter**
 (`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
 
+## Authored, not yet implemented
+
+Two packages are fully authored as OpenSpec changes and are ready to implement
+in a fresh conversation:
+
+- `openspec/changes/portfolio-vocabulary-normalization/` (package 3) — canonical
+  `kind`/`profile` sets plus a single `vocabulary.json` sourcing the placeholder
+  and secret word lists.
+- `openspec/changes/governance-front-door/` (package 8) — one auto-triggering
+  skill that routes to the governance references.
+
+Four cross-repo packages are specified implementation-ready in
+`docs/package-backlog.md`: 4 `gate-run-evidence` (`driftwatchdog`), 5
+`platform-adoption-dotnet`, 6 `platform-adoption-rust`, 7
+`contracts-single-source`. Each is authored and implemented in its own
+repository, never from here.
+
 ## Evidence
 
 - `python3 -m unittest discover -s tests` — 122 tests, 0 failures.
@@ -74,20 +91,17 @@ by these two changes (the 10 declarations plus `crossalheart`'s rules and
 
 ## Next action
 
-1. Author and implement package `portfolio-vocabulary-normalization`: collapse
-   the 22 `kind` values and 17 `profile` values to a canonical set, and
-   single-source the duplicated placeholder/secret/capability vocabulary
-   (`workspace-governance/scripts/product_code_quality.py` vs
-   `driftwatchdog/src/gate/concerns.rs` vs `platform-contracts/schemas/registry.json`).
-   It depends on the two shipped packages.
-2. Then package `gate-run-evidence` (real driftwatchdog runs feeding
-   `release_evidence`).
-3. Replace the 11 scaffold `HANDOFF.md` bodies as each product's own state is
+1. Implement package 3 (`portfolio-vocabulary-normalization`) from its authored
+   change, then archive it with the two required commits.
+2. Implement package 8 (`governance-front-door`) the same way.
+3. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
+   each is a separate conversation and a separate repository.
+4. Replace the 11 scaffold `HANDOFF.md` bodies as each product's own state is
    recorded (product-owned work).
-4. Re-promote each pilot project at its current `HEAD` once its release pipeline
+5. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-5. Commit the sibling declaration/rules edits in their own repositories when
+6. Commit the sibling declaration/rules edits in their own repositories when
    those repositories' pending work is ready.
 
 ## Evidence boundary
