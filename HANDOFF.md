@@ -4,85 +4,79 @@ current_spec: none
 
 ## Current state
 
-The governance repository now ships a read-only **Forge governance
-adapter** at `scripts/forge_governance_adapter.py`. The script reads
-one AdapterRequest on stdin (`contract: "0.1.0"`, `action: "check"`,
-`project_id`, `project_path`), runs the existing in-process audit for
-the named project, and writes exactly one observation document to
-stdout. Status mapping: any audit ERROR attributed to the project →
-`fail`; adoption gap or `DISCOVERED_UNREGISTERED` → `blocked`; clean
-adopted → `pass`; project unknown to the registry and not on disk →
-`unknown` (still exit 0). The adapter never registers, adopts,
-mutates, or writes to this repository, and redacts secret-shaped
-substrings (the checker's `SECRET_WORDS` rule plus any
-immediately-associated value) from every evidence line.
+The `registry-and-declaration-integrity` change is archived at
+`openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/` and
+its canonical spec lives at `openspec/specs/registry-integrity/spec.md`. It
+registered the 11 discovered declarations, corrected six declaration
+identity/format defects, created four missing declarations, added duplicate
+id/path guards, derived and enforced the canonical project id in
+`init_project.py`, and made `maturity_audit.py` report the authoritative
+`workspace_check` counts. Unregistered discovery is now an ERROR because the
+registry sets `discovery.unregistered_policy: "fail"`.
 
-The change is archived in
-`openspec/changes/archive/2026-09-24-forge-governance-adapter/` and the
-canonical spec lives at
-`openspec/specs/forge-governance-adapter/spec.md`. The README adds an
-optional-consumers section with the exact `forge governance use
-workspace-governance <root> --adapter ...` invocation. ROADMAP Phase 3
-records the shipped adapter as part of the Forge control-plane
-integration.
+The previously shipped read-only **Forge governance adapter**
+(`scripts/forge_governance_adapter.py`) is unchanged: it answers one `check`
+request on stdin (`contract: "0.1.0"`), maps audit ERROR → `fail`, adoption gap
+→ `blocked`, clean adopted → `pass`, absent project → `unknown`, and redacts
+secret-shaped substrings from every evidence line. Its canonical spec is
+`openspec/specs/forge-governance-adapter/spec.md`.
 
 ## Evidence
 
-- `python3 -m unittest discover -s tests` — 97 tests, 0 failures
-  (28 new adapter scenarios + 69 existing).
-- `python3 scripts/workspace_check.py --self-check` — 0 errors,
-  0 warnings.
-- `python3 scripts/auto_gate.py --self-check --no-deployment` —
-  PASS.
-- `python3 scripts/jenkins_manifest.py --check --root /home/paul/code`
-  — 7 projects, 0 errors.
-- `node scripts/check-openspec-change-names.mjs` — valid.
-- `openspec validate --all --strict --no-interactive` — 4 passed,
-  0 failed (4 canonical specs, 0 active changes).
-- `git diff --check` — clean; no secrets, host paths, or runtime
-  credentials added.
-- End-to-end smoke against `alethefy`, `workspace-governance`,
-  `forge`, and `hermora` — four valid observations, each with the
-  expected status; an unknown project returns `unknown` with exit 0;
-  a malformed request returns exit 2 with a single-line stderr note.
-  The governance tree hash is byte-identical before and after the
-  smoke run.
-- Commit `15b09f1` (the implementation + tests + archive commit)
-  brings in the adapter script, the 28-scenario test module, the
-  optional-consumers README section, the Phase 3 ROADMAP update, the
-  archived OpenSpec change, and the canonical spec.
+- `python3 -m unittest discover -s tests` — 112 tests, 0 failures (15 new
+  across registry-integrity, init_project and maturity_audit modules).
+- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
+- `python3 scripts/workspace_check.py --root .. --audit --json` — 2 errors /
+  7 warnings, down from 14 / 18; zero findings for the change's six in-scope
+  codes (`DECLARATION_MISSING`, `DECLARATION_ID`, `DECLARATION_SCHEMA`,
+  `VERIFICATION_COMMAND`, `DISCOVERED_UNREGISTERED`,
+  `DEPLOYMENT_PROMOTION_STALE`).
+- `python3 scripts/maturity_audit.py --root .. --json` — reports the same
+  2 errors / 7 warnings as the audit; `evidence_planned` is 0.
+- `python3 scripts/jenkins_manifest.py --check --root /home/paul/code` —
+  7 projects, 0 errors.
+- `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
+- `node scripts/check-openspec-change-names.mjs` — valid;
+  `openspec validate --all --strict --no-interactive` — 5 passed, 0 failed
+  (5 canonical specs, 0 active changes).
+- Forge adapter smoke — `pass` (`ziban`), `fail` (`crossalheart`'s remaining
+  `REQUIRED_FILE`), `unknown` (absent project).
+- `git diff --check` — clean; no secrets, host paths or runtime credentials
+  added.
+- Commit `039ae39` (the implementation + tests + archive commit) brings in the
+  registry and declaration changes, the checker and initializer updates, the
+  delegated maturity report, the 15 new tests, the README/ROADMAP/adoption-queue
+  updates, the archived change, and the canonical spec.
 
 ## Portfolio impact observed
 
-No audit findings changed: the adapter is read-only, the new test
-module exercises synthetic workspaces under a sandboxed governance
-root, and `workspace_check.py --self-check` is unchanged. The
-pre-existing `DEPLOYMENT_PROMOTION_STALE` warnings on the seven pilot
-projects, the `DISCOVERED_UNREGISTERED` finding for `mewo`, and the
-pre-existing audit errors on `campusMesh`, `rust-platform-libs`,
-`vowra`, `crossalheart`, `dharmatlas`, `hookit`, and
-`lileililiwen-site` are all unchanged by this change. Forge's
-governance surface now has a real, fail-closed data source for those
-findings.
+Ten sibling declarations changed as data: `campusMesh`, `careBridge`,
+`citylens`, `retakeKit`, `trailCrew` and `vowra` were corrected, and
+`dharmatlas`, `hookit`, `openTeacherKit` and `lileililiwen.github.io` gained a
+declaration. Those files live in their own repositories and were left
+uncommitted there, alongside those repositories' pre-existing pending work.
+
+Two audit errors remain: the deferred `crossalheart` `REQUIRED_FILE`
+(`.ai-rules/workflow.md`, `.ai-rules/completion.md`), owned by package
+`shared-rules-single-source`. Seven `DEPLOYMENT_PROMOTION_STALE` warnings remain
+as triage: re-promotion was deliberately not performed because it would record a
+deployable decision at the current revision without a new release.
 
 ## Next action
 
-1. Re-promote each pilot project at its current `HEAD` to clear the
-   per-project `DEPLOYMENT_PROMOTION_STALE` warnings (optional; the
-   warnings are triage, not blocking).
-2. Replace the pilot-context `release_evidence` placeholder files with
-   real release artefacts as each project's release pipeline produces
-   them.
-3. Decide whether to register `mewo` with a complete `release_evidence`
-   block or leave it unadopted; the revert in the mewo repository
-   removes the hand-claim but the project remains
-   `DISCOVERED_UNREGISTERED` until the registry is updated.
-4. Identify the next governance change to author. The four
-   `openspec/specs/*` directories are the existing capabilities of
-   this repository (registry, capability manifest, release evidence,
-   product-code quality, deployment promotion, Forge adapter). The
-   next OpenSpec change should be proposed only after the open
-   `next-action` items above are triaged.
+1. Author and implement package `shared-rules-single-source`: make `.ai-rules/*`
+   and stub `HANDOFF.md` derive from one canonical template set (73 files hold
+   31 distinct contents today) and clear the `crossalheart` `REQUIRED_FILE`
+   error. It depends on the now-shipped registry integrity work.
+2. Then package `portfolio-vocabulary-normalization` (22 kinds / 17 profiles,
+   and the duplicated placeholder/secret/capability vocabulary).
+3. Then package `gate-run-evidence` (real driftwatchdog runs feeding
+   `release_evidence`).
+4. Re-promote each pilot project at its current `HEAD` once its release pipeline
+   produces real artifacts, and replace the pilot-context `release_evidence`
+   placeholders.
+5. Commit the sibling declaration edits named in "Portfolio impact observed" in
+   their own repositories when those repositories' pending work is ready.
 
 ## Evidence boundary
 
