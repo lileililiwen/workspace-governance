@@ -4,89 +4,101 @@ current_spec: none
 
 ## Current state
 
-The `registry-and-declaration-integrity` change is archived at
-`openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/` and
-its canonical spec lives at `openspec/specs/registry-integrity/spec.md`. It
-registered the 11 discovered declarations, corrected six declaration
-identity/format defects, created four missing declarations, added duplicate
-id/path guards, derived and enforced the canonical project id in
-`init_project.py`, and made `maturity_audit.py` report the authoritative
-`workspace_check` counts. Unregistered discovery is now an ERROR because the
-registry sets `discovery.unregistered_policy: "fail"`.
+Two changes shipped in sequence.
 
-The previously shipped read-only **Forge governance adapter**
-(`scripts/forge_governance_adapter.py`) is unchanged: it answers one `check`
-request on stdin (`contract: "0.1.0"`), maps audit ERROR → `fail`, adoption gap
-→ `blocked`, clean adopted → `pass`, absent project → `unknown`, and redacts
-secret-shaped substrings from every evidence line. Its canonical spec is
+**1. `registry-and-declaration-integrity`** (archived
+`openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/`,
+canonical spec `openspec/specs/registry-integrity/spec.md`). Registered the 11
+discovered declarations, corrected six declaration identity/format defects,
+created four missing declarations, added duplicate id/path guards, derived and
+enforced the canonical project id in `init_project.py`, and made
+`maturity_audit.py` report the authoritative `workspace_check` counts.
+Unregistered discovery is now an ERROR via
+`discovery.unregistered_policy: "fail"`.
+
+**2. `shared-rules-single-source`** (archived
+`openspec/changes/archive/2026-09-26-shared-rules-single-source/`, canonical
+spec `openspec/specs/rules-baseline/spec.md`). Made `templates/project/**` the
+only source of the shared rules and had `init_project.py` read it from disk,
+deleting the duplicate embedded copy that had drifted from the on-disk
+templates. Added `scripts/rules_drift.py`, a **non-destructive** clause-level
+drift report with no `--apply`, and surfaced scaffold `HANDOFF.md` files from
+the audit as `HANDOFF_SCAFFOLD`. Created `crossalheart`'s missing rules,
+clearing the workspace audit's last two errors.
+
+The read-only **Forge governance adapter**
+(`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
 
 ## Evidence
 
-- `python3 -m unittest discover -s tests` — 112 tests, 0 failures (15 new
-  across registry-integrity, init_project and maturity_audit modules).
+- `python3 -m unittest discover -s tests` — 122 tests, 0 failures.
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
-- `python3 scripts/workspace_check.py --root .. --audit --json` — 2 errors /
-  7 warnings, down from 14 / 18; zero findings for the change's six in-scope
-  codes (`DECLARATION_MISSING`, `DECLARATION_ID`, `DECLARATION_SCHEMA`,
-  `VERIFICATION_COMMAND`, `DISCOVERED_UNREGISTERED`,
-  `DEPLOYMENT_PROMOTION_STALE`).
+- `python3 scripts/workspace_check.py --root .. --audit --json` — **0 errors**,
+  18 warnings (11 `HANDOFF_SCAFFOLD`, 7 `DEPLOYMENT_PROMOTION_STALE`), down from
+  14 errors / 18 warnings before the two changes.
 - `python3 scripts/maturity_audit.py --root .. --json` — reports the same
-  2 errors / 7 warnings as the audit; `evidence_planned` is 0.
+  0 errors / 18 warnings as the audit; `evidence_planned` is 0.
+- `python3 scripts/rules_drift.py --root .. --check` — 81 triage findings
+  (clause-level drift across adopted projects); every project file is unchanged
+  by the run.
 - `python3 scripts/jenkins_manifest.py --check --root /home/paul/code` —
   7 projects, 0 errors.
 - `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
 - `node scripts/check-openspec-change-names.mjs` — valid;
-  `openspec validate --all --strict --no-interactive` — 5 passed, 0 failed
-  (5 canonical specs, 0 active changes).
-- Forge adapter smoke — `pass` (`ziban`), `fail` (`crossalheart`'s remaining
-  `REQUIRED_FILE`), `unknown` (absent project).
-- `git diff --check` — clean; no secrets, host paths or runtime credentials
-  added.
-- Commit `039ae39` (the implementation + tests + archive commit) brings in the
-  registry and declaration changes, the checker and initializer updates, the
-  delegated maturity report, the 15 new tests, the README/ROADMAP/adoption-queue
-  updates, the archived change, and the canonical spec.
+  `openspec validate --all --strict --no-interactive` — 6 passed, 0 failed
+  (6 canonical specs, 0 active changes).
+- `git diff --check` — clean.
+- Commits: `039ae39` and `91d9fd9` (implementation + tests + archive), each
+  followed by a HANDOFF-only commit.
 
 ## Portfolio impact observed
 
-Ten sibling declarations changed as data: `campusMesh`, `careBridge`,
-`citylens`, `retakeKit`, `trailCrew` and `vowra` were corrected, and
-`dharmatlas`, `hookit`, `openTeacherKit` and `lileililiwen.github.io` gained a
-declaration. Those files live in their own repositories and were left
-uncommitted there, alongside those repositories' pre-existing pending work.
+The `.ai-rules` baseline change is deliberately non-destructive. A first
+implementation made whole canonical paragraphs mandatory and shipped `--apply`;
+running it appended a duplicate canonical block to **60 project files**,
+including well-maintained ones such as `mewo` whose text already expressed the
+same rules. That was measured, judged a regression, and reverted byte-for-byte
+before the change was re-scoped to a report-only clause check. The portfolio
+`git diff` for `.ai-rules` is clean apart from `crossalheart`'s newly created
+files.
 
-Two audit errors remain: the deferred `crossalheart` `REQUIRED_FILE`
-(`.ai-rules/workflow.md`, `.ai-rules/completion.md`), owned by package
-`shared-rules-single-source`. Seven `DEPLOYMENT_PROMOTION_STALE` warnings remain
-as triage: re-promotion was deliberately not performed because it would record a
-deployable decision at the current revision without a new release.
+11 adopted projects still carry scaffold `HANDOFF.md` bodies (reported as
+`HANDOFF_SCAFFOLD`). The 7 `DEPLOYMENT_PROMOTION_STALE` warnings remain triaged:
+re-promotion was not performed because it would record a deployable decision at
+the current revision without a new release.
+
+Sibling repositories still hold uncommitted declaration and rules files created
+by these two changes (the 10 declarations plus `crossalheart`'s rules and
+`.ai-gate`); they were left uncommitted in their own repositories.
 
 ## Next action
 
-1. Author and implement package `shared-rules-single-source`: make `.ai-rules/*`
-   and stub `HANDOFF.md` derive from one canonical template set (73 files hold
-   31 distinct contents today) and clear the `crossalheart` `REQUIRED_FILE`
-   error. It depends on the now-shipped registry integrity work.
-2. Then package `portfolio-vocabulary-normalization` (22 kinds / 17 profiles,
-   and the duplicated placeholder/secret/capability vocabulary).
-3. Then package `gate-run-evidence` (real driftwatchdog runs feeding
+1. Author and implement package `portfolio-vocabulary-normalization`: collapse
+   the 22 `kind` values and 17 `profile` values to a canonical set, and
+   single-source the duplicated placeholder/secret/capability vocabulary
+   (`workspace-governance/scripts/product_code_quality.py` vs
+   `driftwatchdog/src/gate/concerns.rs` vs `platform-contracts/schemas/registry.json`).
+   It depends on the two shipped packages.
+2. Then package `gate-run-evidence` (real driftwatchdog runs feeding
    `release_evidence`).
+3. Replace the 11 scaffold `HANDOFF.md` bodies as each product's own state is
+   recorded (product-owned work).
 4. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-5. Commit the sibling declaration edits named in "Portfolio impact observed" in
-   their own repositories when those repositories' pending work is ready.
+5. Commit the sibling declaration/rules edits in their own repositories when
+   those repositories' pending work is ready.
 
 ## Evidence boundary
 
 This repository can prove registry/schema/checker behavior, capability
 declaration shape, release-evidence shape, the deployable+release-evidence
 gate, the product-code quality rule, the deployment promotion
-mechanism, and the Forge governance adapter contract. It cannot prove
-that the seven promoted projects actually build, pass tests, deploy, or
-are runtime-healthy; those claims require the promoted projects' own
-verification commands and jenkins-local runtime observation. The
+mechanism, the rules-baseline drift report, and the Forge governance adapter
+contract. It cannot prove that the seven promoted projects actually build, pass
+tests, deploy, or are runtime-healthy; those claims require the promoted
+projects' own verification commands and jenkins-local runtime observation. The
 adapter likewise cannot prove a project's runtime or release health;
 it only translates this repository's own audit findings.
 
