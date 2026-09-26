@@ -1,10 +1,10 @@
 # Project Handoff
 
-current_spec: bootstrap-governance
+current_spec: __CURRENT_SPEC__
 
 ## Current state
 
-Replace this section with implementation and verification evidence.
+Governance declaration created by Workspace Governance. Replace this section with current implementation and verification evidence.
 
 ## Next action
 

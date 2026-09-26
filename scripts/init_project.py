@@ -12,6 +12,17 @@ from pathlib import Path
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 CONVERTIBLE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+GOVERNANCE_ROOT = Path(__file__).resolve().parents[1]
+TEMPLATE_DIR = GOVERNANCE_ROOT / "templates" / "project"
+TEXT_TEMPLATES = (
+    "README.md",
+    "ROADMAP.md",
+    "AGENTS.md",
+    "HANDOFF.md",
+    ".ai-rules/workflow.md",
+    ".ai-rules/completion.md",
+    ".ai-gate/gate.yaml",
+)
 
 
 def derive_id(directory_name: str) -> str:
@@ -46,15 +57,28 @@ def resolve_project_id(directory_name: str, requested: str | None) -> tuple[str 
     return derived, None
 
 
-TEMPLATES = {
-    "README.md": "# __PROJECT_ID__\n\nThis project is governed by Workspace Governance. Preserve the product-specific README content when extending this file.\n\nVerification command: `__VERIFICATION_COMMAND__`.\n",
-    "ROADMAP.md": "# __PROJECT_ID__ Roadmap\n\nRecord dependency-ordered delivery phases, release targets, deferred scope, and evidence boundaries here.\n",
-    "AGENTS.md": "# Project Agent Instructions\n\n- Read `HANDOFF.md` before work.\n- Use OpenSpec for non-trivial changes.\n- Use BFS → DFS → BFS for impact, implementation, and regression review.\n- Run the declared verification command before completion.\n- Build/test/skeleton success is not runtime or release evidence.\n- Each completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit.\n\nDetailed rules: `.ai-rules/workflow.md` and `.ai-rules/completion.md`.\n",
-    "HANDOFF.md": "# Project Handoff\n\ncurrent_spec: __CURRENT_SPEC__\n\n## Current state\n\nGovernance declaration created by Workspace Governance. Replace this section with current implementation and verification evidence.\n\n## Next action\n\nSelect the next OpenSpec change or record why the project is blocked.\n\nEach completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit.\n",
-    ".ai-rules/workflow.md": "# Project Workflow\n\nUse BFS → DFS → BFS. Map impact and evidence first, implement one coherent change, then re-audit callers, persistence, APIs, tests, security, and release boundaries.\n\nRun the shared governance checker and the project verification command before archive or completion. Run `node scripts/check-openspec-change-names.mjs` from the governance repository before OpenSpec status/instructions.\n\nEach completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit. Stop after commit 2.\n",
-    ".ai-rules/completion.md": "# Project Completion\n\nCompletion requires requirements and scenarios verified, migrated callers reviewed, required tests passing, the project verification command passing, the shared governance check passing, and the original impact surface rechecked. Build/test/skeleton success is not runtime or release evidence.\n\nEach completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit. Stop after commit 2.\n",
-    ".ai-gate/gate.yaml": "version: 1\nruntime: driftwatchdog\nprofile: __PROFILE__\nrule_pack: workspace-governance@1\nchecks:\n  repository: true\n  build: true\n  tests: true\n  security: true\n  product_quality: false\nblocking:\n  - FAIL\n  - REVIEW_REQUIRED\nnotes:\n  - Set `product_quality: true` only after adding a `quality` block to `.project.json`; see docs/product-code-quality.md.\n  - The local OpenSpec name preflight remains mandatory.\n",
-}
+def load_templates() -> dict[str, str]:
+    """Read the canonical templates from disk.
+
+    `templates/project/` is the single source of truth; there is deliberately
+    no embedded copy in this script, so changing a template changes the
+    initializer's output.
+    """
+    templates: dict[str, str] = {}
+    for relative in TEXT_TEMPLATES:
+        path = TEMPLATE_DIR / relative
+        if not path.is_file():
+            raise FileNotFoundError(f"missing canonical template: {path}")
+        templates[relative] = path.read_text(encoding="utf-8")
+    return templates
+
+
+def render(content: str, project_id: str, profile: str, verification_command: str) -> str:
+    return (content
+            .replace("__PROFILE__", profile)
+            .replace("__CURRENT_SPEC__", "bootstrap-governance")
+            .replace("__PROJECT_ID__", project_id)
+            .replace("__VERIFICATION_COMMAND__", verification_command))
 
 
 def main() -> int:
@@ -72,6 +96,11 @@ def main() -> int:
     if project_id is None:
         print(f"init_project refused: {error}", file=sys.stderr)
         return 2
+    try:
+        templates = load_templates()
+    except FileNotFoundError as exc:
+        print(f"init_project refused: {exc}", file=sys.stderr)
+        return 2
     target.mkdir(parents=True, exist_ok=True)
     created: list[str] = []
     declaration = target / ".project.json"
@@ -86,12 +115,12 @@ def main() -> int:
             "deployment": {"deployable": False, "jenkins_job": None, "compose_file": None},
         }, indent=2) + "\n", encoding="utf-8")
         created.append(".project.json")
-    for relative, content in TEMPLATES.items():
+    for relative, content in templates.items():
         path = target / relative
         if path.exists():
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content.replace("__PROFILE__", args.profile).replace("__CURRENT_SPEC__", "bootstrap-governance").replace("__PROJECT_ID__", project_id).replace("__VERIFICATION_COMMAND__", args.verification_command), encoding="utf-8")
+        path.write_text(render(content, project_id, args.profile, args.verification_command), encoding="utf-8")
         created.append(relative)
     print(f"Initialized {project_id} at {target}")
     print("Created: " + (", ".join(created) if created else "nothing; existing files preserved"))

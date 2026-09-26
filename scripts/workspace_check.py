@@ -406,6 +406,18 @@ def validate_change_names(project_path: Path, findings: list[Finding], project_i
             finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {child.name}", project_id)
 
 
+def validate_handoff_quality(project_path: Path, findings: list[Finding], project_id: str) -> None:
+    """Surface a scaffold `HANDOFF.md` so boilerplate cannot pass as a handoff.
+
+    Clause-level `.ai-rules` drift is reported by `scripts/rules_sync.py` as a
+    triage report rather than here, because repositories legitimately document
+    the shared rules in their own words and language.
+    """
+    import rules_drift  # local import to keep this module standalone
+    if rules_drift.scaffold_handoff(project_path):
+        finding(findings, "WARNING", "HANDOFF_SCAFFOLD", "HANDOFF.md still carries the initializer scaffold", project_id)
+
+
 def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list[Finding], strict: bool = True, governance_root: Path | None = None) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
@@ -465,6 +477,8 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
         validate_deployment_promotion(deployment, project_path, project_id, governance_root, findings)
     if isinstance(declaration.get("quality"), dict):
         validate_product_quality(declaration, project_path, findings, project_id)
+    if entry.get("adoption") == "adopted":
+        validate_handoff_quality(project_path, findings, project_id)
 
 
 def scan_for_secrets(value: Any, findings: list[Finding], location: str = "registry") -> None:

@@ -1,6 +1,6 @@
 version: 1
 runtime: driftwatchdog
-profile: replace-with-profile
+profile: __PROFILE__
 rule_pack: workspace-governance@1
 checks:
   repository: true
