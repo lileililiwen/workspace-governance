@@ -10,7 +10,7 @@ the change directory.
 |---|---|---|---|---|
 | 1 | `registry-and-declaration-integrity` | workspace-governance | `openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/` | shipped |
 | 2 | `shared-rules-single-source` | workspace-governance | `openspec/changes/archive/2026-09-26-shared-rules-single-source/` | shipped |
-| 3 | `portfolio-vocabulary-normalization` | workspace-governance | `openspec/changes/portfolio-vocabulary-normalization/` | authored |
+| 3 | `portfolio-vocabulary-normalization` | workspace-governance | `openspec/changes/archive/2026-09-27-portfolio-vocabulary-normalization/` | shipped |
 | 4 | `gate-evidence-export` | driftwatchdog | `openspec/changes/gate-evidence-export/` | authored |
 | 5 | `platform-consumer-bootstrap` | dotnet-platform-libs | `openspec/changes/platform-consumer-bootstrap/` | authored |
 | 6 | `rust-platform-consumer-baseline` | rust-platform-libs | `openspec/changes/rust-platform-consumer-baseline/` | authored |

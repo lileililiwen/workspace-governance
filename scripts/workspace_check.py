@@ -15,9 +15,46 @@ from typing import Any
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 CHANGE_ID = PROJECT_ID
-PROFILES = {"governance", "product", "dotnet-library", "dotnet-template", "deployment", "inventory"}
 LIFECYCLES = {"active", "planning", "reference", "inventory", "archived"}
-SECRET_WORDS = re.compile(r"(password|secret|token|api[_-]?key|private[_-]?key|credential)", re.I)
+
+# The canonical kind/profile sets and the secret scan pattern live in
+# vocabulary.json (see scripts/vocabulary.py). This module keeps no local
+# duplicate list: SECRET_WORDS and PROFILES resolve lazily from the
+# vocabulary so `from workspace_check import SECRET_WORDS` (used by the
+# Forge governance adapter) keeps working.
+
+
+def _default_governance_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _vocabulary_for(governance_root: Path | None) -> dict[str, Any]:
+    import vocabulary
+
+    root = Path(governance_root) if governance_root is not None else _default_governance_root()
+    return vocabulary.load_vocabulary_for_governance_root(root)
+
+
+def canonical_profiles_for(governance_root: Path | None = None) -> frozenset[str]:
+    return _vocabulary_for(governance_root)["profiles"]
+
+
+def canonical_kinds_for(governance_root: Path | None = None) -> frozenset[str]:
+    return _vocabulary_for(governance_root)["kinds"]
+
+
+def secret_words_for(governance_root: Path | None = None) -> "re.Pattern[str]":
+    import vocabulary
+
+    return vocabulary.secret_pattern(_vocabulary_for(governance_root)["secret_field_substrings"])
+
+
+def __getattr__(name: str) -> Any:
+    if name == "SECRET_WORDS":
+        return secret_words_for()
+    if name == "PROFILES":
+        return set(canonical_profiles_for())
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Capability and release-evidence vocabulary (additive, opt-in per project).
 CAPABILITY_OWNERS = {"platform", "product", "shared", "external"}
@@ -102,7 +139,7 @@ def load_json(path: Path, findings: list[Finding], code: str) -> dict[str, Any] 
     return value
 
 
-def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding], check_paths: bool = True) -> list[dict[str, Any]]:
+def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding], check_paths: bool = True, *, canonical_profiles: set[str] | frozenset[str] | None = None, governance_root: Path | None = None) -> list[dict[str, Any]]:
     if registry.get("schema_version") != 1:
         finding(findings, "ERROR", "REGISTRY_SCHEMA", "registry schema_version must be 1")
     projects = registry.get("projects")
@@ -136,8 +173,10 @@ def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: 
         profile = entry.get("profile")
         if not isinstance(profile, str) or not profile:
             finding(findings, "ERROR", "PROFILE_MISSING", "project profile is required", project_id)
-        elif profile not in PROFILES and not profile.endswith("-product") and profile not in {"platform", "tooling", "python-runtime", "rust-platform", "typescript-monorepo"}:
-            finding(findings, "ERROR", "PROFILE_UNKNOWN", f"unknown profile: {profile}", project_id)
+        else:
+            profiles = canonical_profiles if canonical_profiles is not None else canonical_profiles_for(governance_root)
+            if profile not in profiles:
+                finding(findings, "ERROR", "PROFILE_UNKNOWN", f"unknown profile: {profile}; canonical profiles: {sorted(profiles)}", project_id)
         lifecycle = entry.get("lifecycle")
         if lifecycle not in LIFECYCLES:
             finding(findings, "ERROR", "LIFECYCLE", f"invalid lifecycle: {lifecycle!r}", project_id)
@@ -175,6 +214,37 @@ def load_profile_spec(governance_root: Path, profile: str) -> dict[str, Any] | N
     if not isinstance(value, dict):
         return None
     return value
+
+
+def validate_profile_docs(governance_root: Path, findings: list[Finding], *, canonical_profiles: set[str] | frozenset[str] | None = None) -> None:
+    """A `profiles/<name>.json` document naming a non-canonical profile is ERROR `PROFILE_DOC_UNKNOWN`."""
+    profiles = canonical_profiles if canonical_profiles is not None else canonical_profiles_for(governance_root)
+    profiles_dir = Path(governance_root) / "profiles"
+    if not profiles_dir.is_dir():
+        return
+    for child in sorted(profiles_dir.glob("*.json")):
+        try:
+            value = json.loads(child.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            finding(findings, "ERROR", "PROFILE_DOC_UNKNOWN", f"cannot parse profile document {child.name}: {exc}")
+            continue
+        if not isinstance(value, dict):
+            finding(findings, "ERROR", "PROFILE_DOC_UNKNOWN", f"profile document must contain a JSON object: {child.name}")
+            continue
+        documented = value.get("id", child.stem)
+        if child.stem not in profiles or documented not in profiles:
+            finding(findings, "ERROR", "PROFILE_DOC_UNKNOWN", f"profile document {child.name} names a non-canonical profile: {documented!r}; canonical profiles: {sorted(profiles)}")
+
+
+def validate_kind(declaration: dict[str, Any], findings: list[Finding], project_id: str, *, canonical_kinds: set[str] | frozenset[str] | None = None, governance_root: Path | None = None) -> None:
+    """A declaration whose `kind` is outside the canonical set is WARNING `KIND_UNKNOWN`.
+
+    Kind is descriptive and never drives profile requirements.
+    """
+    kinds = canonical_kinds if canonical_kinds is not None else canonical_kinds_for(governance_root)
+    kind = declaration.get("kind")
+    if not isinstance(kind, str) or kind not in kinds:
+        finding(findings, "WARNING", "KIND_UNKNOWN", f"unknown kind: {kind!r}; canonical kinds: {sorted(kinds)}", project_id)
 
 
 def validate_capabilities(capabilities: Any, project_path: Path, findings: list[Finding], project_id: str, supported: set[str] | None = None) -> None:
@@ -373,9 +443,10 @@ def validate_product_quality(declaration: dict[str, Any], project_path: Path, fi
     becomes WARNING, PASS produces no finding.
     """
     import product_code_quality  # local import to keep workspace_check importable without the checker
+    import vocabulary as vocabulary_module  # local import for the same reason
     try:
         policy = product_code_quality.load_policy(declaration)
-    except product_code_quality.ConfigError as exc:
+    except (product_code_quality.ConfigError, vocabulary_module.VocabularyError) as exc:
         finding(findings, "WARNING", "QUALITY_POLICY", f"product quality policy invalid: {exc}", project_id)
         return
     try:
@@ -433,6 +504,7 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
         finding(findings, "ERROR", "DECLARATION_SCHEMA", "project declaration schema_version must be 1", project_id)
     if declaration.get("id") != project_id:
         finding(findings, "ERROR", "DECLARATION_ID", f"declaration id must be {project_id!r}", project_id)
+    validate_kind(declaration, findings, project_id, governance_root=governance_root)
     profile = str(entry.get("profile"))
     required, requires_ci, requires_openspec, requires_verification = profile_requirements(profile)
     for relative in required:
@@ -481,20 +553,31 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
         validate_handoff_quality(project_path, findings, project_id)
 
 
-def scan_for_secrets(value: Any, findings: list[Finding], location: str = "registry") -> None:
+def scan_for_secrets(value: Any, findings: list[Finding], location: str = "registry", *, secret_words: "re.Pattern[str] | None" = None, governance_root: Path | None = None) -> None:
+    pattern = secret_words if secret_words is not None else secret_words_for(governance_root)
     if isinstance(value, dict):
         for key, child in value.items():
-            if SECRET_WORDS.search(str(key)) and child not in (None, "", False):
+            if pattern.search(str(key)) and child not in (None, "", False):
                 finding(findings, "ERROR", "SECRET_VALUE", f"secret-like field contains a value: {location}.{key}")
-            scan_for_secrets(child, findings, f"{location}.{key}")
+            scan_for_secrets(child, findings, f"{location}.{key}", secret_words=pattern)
     elif isinstance(value, list):
         for index, child in enumerate(value):
-            scan_for_secrets(child, findings, f"{location}[{index}]")
+            scan_for_secrets(child, findings, f"{location}[{index}]", secret_words=pattern)
 
 
 def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
     findings: list[Finding] = []
     governance_root = Path(__file__).resolve().parents[1]
+    try:
+        vocabulary = _vocabulary_for(governance_root)
+    except Exception as exc:
+        finding(findings, "ERROR", "VOCABULARY", str(exc))
+        return findings, {"errors": len(findings), "warnings": 0}
+    canonical_profiles = vocabulary["profiles"]
+    canonical_kinds = vocabulary["kinds"]
+    import vocabulary as vocabulary_module
+
+    secret_words = vocabulary_module.secret_pattern(vocabulary["secret_field_substrings"])
     registry_path = Path(args.registry)
     if not registry_path.is_absolute():
         registry_path = governance_root / registry_path
@@ -508,8 +591,9 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
         workspace_root = Path(configured_root).expanduser().resolve()
     else:
         workspace_root = Path.cwd().resolve()
-    projects = validate_registry(registry, workspace_root, findings, check_paths=not args.self_check)
-    scan_for_secrets(registry, findings)
+    projects = validate_registry(registry, workspace_root, findings, check_paths=not args.self_check, canonical_profiles=canonical_profiles, governance_root=governance_root)
+    validate_profile_docs(governance_root, findings, canonical_profiles=canonical_profiles)
+    scan_for_secrets(registry, findings, secret_words=secret_words)
     effective_projects = list(projects)
     explicit_paths = {str(entry.get("path")) for entry in projects}
     discovery = registry.get("discovery") or {}
@@ -572,6 +656,8 @@ def main(argv: list[str] | None = None) -> int:
             prefix = f"[{item.project}] " if item.project else ""
             print(f"{item.level} {item.code}: {prefix}{item.message}")
         print(f"Summary: errors={summary['errors']} warnings={summary['warnings']}")
+    if any(item.code == "VOCABULARY" for item in findings):
+        return 2
     return 1 if summary["errors"] else 0
 
 

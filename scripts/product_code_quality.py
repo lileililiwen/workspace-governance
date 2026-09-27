@@ -27,20 +27,49 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Iterable
 
+from vocabulary import VocabularyError
+
 
 SCHEMA_VERSION = 1
 LANGUAGES = ("rust", "python", "typescript", "javascript", "csharp", "go", "generic")
 
-DEFAULT_PLACEHOLDER_MARKERS = (
-    "todo",
-    "fixme",
-    "xxx",
-    "hack",
-    "placeholder",
-    "stub",
-    "unimplemented!",
-    "todo!",
-)
+# The default placeholder markers and the secret redaction pattern live in
+# vocabulary.json (see scripts/vocabulary.py). This module keeps no local
+# duplicate list: both resolve lazily from the vocabulary, so a missing or
+# unusable vocabulary raises VocabularyError instead of silently scanning
+# with an empty list.
+
+
+def _governance_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def default_placeholder_markers() -> tuple[str, ...]:
+    import vocabulary
+
+    return tuple(vocabulary.load_vocabulary_for_governance_root(_governance_root())["placeholder_markers"])
+
+
+_SECRET_PATTERN: "re.Pattern[str] | None" = None
+
+
+def _secret_pattern() -> "re.Pattern[str]":
+    global _SECRET_PATTERN
+    if _SECRET_PATTERN is None:
+        import vocabulary
+
+        _SECRET_PATTERN = vocabulary.secret_pattern(
+            vocabulary.load_vocabulary_for_governance_root(_governance_root())["secret_field_substrings"]
+        )
+    return _SECRET_PATTERN
+
+
+def __getattr__(name: str) -> Any:
+    if name == "DEFAULT_PLACEHOLDER_MARKERS":
+        return default_placeholder_markers()
+    if name == "SECRET_WORDS":
+        return _secret_pattern()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Default test-scope and out-of-product directories. These are matched
 # against path segments, not full paths, so they apply inside any root.
@@ -89,7 +118,7 @@ LANGUAGE_EXTENSIONS: dict[str, tuple[str, ...]] = {
 }
 
 # Secret-like vocabulary that must never appear in a finding message.
-SECRET_WORDS = re.compile(r"(password|secret|token|api[_-]?key|private[_-]?key|credential)", re.I)
+# Resolved from vocabulary.json at use time; see _secret_pattern.
 
 
 @dataclass
@@ -98,7 +127,7 @@ class Policy:
     languages: tuple[str, ...]
     exclude: tuple[str, ...] = ()
     placeholder_threshold: int = 0
-    placeholder_markers: tuple[str, ...] = DEFAULT_PLACEHOLDER_MARKERS
+    placeholder_markers: tuple[str, ...] = field(default_factory=default_placeholder_markers)
     root_dir: Path | None = None
 
     def with_root(self, root: Path) -> "Policy":
@@ -191,7 +220,7 @@ def parse_policy(raw: dict[str, Any]) -> Policy:
     threshold = raw.get("placeholder_threshold", 0)
     if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 0:
         raise ConfigError("quality.placeholder_threshold must be a non-negative integer")
-    markers_raw = raw.get("placeholder_markers", list(DEFAULT_PLACEHOLDER_MARKERS))
+    markers_raw = raw.get("placeholder_markers", list(default_placeholder_markers()))
     if not isinstance(markers_raw, list) or not markers_raw:
         raise ConfigError("quality.placeholder_markers must be a non-empty list")
     markers: list[str] = []
@@ -463,7 +492,7 @@ def scan_placeholders(path: Path, lines: list[str], markers: Iterable[str]) -> l
     for index, line in enumerate(lines, start=1):
         for match in pattern.finditer(line):
             token = match.group(0)
-            if SECRET_WORDS.search(token):
+            if _secret_pattern().search(token):
                 continue
             findings.append(Finding(
                 rule_id="placeholder-marker",
@@ -483,7 +512,7 @@ def scan_placeholders(path: Path, lines: list[str], markers: Iterable[str]) -> l
 
 
 def redact(text: str) -> str:
-    return SECRET_WORDS.sub("[REDACTED]", text)
+    return _secret_pattern().sub("[REDACTED]", text)
 
 
 # ---------------------------------------------------------------------------
@@ -640,7 +669,7 @@ def main(argv: list[str] | None = None) -> int:
             declaration_path = args.declaration if args.declaration else project_dir / ".project.json"
             declaration = _load_declaration(declaration_path)
             policy = load_policy(declaration)
-    except ConfigError as exc:
+    except (ConfigError, VocabularyError) as exc:
         report = Report(
             schema_version=SCHEMA_VERSION,
             status="REVIEW_REQUIRED",

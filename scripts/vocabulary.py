@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Single source for the portfolio vocabulary owned by Workspace Governance.
+
+`vocabulary.json` at the governance root is the only machine-readable source
+for the canonical `profiles`, canonical `kinds`, `placeholder_markers` and
+`secret_field_substrings`. Consumers (`workspace_check.py`,
+`product_code_quality.py`, `maturity_audit.py`) load it through this module.
+
+The loader is fail-closed: a missing, unparseable, duplicate-bearing or
+empty-list vocabulary raises `VocabularyError` naming the file and the
+problem. Consumers must surface that as a non-zero exit, never fall back to
+an empty list (an empty secret list would silently disable the scan).
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+
+VOCABULARY_FILENAME = "vocabulary.json"
+REQUIRED_KEYS = ("profiles", "kinds", "placeholder_markers", "secret_field_substrings")
+
+
+class VocabularyError(ValueError):
+    """Raised when `vocabulary.json` is missing or unusable."""
+
+
+_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def vocabulary_path(governance_root: Path) -> Path:
+    return Path(governance_root) / VOCABULARY_FILENAME
+
+
+def load_vocabulary(path: Path) -> dict[str, Any]:
+    """Load and validate the vocabulary file at `path`.
+
+    Returns `{"schema_version": int, "profiles": frozenset, "kinds":
+    frozenset, "placeholder_markers": tuple, "secret_field_substrings":
+    tuple}`. Raises `VocabularyError` naming the file on any problem.
+    """
+    path = Path(path)
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise VocabularyError(f"vocabulary file missing: {path}")
+    except OSError as exc:
+        raise VocabularyError(f"cannot read vocabulary file {path}: {exc}")
+    except json.JSONDecodeError as exc:
+        raise VocabularyError(f"vocabulary file is not valid JSON: {path}: {exc}")
+    if not isinstance(raw, dict):
+        raise VocabularyError(f"vocabulary file must contain a JSON object: {path}")
+    if raw.get("schema_version") != 1:
+        raise VocabularyError(f"vocabulary schema_version must be 1: {path}")
+    vocabulary: dict[str, Any] = {"schema_version": 1}
+    for key in REQUIRED_KEYS:
+        value = raw.get(key)
+        if not isinstance(value, list) or not value:
+            raise VocabularyError(f"vocabulary {key!r} must be a non-empty list: {path}")
+        for entry in value:
+            if not isinstance(entry, str) or not entry:
+                raise VocabularyError(f"vocabulary {key!r} entries must be non-empty strings: {path}")
+        if len(set(value)) != len(value):
+            raise VocabularyError(f"vocabulary {key!r} contains a duplicate entry: {path}")
+        vocabulary[key] = frozenset(value) if key in ("profiles", "kinds") else tuple(value)
+    return vocabulary
+
+
+def load_vocabulary_for_governance_root(governance_root: Path) -> dict[str, Any]:
+    """Load the vocabulary for a governance root, caching per resolved path."""
+    key = str(Path(governance_root).resolve())
+    cached = _CACHE.get(key)
+    if cached is None:
+        cached = load_vocabulary(vocabulary_path(governance_root))
+        _CACHE[key] = cached
+    return cached
+
+
+def secret_pattern(substrings: tuple[str, ...]) -> "re.Pattern[str]":
+    """Compile a case-insensitive substring pattern for secret-shaped keys."""
+    ordered = sorted(substrings, key=len, reverse=True)
+    return re.compile("(" + "|".join(re.escape(item) for item in ordered) + ")", re.IGNORECASE)
+
+
+def clear_cache() -> None:
+    _CACHE.clear()

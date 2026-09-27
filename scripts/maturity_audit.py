@@ -141,6 +141,7 @@ def print_human(result: dict) -> None:
     print(f"Docs complete:       {s['docs_complete']}")
     print(f"Audit errors:        {s['errors']}")
     print(f"Audit warnings:      {s['warnings']}")
+    print(f"Vocabulary version:  {s.get('vocabulary_version', 'unknown')}")
     print()
     if result["findings"]:
         print("Findings:")
@@ -165,6 +166,16 @@ def authoritative_summary(root: Path, registry: str = "projects.json") -> dict[s
     return summary
 
 
+def vocabulary_version() -> Any:
+    """Report the vocabulary schema version (display only)."""
+    try:
+        import vocabulary
+        governance_root = Path(__file__).resolve().parents[1]
+        return vocabulary.load_vocabulary_for_governance_root(governance_root)["schema_version"]
+    except Exception:
+        return "unknown"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Workspace maturity audit")
     parser.add_argument("--root", default=".", help="Workspace root directory")
@@ -184,6 +195,7 @@ def main() -> int:
         return 1
     result["summary"]["errors"] = audit_summary["errors"]
     result["summary"]["warnings"] = audit_summary["warnings"]
+    result["summary"]["vocabulary_version"] = vocabulary_version()
 
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))

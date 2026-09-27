@@ -70,6 +70,21 @@ host name) may use an explicitly recorded alias.
 `workspace_check.py`; it never computes a second, independent result, so the
 two views cannot disagree.
 
+## Portfolio vocabulary
+
+`vocabulary.json` is the single machine-readable source for the canonical
+`profiles` (15), canonical `kinds` (12), `placeholder_markers`, and
+`secret_field_substrings`. `workspace_check.py` enforces the canonical sets
+(a non-canonical registry `profile` is ERROR `PROFILE_UNKNOWN`; a
+non-canonical declaration `kind` is WARNING `KIND_UNKNOWN`; a
+`profiles/<name>.json` document naming a non-canonical profile is ERROR
+`PROFILE_DOC_UNKNOWN`) and scans secrets with the vocabulary substrings, while
+`product_code_quality.py` defaults its placeholder markers from the same file.
+A missing, unparseable, duplicate-bearing, or empty-list vocabulary makes each
+consumer exit non-zero; there is no empty-list fallback. Kind is descriptive
+and never drives profile requirements. The canonical spec is
+`openspec/specs/portfolio-vocabulary/spec.md`.
+
 ## Mandatory command
 
 Run from this repository. The registry never stores a machine-specific root;

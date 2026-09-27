@@ -1,10 +1,10 @@
 # Workspace Governance Roadmap
 
 > **Status (as of 2026-09-26):** Phases 1–4 are shipped and the workspace audit
-> is at 0 errors. Packages 1 (`registry-and-declaration-integrity`) and 2
-> (`shared-rules-single-source`) are archived. Package 3
-> (`portfolio-vocabulary-normalization`) and package 8 (`governance-front-door`)
-> are authored and ready to implement. Packages 4–7 are specified
+> is at 0 errors. Packages 1 (`registry-and-declaration-integrity`), 2
+> (`shared-rules-single-source`) and 3 (`portfolio-vocabulary-normalization`)
+> are archived. Package 8 (`governance-front-door`)
+> is authored and ready to implement. Packages 4–7 are specified
 > implementation-ready in `docs/package-backlog.md` and are owned by
 > `driftwatchdog`, `dotnet-platform-libs`, `rust-platform-libs` and
 > `platform-contracts` respectively. Remaining follow-ups: re-promote the pilot

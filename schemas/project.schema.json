@@ -7,8 +7,8 @@
   "properties": {
     "schema_version": {"const": 1},
     "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
-    "kind": {"type": "string", "minLength": 1},
-    "profile": {"type": "string", "minLength": 1},
+    "kind": {"type": "string", "minLength": 1, "description": "Descriptive project kind. Must use a canonical value from vocabulary.json kinds; other values are reported as KIND_UNKNOWN. Kind never drives profile requirements."},
+    "profile": {"type": "string", "minLength": 1, "description": "Governance profile driving required files, CI, OpenSpec and verification requirements. Must use a canonical value from vocabulary.json profiles."},
     "lifecycle": {"enum": ["active", "planning", "reference", "inventory", "archived"]},
     "verification": {
       "type": "object",
