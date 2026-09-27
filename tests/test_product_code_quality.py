@@ -407,6 +407,26 @@ class AuditIntegrationTests(unittest.TestCase):
         import sys
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
         import workspace_check
+        if declaration.get("profile") != "inventory":
+            declaration.setdefault("discoverability", {
+                "description": "A test project for governance checks.",
+                "keywords": ["test", "governance"],
+                "topics": ["governance-test"],
+                "audience": ["developers"],
+                "use_cases": ["run governance tests"],
+                "search_phrases": ["governance test project"],
+                "homepage": "https://example.com/demo-project",
+                "license_spdx": "MIT",
+                "visibility": "private",
+            })
+            declaration.setdefault("publication", {
+                "provider": "github",
+                "owner": "example",
+                "repository": "demo-project",
+                "default_branch": "main",
+                "state": "metadata_verified",
+                "evidence_ref": "HANDOFF.md",
+            })
         declaration_path = self.project / ".project.json"
         declaration_path.write_text(json.dumps(declaration), encoding="utf-8")
         (self.project / "README.md").write_text("# demo\n", encoding="utf-8")
@@ -416,6 +436,7 @@ class AuditIntegrationTests(unittest.TestCase):
         (self.project / ".ai-rules").mkdir()
         (self.project / ".ai-rules" / "workflow.md").write_text("w\n", encoding="utf-8")
         (self.project / ".ai-rules" / "completion.md").write_text("c\n", encoding="utf-8")
+        (self.project / "LICENSE").write_text("MIT License\n", encoding="utf-8")
         (self.project / "openspec").mkdir()
         (self.project / "Jenkinsfile").write_text("// ci\n", encoding="utf-8")
         registry = {

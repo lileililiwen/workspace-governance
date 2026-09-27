@@ -489,7 +489,7 @@ def validate_handoff_quality(project_path: Path, findings: list[Finding], projec
         finding(findings, "WARNING", "HANDOFF_SCAFFOLD", "HANDOFF.md still carries the initializer scaffold", project_id)
 
 
-def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list[Finding], strict: bool = True, governance_root: Path | None = None) -> None:
+def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list[Finding], strict: bool = True, governance_root: Path | None = None, *, check_publication: bool = True) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
     declaration_path = project_path / ".project.json"
@@ -513,6 +513,14 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
     verification = declaration.get("verification")
     if requires_verification and (not isinstance(verification, dict) or not str(verification.get("command", "")).strip()):
         finding(findings, "ERROR", "VERIFICATION_COMMAND", "a real verification command is required", project_id)
+    if profile != "inventory":
+        from repository_metadata import validate_discoverability, validate_publication
+
+        if not (project_path / "LICENSE").is_file():
+            finding(findings, "ERROR", "LICENSE_MISSING", "standard project must contain a root LICENSE", project_id)
+        validate_discoverability(declaration, project_path, findings, project_id)
+        if check_publication:
+            validate_publication(declaration, findings, project_id)
     if requires_ci and not any((project_path / candidate).exists() for candidate in ("Jenkinsfile", ".gitlab-ci.yml")) and not (project_path / ".github" / "workflows").is_dir():
         finding(findings, "ERROR", "CI_MISSING", "a CI workflow is required by this profile", project_id)
     if requires_openspec and not (project_path / "openspec").is_dir():
@@ -621,7 +629,7 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
     if args.self_check:
         selected = [{**entry, "path": "."} for entry in projects if entry.get("id") == "workspace-governance"]
         for entry in selected:
-            validate_project(entry, workspace_root, findings, governance_root=governance_root)
+            validate_project(entry, workspace_root, findings, governance_root=governance_root, check_publication=False)
     else:
         selected = effective_projects
         if args.project:

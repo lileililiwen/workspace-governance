@@ -251,6 +251,43 @@ python3 scripts/init_project.py /path/to/project \
 python3 scripts/workspace_check.py --root .. --project my-project
 ```
 
+## License and GitHub discoverability
+
+The governance audit exposes standard projects that lack a root `LICENSE`,
+source-backed `.project.json.discoverability` metadata, or verified GitHub
+publication evidence:
+
+```bash
+python3 scripts/workspace_check.py --root .. --audit --json
+```
+
+Repair local metadata explicitly; semantic fields are never invented and
+existing files are preserved:
+
+```bash
+python3 scripts/init_project.py /path/to/project --profile product --kind product \
+  --apply-metadata --description "Source-backed description" \
+  --keywords repository governance --topics repository-governance \
+  --audience developers --use-case "audit project repositories" \
+  --search-phrase "repository governance tool" \
+  --homepage https://github.com/OWNER/REPOSITORY --license-spdx MIT \
+  --visibility public
+```
+
+Verify or explicitly apply GitHub metadata through the authenticated `gh` CLI:
+
+```bash
+python3 scripts/github_metadata.py /path/to/project --check --json
+python3 scripts/github_metadata.py /path/to/project --apply --json
+python3 scripts/github_metadata.py /path/to/project --publish \
+  --owner OWNER --repository REPOSITORY --json
+```
+
+Authentication failures are blocking; run `gh auth login` manually. The
+adapter never handles or prints tokens, never replaces an existing remote, and
+never force-pushes. GitHub metadata is evidence only after `gh repo view` and
+the local publication declaration agree.
+
 `--id` is optional and defaults to the kebab-case directory name; an explicit
 `--id` must match the derived id unless the directory name is not convertible.
 

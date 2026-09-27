@@ -85,5 +85,24 @@
       "tests"
     ],
     "placeholder_threshold": 0
+  },
+  "discoverability": {
+    "description": "Language-neutral workspace governance for project declarations, standard documentation, evidence policy, and repository metadata.",
+    "keywords": ["workspace governance", "repository audit", "project metadata", "GitHub metadata"],
+    "topics": ["workspace-governance", "repository-audit", "project-metadata", "github-metadata"],
+    "audience": ["developers", "platform engineers", "AI coding agents"],
+    "use_cases": ["audit a multi-project workspace", "standardize repository metadata", "verify GitHub discoverability"],
+    "search_phrases": ["workspace repository governance tool", "GitHub project metadata audit", "standard repository documentation"],
+    "homepage": "https://github.com/lileililiwen/workspace-governance",
+    "license_spdx": "MIT",
+    "visibility": "public"
+  },
+  "publication": {
+    "provider": "github",
+    "owner": "lileililiwen",
+    "repository": "workspace-governance",
+    "default_branch": "main",
+    "state": "unverified",
+    "evidence_ref": "HANDOFF.md"
   }
 }

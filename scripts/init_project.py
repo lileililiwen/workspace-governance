@@ -7,7 +7,10 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
+
+from repository_metadata import build_discoverability
 
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
@@ -23,6 +26,32 @@ TEXT_TEMPLATES = (
     ".ai-rules/completion.md",
     ".ai-gate/gate.yaml",
 )
+
+
+def mit_license() -> str:
+    year = datetime.now().year
+    return f"""MIT License
+
+Copyright (c) {year} Project contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the \"Software\"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
 
 
 def derive_id(directory_name: str) -> str:
@@ -81,6 +110,28 @@ def render(content: str, project_id: str, profile: str, verification_command: st
             .replace("__VERIFICATION_COMMAND__", verification_command))
 
 
+def apply_local_metadata(target: Path, metadata: dict, license_spdx: str) -> list[str]:
+    """Add missing local metadata without replacing existing values or files."""
+    changed: list[str] = []
+    declaration_path = target / ".project.json"
+    declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
+    if not isinstance(declaration, dict):
+        raise ValueError(".project.json must contain an object")
+    license_path = target / "LICENSE"
+    if not license_path.exists() and license_spdx != "MIT":
+        raise ValueError(f"no bundled license template for {license_spdx}; add LICENSE manually")
+    if "discoverability" not in declaration:
+        declaration["discoverability"] = metadata
+        declaration_path.write_text(json.dumps(declaration, indent=2) + "\n", encoding="utf-8")
+        changed.append(".project.json")
+    elif declaration["discoverability"] != metadata:
+        raise ValueError("discoverability already exists and differs; refusing to overwrite it")
+    if not license_path.exists():
+        license_path.write_text(mit_license(), encoding="utf-8")
+        changed.append("LICENSE")
+    return changed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("target", type=Path)
@@ -90,6 +141,16 @@ def main() -> int:
     parser.add_argument("--lifecycle", default="active")
     parser.add_argument("--verification-command", default="./scripts/verify.sh")
     parser.add_argument("--force", action="store_true", help="kept for automation compatibility; existing files are never overwritten")
+    parser.add_argument("--apply-metadata", action="store_true", help="add explicit discoverability metadata and a missing license")
+    parser.add_argument("--description")
+    parser.add_argument("--keywords", nargs="+")
+    parser.add_argument("--topics", nargs="+")
+    parser.add_argument("--audience", nargs="+")
+    parser.add_argument("--use-case", dest="use_cases", action="append")
+    parser.add_argument("--search-phrase", dest="search_phrases", action="append")
+    parser.add_argument("--homepage")
+    parser.add_argument("--license-spdx", default="MIT")
+    parser.add_argument("--visibility", choices=["public", "private", "internal"])
     args = parser.parse_args()
     target = args.target.resolve()
     project_id, error = resolve_project_id(target.name, args.id)
@@ -122,6 +183,24 @@ def main() -> int:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(render(content, project_id, args.profile, args.verification_command), encoding="utf-8")
         created.append(relative)
+    if args.apply_metadata:
+        try:
+            metadata = build_discoverability(
+                description=args.description or "",
+                keywords=args.keywords or [],
+                topics=args.topics or [],
+                audience=args.audience or [],
+                use_cases=args.use_cases or [],
+                search_phrases=args.search_phrases or [],
+                homepage=args.homepage or "",
+                license_spdx=args.license_spdx,
+                visibility=args.visibility or "",
+            )
+            created.extend(apply_local_metadata(target, metadata, args.license_spdx))
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            print(f"init_project refused metadata repair: {exc}", file=sys.stderr)
+            return 2
+    created = list(dict.fromkeys(created))
     print(f"Initialized {project_id} at {target}")
     print("Created: " + (", ".join(created) if created else "nothing; existing files preserved"))
     return 0

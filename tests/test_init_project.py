@@ -4,7 +4,8 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
-from init_project import derive_id, resolve_project_id
+from init_project import apply_local_metadata, derive_id, resolve_project_id
+from repository_metadata import build_discoverability
 
 
 class DeriveIdTests(unittest.TestCase):
@@ -38,6 +39,49 @@ class ResolveProjectIdTests(unittest.TestCase):
         resolved, error = resolve_project_id("demo", "Bad_Id")
         self.assertIsNone(resolved)
         self.assertIn("must match", error)
+
+
+class MetadataRepairTests(unittest.TestCase):
+    def test_missing_semantic_fields_are_rejected(self):
+        with self.assertRaises(ValueError):
+            build_discoverability(description="", keywords=[], topics=[], audience=[], use_cases=[], search_phrases=[], homepage="", license_spdx="MIT", visibility="public")
+
+    def test_explicit_metadata_is_normalized(self):
+        metadata = build_discoverability(
+            description="Repository governance tool",
+            keywords=["repository", "governance"],
+            topics=["Repository Governance"],
+            audience=["developers"],
+            use_cases=["audit projects"],
+            search_phrases=["repository governance"],
+            homepage="https://example.com",
+            license_spdx="MIT",
+            visibility="public",
+        )
+        self.assertEqual(metadata["topics"], ["repository-governance"])
+
+    def test_apply_repair_adds_metadata_and_license(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / ".project.json").write_text(json.dumps({"id": "demo"}), encoding="utf-8")
+            metadata = build_discoverability(
+                description="Repository governance tool",
+                keywords=["repository"],
+                topics=["repository-governance"],
+                audience=["developers"],
+                use_cases=["audit projects"],
+                search_phrases=["repository governance"],
+                homepage="https://example.com",
+                license_spdx="MIT",
+                visibility="public",
+            )
+            changed = apply_local_metadata(target, metadata, "MIT")
+            self.assertEqual(changed, [".project.json", "LICENSE"])
+            self.assertEqual(json.loads((target / ".project.json").read_text())["discoverability"], metadata)
+            self.assertIn("MIT License", (target / "LICENSE").read_text())
 
 
 if __name__ == "__main__":

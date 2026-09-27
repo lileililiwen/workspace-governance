@@ -20,6 +20,7 @@ beside an existing one.
 | Gate, evidence, or release readiness | `skills/workspace-governance/references/gate-and-evidence.md` (driftwatchdog, `docs/capabilities.md`, `scripts/promote_project.py`) |
 | Kind, profile, marker, or secret vocabulary | `skills/workspace-governance/references/vocabulary.md` (`vocabulary.json`) |
 | Shared rules, `.ai-rules`, or handoff shape | `skills/workspace-governance/references/rules-baseline.md` (`scripts/rules_drift.py`, `openspec/specs/rules-baseline/spec.md`) |
+| License, discoverability, GitHub metadata, or repository publication | `skills/workspace-governance/references/repository-metadata.md` (`scripts/repository_metadata.py`, `scripts/github_metadata.py`, `scripts/init_project.py`) |
 | Shared library adoption (.NET / Rust) | `skills/workspace-governance/references/platform-adoption.md` (dotnet-platform-libs, rust-platform-libs) |
 | Shared contracts or schemas | `skills/workspace-governance/references/contracts.md` (platform-contracts) |
 | Unknown or ambiguous | Safe default: `python3 scripts/workspace_check.py --root .. --audit`, then `openspec list`. Say that no route matched; never guess. |
