@@ -4,7 +4,7 @@
 > is at 0 errors. Packages 1 (`registry-and-declaration-integrity`), 2
 > (`shared-rules-single-source`) and 3 (`portfolio-vocabulary-normalization`)
 > are archived. Package 8 (`governance-front-door`)
-> is authored and ready to implement. Packages 4–7 are specified
+> is archived as well. Packages 4–7 are specified
 > implementation-ready in `docs/package-backlog.md` and are owned by
 > `driftwatchdog`, `dotnet-platform-libs`, `rust-platform-libs` and
 > `platform-contracts` respectively. Remaining follow-ups: re-promote the pilot

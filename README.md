@@ -128,6 +128,22 @@ See `openspec/specs/forge-governance-adapter/spec.md` for the contract
 shape and `tests/test_forge_governance_adapter.py` for the mapping
 matrix.
 
+### Agent skill: workspace-governance
+
+`skills/workspace-governance/SKILL.md` is the single auto-triggering entry
+for governance situations. It routes to per-concern references
+(`skills/workspace-governance/references/*.md`), each linking the owning
+script or canonical spec rather than restating policy. The skill is
+versioned with the scripts it cites and is not installed automatically;
+make it discoverable with a symlink or a copy:
+
+```bash
+ln -s <repo>/skills/workspace-governance ~/.agents/skills/workspace-governance
+```
+
+`python3 scripts/check_skill_refs.py` proves every cited path exists; it
+fails naming the reference and the missing path when one does not.
+
 With `explicit-plus-immediate-directories`, immediate child folders containing
 common project markers are discovered automatically. The registry's
 `discovery.unregistered_policy` decides the level: this workspace sets `fail`,

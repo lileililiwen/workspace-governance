@@ -15,7 +15,7 @@ the change directory.
 | 5 | `platform-consumer-bootstrap` | dotnet-platform-libs | `openspec/changes/platform-consumer-bootstrap/` | authored |
 | 6 | `rust-platform-consumer-baseline` | rust-platform-libs | `openspec/changes/rust-platform-consumer-baseline/` | authored |
 | 7 | `contracts-consumer-parity` | platform-contracts | `openspec/changes/contracts-consumer-parity/` | authored |
-| 8 | `governance-front-door` | workspace-governance | `openspec/changes/governance-front-door/` | authored |
+| 8 | `governance-front-door` | workspace-governance | `openspec/changes/archive/2026-09-27-governance-front-door/` | shipped |
 
 Package 4 was called `gate-run-evidence` in the original portfolio map; 5 was
 `platform-adoption-dotnet`; 6 `platform-adoption-rust`; 7
