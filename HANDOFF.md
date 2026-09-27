@@ -1,8 +1,33 @@
 # Workspace Governance Handoff
 
-current_spec: none
-
 ## Current state
+
+The `repository-discoverability-governance` change is implemented and archived
+in commit `1c434b5`. Workspace Governance now audits standard adopted projects
+for `LICENSE`, source-backed `.project.json.discoverability`, and separate
+GitHub publication evidence. `scripts/init_project.py` performs additive local
+repair, while `scripts/github_metadata.py` requires authenticated `gh`,
+preserves existing remotes/topics, and supports explicit check/apply/publish
+modes without token handling or force-pushes.
+
+## Latest verification evidence
+
+- `python3 -m unittest discover -s tests -v` — 159 tests, 0 failures.
+- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
+- `python3 scripts/check_skill_refs.py` — `SKILL.md + 7 references` valid.
+- `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
+- `openspec validate --all --strict --no-interactive` — 10 passed, 0 failed.
+- `git diff --check` — clean before the handoff-only update.
+- `gh auth status` — authenticated account `lileililiwen`.
+- `python3 scripts/github_metadata.py . --check --json` — BLOCKED with
+  `GITHUB_REMOTE_MISSING`; this repository has no `origin`, so no GitHub
+  repository or metadata was created by this change.
+- Portfolio audit `python3 scripts/workspace_check.py --root .. --audit
+  --json` — 208 errors and 16 warnings, intentionally exposing migration work:
+  57 `LICENSE_MISSING`, 75 `DISCOVERABILITY_MISSING`, and 76
+  `PUBLICATION_UNVERIFIED`, plus the pre-existing handoff/deployment warnings.
+- `python3 scripts/jenkins_manifest.py --check --root ..` — blocked by the
+  same newly exposed portfolio metadata gaps; no deployment manifest changed.
 
 Five changes shipped in sequence.
 
