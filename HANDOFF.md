@@ -19,13 +19,16 @@ modes without token handling or force-pushes.
 - `openspec validate --all --strict --no-interactive` — 10 passed, 0 failed.
 - `git diff --check` — clean before the handoff-only update.
 - `gh auth status` — authenticated account `lileililiwen`.
-- `python3 scripts/github_metadata.py . --check --json` — BLOCKED with
-  `GITHUB_REMOTE_MISSING`; this repository has no `origin`, so no GitHub
-  repository or metadata was created by this change.
+- `gh repo create` created `https://github.com/lileililiwen/workspace-governance`,
+  `main` was pushed through `origin`, and
+  `python3 scripts/github_metadata.py . --check --json` reports
+  `metadata_verified` with no differences. The local declaration records the
+  verified GitHub publication state.
 - Portfolio audit `python3 scripts/workspace_check.py --root .. --audit
-  --json` — 208 errors and 16 warnings, intentionally exposing migration work:
-  57 `LICENSE_MISSING`, 75 `DISCOVERABILITY_MISSING`, and 76
-  `PUBLICATION_UNVERIFIED`, plus the pre-existing handoff/deployment warnings.
+  --json` — 207 errors and 18 warnings, intentionally exposing migration work:
+  57 `LICENSE_MISSING`, 75 `DISCOVERABILITY_MISSING`, and 75
+  `PUBLICATION_UNVERIFIED`, plus the pre-existing handoff/deployment and
+  capability warnings.
 - `python3 scripts/jenkins_manifest.py --check --root ..` — blocked by the
   same newly exposed portfolio metadata gaps; no deployment manifest changed.
 
