@@ -4,7 +4,7 @@ current_spec: none
 
 ## Current state
 
-Two changes shipped in sequence.
+Three changes shipped in sequence.
 
 **1. `registry-and-declaration-integrity`** (archived
 `openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/`,
@@ -26,16 +26,29 @@ drift report with no `--apply`, and surfaced scaffold `HANDOFF.md` files from
 the audit as `HANDOFF_SCAFFOLD`. Created `crossalheart`'s missing rules,
 clearing the workspace audit's last two errors.
 
+**3. `portfolio-vocabulary-normalization`** (archived
+`openspec/changes/archive/2026-09-27-portfolio-vocabulary-normalization/`,
+canonical spec `openspec/specs/portfolio-vocabulary/spec.md`). Added
+`vocabulary.json` as the single machine-readable source for the 15 canonical
+profiles, 12 canonical kinds, placeholder markers, and secret-field
+substrings. `workspace_check.py` enforces `PROFILE_UNKNOWN` (ERROR),
+`KIND_UNKNOWN` (WARNING), and `PROFILE_DOC_UNKNOWN` (ERROR) from it and exits
+2 with `VOCABULARY` when it is missing or unusable; `product_code_quality.py`
+defaults its markers from it while keeping per-project overrides;
+`maturity_audit.py` reports the vocabulary version. Added the 9 missing
+`profiles/*.json` documents and remapped 19 sibling declarations with
+non-canonical `kind`/`profile` values (left uncommitted in their own
+repositories, alongside the earlier declaration/rules edits).
+
 The read-only **Forge governance adapter**
 (`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
 
 ## Authored, not yet implemented
 
-Six packages are fully authored as OpenSpec changes and are ready to implement
+Five packages are fully authored as OpenSpec changes and are ready to implement
 in a fresh conversation. Each lives in the repository that owns the work:
 
-- `openspec/changes/portfolio-vocabulary-normalization/` (package 3, here).
 - `openspec/changes/governance-front-door/` (package 8, here).
 - `driftwatchdog/openspec/changes/gate-evidence-export/` (package 4).
 - `dotnet-platform-libs/openspec/changes/platform-consumer-bootstrap/` (package 5).
@@ -47,25 +60,30 @@ lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
 
-- `python3 -m unittest discover -s tests` — 122 tests, 0 failures.
+- `python3 -m unittest discover -s tests` — 140 tests, 0 failures (122 prior + 18 new in `tests/test_vocabulary.py`).
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
 - `python3 scripts/workspace_check.py --root .. --audit --json` — **0 errors**,
-  18 warnings (11 `HANDOFF_SCAFFOLD`, 7 `DEPLOYMENT_PROMOTION_STALE`), down from
-  14 errors / 18 warnings before the two changes.
+  16 warnings (9 `HANDOFF_SCAFFOLD`, 7 `DEPLOYMENT_PROMOTION_STALE`), down from
+  18 warnings before this change (two products recorded real `HANDOFF.md`
+  bodies since 2026-09-26 through product-owned work; no `KIND_UNKNOWN`,
+  `PROFILE_UNKNOWN`, or `PROFILE_DOC_UNKNOWN` remains).
 - `python3 scripts/maturity_audit.py --root .. --json` — reports the same
-  0 errors / 18 warnings as the audit; `evidence_planned` is 0.
-- `python3 scripts/rules_drift.py --root .. --check` — 81 triage findings
-  (clause-level drift across adopted projects); every project file is unchanged
-  by the run.
+  0 errors / 16 warnings as the audit; `vocabulary_version` is 1.
+- `python3 scripts/product_code_quality.py . --json` — PASS for the governance
+  repo (markers now default from the vocabulary).
 - `python3 scripts/jenkins_manifest.py --check --root /home/paul/code` —
   7 projects, 0 errors.
 - `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
+- Forge adapter observations verified for a clean project (`mewo`, pass), a
+  remapped project (`forge`, pass), a warning-carrying project (`mortalect`,
+  pass with `HANDOFF_SCAFFOLD` evidence), an unregistered id (`ghost`,
+  unknown), and a pending-adoption project (`crossalheart`, blocked).
 - `node scripts/check-openspec-change-names.mjs` — valid;
-  `openspec validate --all --strict --no-interactive` — 6 passed, 0 failed
-  (6 canonical specs, 0 active changes).
+  `openspec validate --all --strict --no-interactive` — 9 passed, 0 failed
+  (7 canonical specs, 2 active changes).
 - `git diff --check` — clean.
-- Commits: `039ae39` and `91d9fd9` (implementation + tests + archive), each
-  followed by a HANDOFF-only commit.
+- Commit `e74901e` was the pre-work HEAD; package 3 implementation is the
+  first commit after it, followed by this HANDOFF-only commit.
 
 ## Portfolio impact observed
 
@@ -78,28 +96,29 @@ before the change was re-scoped to a report-only clause check. The portfolio
 `git diff` for `.ai-rules` is clean apart from `crossalheart`'s newly created
 files.
 
-11 adopted projects still carry scaffold `HANDOFF.md` bodies (reported as
-`HANDOFF_SCAFFOLD`). The 7 `DEPLOYMENT_PROMOTION_STALE` warnings remain triaged:
+9 adopted projects still carry scaffold `HANDOFF.md` bodies (reported as
+`HANDOFF_SCAFFOLD`; two products recorded real handoffs since 2026-09-26).
+The 7 `DEPLOYMENT_PROMOTION_STALE` warnings remain triaged:
 re-promotion was not performed because it would record a deployable decision at
 the current revision without a new release.
 
-Sibling repositories still hold uncommitted declaration and rules files created
-by these two changes (the 10 declarations plus `crossalheart`'s rules and
-`.ai-gate`); they were left uncommitted in their own repositories.
+Sibling repositories still hold uncommitted declaration, rules, and vocabulary
+remap files created by these three changes (the 10 declarations plus
+`crossalheart`'s rules and `.ai-gate`, plus 19 `kind`/`profile` remaps);
+they were left uncommitted in their own repositories.
 
 ## Next action
 
-1. Implement package 3 (`portfolio-vocabulary-normalization`) from its authored
+1. Implement package 8 (`governance-front-door`) from its authored
    change, then archive it with the two required commits.
-2. Implement package 8 (`governance-front-door`) the same way.
-3. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
+2. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
    each is a separate conversation and a separate repository.
-4. Replace the 11 scaffold `HANDOFF.md` bodies as each product's own state is
+3. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
    recorded (product-owned work).
-5. Re-promote each pilot project at its current `HEAD` once its release pipeline
+4. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-6. Commit the sibling declaration/rules edits in their own repositories when
+5. Commit the sibling declaration/rules edits in their own repositories when
    those repositories' pending work is ready.
 
 ## Evidence boundary
