@@ -4,7 +4,7 @@ current_spec: none
 
 ## Current state
 
-Three changes shipped in sequence.
+Four changes shipped in sequence.
 
 **1. `registry-and-declaration-integrity`** (archived
 `openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/`,
@@ -40,16 +40,29 @@ defaults its markers from it while keeping per-project overrides;
 non-canonical `kind`/`profile` values (left uncommitted in their own
 repositories, alongside the earlier declaration/rules edits).
 
+**4. `governance-front-door`** (archived
+`openspec/changes/archive/2026-09-27-governance-front-door/`, canonical spec
+`openspec/specs/governance-front-door/spec.md`). Shipped
+`skills/workspace-governance/SKILL.md` — one auto-triggering entry whose
+routing table sends each governance situation to a per-concern reference —
+plus six references that link owning scripts and canonical specs instead of
+restating policy. Added `scripts/check_skill_refs.py`, which fails naming the
+reference and the missing path when a cited path or command does not exist,
+with `tests/test_skill_refs.py` covering the valid tree, the missing-script
+negative, routing resolution, the safe default, and the
+no-destructive-instructions boundary. Documented the manual install in
+`README.md`. No checker, policy, spec, template, or sibling repository was
+changed.
+
 The read-only **Forge governance adapter**
 (`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
 
 ## Authored, not yet implemented
 
-Five packages are fully authored as OpenSpec changes and are ready to implement
+Four packages are fully authored as OpenSpec changes and are ready to implement
 in a fresh conversation. Each lives in the repository that owns the work:
 
-- `openspec/changes/governance-front-door/` (package 8, here).
 - `driftwatchdog/openspec/changes/gate-evidence-export/` (package 4).
 - `dotnet-platform-libs/openspec/changes/platform-consumer-bootstrap/` (package 5).
 - `rust-platform-libs/openspec/changes/rust-platform-consumer-baseline/` (package 6).
@@ -60,29 +73,23 @@ lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
 
-- `python3 -m unittest discover -s tests` — 140 tests, 0 failures (122 prior + 18 new in `tests/test_vocabulary.py`).
-- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
+- `python3 scripts/check_skill_refs.py` — `skill refs ok: SKILL.md + 6 references`.
+- `python3 -m unittest discover -s tests` — 148 tests, 0 failures (140 prior + 8 new in `tests/test_skill_refs.py`).
+- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings (unchanged).
 - `python3 scripts/workspace_check.py --root .. --audit --json` — **0 errors**,
-  16 warnings (9 `HANDOFF_SCAFFOLD`, 7 `DEPLOYMENT_PROMOTION_STALE`), down from
-  18 warnings before this change (two products recorded real `HANDOFF.md`
-  bodies since 2026-09-26 through product-owned work; no `KIND_UNKNOWN`,
-  `PROFILE_UNKNOWN`, or `PROFILE_DOC_UNKNOWN` remains).
-- `python3 scripts/maturity_audit.py --root .. --json` — reports the same
-  0 errors / 16 warnings as the audit; `vocabulary_version` is 1.
-- `python3 scripts/product_code_quality.py . --json` — PASS for the governance
-  repo (markers now default from the vocabulary).
-- `python3 scripts/jenkins_manifest.py --check --root /home/paul/code` —
-  7 projects, 0 errors.
-- `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
-- Forge adapter observations verified for a clean project (`mewo`, pass), a
-  remapped project (`forge`, pass), a warning-carrying project (`mortalect`,
-  pass with `HANDOFF_SCAFFOLD` evidence), an unregistered id (`ghost`,
-  unknown), and a pending-adoption project (`crossalheart`, blocked).
+  16 warnings (9 `HANDOFF_SCAFFOLD`, 7 `DEPLOYMENT_PROMOTION_STALE`; unchanged
+  by this docs-only change).
 - `node scripts/check-openspec-change-names.mjs` — valid;
   `openspec validate --all --strict --no-interactive` — 9 passed, 0 failed
-  (7 canonical specs, 2 active changes).
+  (8 canonical specs, 1 active change).
 - `git diff --check` — clean.
-- Commit `e74901e` was the pre-work HEAD; package 3 implementation is the
+- Every cited `python3 scripts/*.py` command runs `--help` successfully
+  (workspace_check, init_project, auto_gate, product_code_quality,
+  maturity_audit, jenkins_manifest, rules_drift, check_skill_refs).
+- Package 3 evidence still stands (140-test baseline, 0/0 self-check,
+  0-error portfolio audit, vocabulary version 1, quality PASS, Jenkins
+  manifest 7 projects 0 errors, auto-gate PASS, adapter observations).
+- Commit `7e1bf63` was the pre-work HEAD; package 8 implementation is the
   first commit after it, followed by this HANDOFF-only commit.
 
 ## Portfolio impact observed
@@ -103,22 +110,21 @@ re-promotion was not performed because it would record a deployable decision at
 the current revision without a new release.
 
 Sibling repositories still hold uncommitted declaration, rules, and vocabulary
-remap files created by these three changes (the 10 declarations plus
+remap files created by the first three changes (the 10 declarations plus
 `crossalheart`'s rules and `.ai-gate`, plus 19 `kind`/`profile` remaps);
-they were left uncommitted in their own repositories.
+they were left uncommitted in their own repositories. Package 8 touched no
+sibling repository.
 
 ## Next action
 
-1. Implement package 8 (`governance-front-door`) from its authored
-   change, then archive it with the two required commits.
-2. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
+1. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
    each is a separate conversation and a separate repository.
-3. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
+2. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
    recorded (product-owned work).
-4. Re-promote each pilot project at its current `HEAD` once its release pipeline
+3. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-5. Commit the sibling declaration/rules edits in their own repositories when
+4. Commit the sibling declaration/rules edits in their own repositories when
    those repositories' pending work is ready.
 
 ## Evidence boundary
@@ -127,7 +133,8 @@ This repository can prove registry/schema/checker behavior, capability
 declaration shape, release-evidence shape, the deployable+release-evidence
 gate, the product-code quality rule, the deployment promotion
 mechanism, the rules-baseline drift report, and the Forge governance adapter
-contract. It cannot prove that the seven promoted projects actually build, pass
+contract. It can prove the front-door skill routes to existing references
+(`check_skill_refs.py`), but it cannot prove an agent will trigger the skill. It cannot prove that the seven promoted projects actually build, pass
 tests, deploy, or are runtime-healthy; those claims require the promoted
 projects' own verification commands and jenkins-local runtime observation. The
 adapter likewise cannot prove a project's runtime or release health;
