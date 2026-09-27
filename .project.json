@@ -7,7 +7,7 @@
   "verification": {
     "command": "python3 -m unittest discover -s tests -v",
     "gate_runtime": "driftwatchdog",
-    "evidence_status": "implemented"
+    "evidence_status": "verified"
   },
   "deployment": {
     "deployable": false,
@@ -36,19 +36,48 @@
     }
   },
   "release_evidence": {
-    "revision": {"state": "declared", "value": "n/a (governance repo, not deployed)"},
-    "version": {"state": "declared", "value": "schema_version 1"},
-    "toolchain": {"state": "declared", "value": "python-3.11"},
-    "artifacts": {"state": "unverified"},
-    "digests": {"state": "unverified"},
-    "sbom": {"state": "unverified"},
-    "provenance": {"state": "unverified"},
-    "checks": {"state": "configured", "value": ["python3 -m unittest discover -s tests -v", "python3 scripts/workspace_check.py --self-check"]},
-    "publication": {"state": "unverified"}
+    "revision": {
+      "state": "declared",
+      "value": "n/a (governance repo, not deployed)"
+    },
+    "version": {
+      "state": "declared",
+      "value": "schema_version 1"
+    },
+    "toolchain": {
+      "state": "declared",
+      "value": "python-3.11"
+    },
+    "artifacts": {
+      "state": "unverified"
+    },
+    "digests": {
+      "state": "unverified"
+    },
+    "sbom": {
+      "state": "unverified"
+    },
+    "provenance": {
+      "state": "unverified"
+    },
+    "checks": {
+      "state": "configured",
+      "value": [
+        "python3 -m unittest discover -s tests -v",
+        "python3 scripts/workspace_check.py --self-check"
+      ]
+    },
+    "publication": {
+      "state": "unverified"
+    }
   },
   "quality": {
-    "product_roots": ["scripts"],
-    "languages": ["python"],
+    "product_roots": [
+      "scripts"
+    ],
+    "languages": [
+      "python"
+    ],
     "exclude": [
       "scripts/workspace-check",
       "scripts/__pycache__",

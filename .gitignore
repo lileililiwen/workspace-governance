@@ -10,3 +10,8 @@ build/
 .env
 .env.*
 !.env.example
+
+# Generated governance reports (point-in-time snapshots, not tracked)
+auto-gate-report.json
+maturity-snapshot.json
+*-snapshot.json
