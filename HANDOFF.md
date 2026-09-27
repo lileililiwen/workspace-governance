@@ -4,7 +4,7 @@ current_spec: none
 
 ## Current state
 
-Four changes shipped in sequence.
+Five changes shipped in sequence.
 
 **1. `registry-and-declaration-integrity`** (archived
 `openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/`,
@@ -54,6 +54,25 @@ no-destructive-instructions boundary. Documented the manual install in
 `README.md`. No checker, policy, spec, template, or sibling repository was
 changed.
 
+**5. `post-mvp-readiness`** (archived
+`openspec/changes/archive/2026-09-27-post-mvp-readiness/`, canonical spec
+`openspec/specs/readiness/spec.md`). Docs-only readiness for the shared
+governance owner: a consolidated README Usage section with one copy-paste
+example per command (every flag verified against the shipped `--help`;
+the Forge adapter documents its stdin/stdout contract), a redacted
+checked-in capture `docs/assets/terminal-self-check.txt` showing a real
+`--self-check` (0 errors, 0 warnings) and `--audit --json` (0 errors,
+16 warnings with the 9/7 breakdown) run plus one labelled illustrative
+finding, an explicit screenshots-not-applicable note (CLI-only), and a
+single vocabulary entry point (`docs/vocabulary.md` plus a README
+section) that links the canonical sources and states the
+intent-vs-evidence invariant. Also repaired the stale
+`docs/package-backlog.md` dependency order (now records 1, 2, 3, 8
+shipped). No script, checker, schema, template, registry, promotion,
+or spec-behavior change; the pre-existing dirty `.project.json` and
+untracked `MATURITY_PROGRESS_SUMMARY.md` were deliberately left
+unstaged.
+
 The read-only **Forge governance adapter**
 (`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
@@ -73,7 +92,21 @@ lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
 
-- `python3 scripts/check_skill_refs.py` — `skill refs ok: SKILL.md + 6 references`.
+- Package 9 (`post-mvp-readiness`) evidence:
+  `python3 -m unittest discover -s tests` — 148 tests, 0 failures;
+  `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings;
+  `python3 scripts/workspace_check.py --root .. --audit --json` — 0 errors,
+  16 warnings (9 `HANDOFF_SCAFFOLD`, 7 `DEPLOYMENT_PROMOTION_STALE`);
+  `python3 scripts/jenkins_manifest.py --check --root ..` — 7 projects,
+  0 errors; `python3 scripts/auto_gate.py --self-check --no-deployment` —
+  PASS; `node scripts/check-openspec-change-names.mjs` — valid;
+  `openspec validate --all --strict --no-interactive` — 9 passed, 0 failed
+  (9 canonical specs, 0 active changes); `git diff --check` — clean.
+  Every documented Usage command runs `--help` (adapter: stdin contract);
+  every new README/docs relative link resolves on disk; no external image
+  host; capture redacted and reproducible offline.
+- Package 8 evidence still stands:
+  `python3 scripts/check_skill_refs.py` — `skill refs ok: SKILL.md + 6 references`.
 - `python3 -m unittest discover -s tests` — 148 tests, 0 failures (140 prior + 8 new in `tests/test_skill_refs.py`).
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings (unchanged).
 - `python3 scripts/workspace_check.py --root .. --audit --json` — **0 errors**,
