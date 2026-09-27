@@ -85,6 +85,20 @@ consumer exit non-zero; there is no empty-list fallback. Kind is descriptive
 and never drives profile requirements. The canonical spec is
 `openspec/specs/portfolio-vocabulary/spec.md`.
 
+## Vocabulary
+
+`docs/vocabulary.md` is the one entry point for the registry and
+evidence terms: declaration (intent), `evidence_status`,
+`capabilities`, `release_evidence`, `deployable`, the promotion
+ledger, finding codes, `kind`/`profile`, the quality gate, the
+governance front door, and the Forge adapter observation. Each
+definition links its canonical source instead of restating policy.
+
+The invariant across all of them: **a declaration is intent, not
+evidence; `deployable` requires both a promotion-ledger entry and
+complete release evidence.** Registry presence never proves that a
+project builds, passes tests, deploys, or is runtime-healthy.
+
 ## Mandatory command
 
 Run from this repository. The registry never stores a machine-specific root;
@@ -98,6 +112,78 @@ python3 scripts/auto_gate.py --root .. --report auto-gate-report.json
 python3 scripts/product_code_quality.py <project_dir> --json
 python3 -m unittest discover -s tests -v
 ```
+
+## Usage
+
+One copy-paste example per governance command. Every example uses
+only flags the shipped scripts support (each runs `--help`
+successfully except the Forge adapter, which reads one JSON
+request on stdin). Pass a workspace root relative to the current
+checkout, never a machine-specific root.
+
+```bash
+# Self-check: this repository's own registry and declarations (0 errors, 0 warnings)
+python3 scripts/workspace_check.py --self-check
+
+# Portfolio audit: every registered project (currently 0 errors, 16 warnings:
+# 9 HANDOFF_SCAFFOLD, 7 DEPLOYMENT_PROMOTION_STALE); add --json for the machine-readable report
+python3 scripts/workspace_check.py --root .. --audit --json
+
+# Single project audit
+python3 scripts/workspace_check.py --root .. --project my-project
+
+# Unattended gate (fails on governance or deployment errors; writes a report when requested)
+python3 scripts/auto_gate.py --root .. --report auto-gate-report.json
+
+# Product-code quality gate for one project directory (exit 0 PASS, 1 FAIL, 2 REVIEW_REQUIRED)
+python3 scripts/product_code_quality.py <project_dir> --json
+
+# Portfolio maturity report (evidence states, CI coverage, OpenSpec adoption)
+python3 scripts/maturity_audit.py --root .. --json
+
+# Shared-rules drift triage (report-only; names projects missing a canonical .ai-rules clause, never edits)
+python3 scripts/rules_drift.py --root .. --json
+
+# Skill reference check (every path cited by the governance front-door skill must exist)
+python3 scripts/check_skill_refs.py
+```
+
+```bash
+# Onboard a project (non-destructive; writes only missing declarations, then review and fill the real verification command)
+python3 scripts/init_project.py /path/to/project --profile rust-product --kind product
+python3 scripts/workspace_check.py --root .. --project my-project
+```
+
+```bash
+# Promote / demote (the only path to deployable: true; records the evidence reference, never runs verification itself)
+python3 scripts/promote_project.py <project-id> --evidence-ref "<revision-or-build pointer>"
+python3 scripts/promote_project.py <project-id> --demote
+```
+
+```bash
+# Deployment handoff (after the governance check; with --root .. currently 7 projects, 0 errors)
+python3 scripts/jenkins_manifest.py --check --root ..
+```
+
+```bash
+# Forge governance-provider adapter (read-only; one check request on stdin, one observation document on stdout)
+echo '{"contract":"0.1.0","action":"check","project_id":"<id>","project_path":"<path>"}' \
+  | WORKSPACE_ROOT=<workspace-root> \
+    python3 scripts/forge_governance_adapter.py
+```
+
+## Terminal capture
+
+`docs/assets/terminal-self-check.txt` is a checked-in, redacted
+capture of a real `--self-check` (0 errors, 0 warnings) and
+`--audit --json` (0 errors, 16 warnings with the finding
+breakdown) run, plus one clearly-labelled illustrative finding
+showing the shape of an unhealthy entry. It is reproducible
+offline with the two commands at the top of that file.
+
+Screenshots are not applicable: this project is CLI-only and has
+no GUI surface, so terminal captures are the only visual
+evidence.
 
 ### Optional: Forge governance-provider adapter
 

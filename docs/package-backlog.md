@@ -42,12 +42,10 @@ the *export*, not the guard).
 
 ## Dependency order
 
-- Shipped: 1, 2.
-- 3 depends on 1 and 2; 4 depends on 3 (it exports in the vocabulary 3
-  canonicalizes).
+- Shipped: 1, 2, 3, 8.
+- 4 depends on 3 (it exports in the vocabulary 3 canonicalized).
 - 5 and 6 are independent of each other and of 3.
 - 7 depends on 5 and 6 (it names their consumer wiring as the follow-up).
-- 8 is last: it routes to the others.
 
 ## Coordination rules
 
