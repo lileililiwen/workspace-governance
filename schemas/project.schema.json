@@ -25,7 +25,15 @@
       "properties": {
         "deployable": {"type": "boolean"},
         "jenkins_job": {"type": ["string", "null"]},
-        "compose_file": {"type": ["string", "null"]}
+        "compose_file": {"type": ["string", "null"], "pattern": "^(null|[^/][^\\u0000]*)$"},
+        "template_type": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+        "template_version": {"type": "integer", "minimum": 1},
+        "rendered_files": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+          "uniqueItems": true
+        },
+        "template_state": {"enum": ["configured", "verified", "blocked"]}
       }
     },
     "capabilities": {

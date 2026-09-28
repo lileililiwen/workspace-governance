@@ -530,7 +530,24 @@ def validate_project(entry: dict[str, Any], workspace_root: Path, findings: list
     deployment = declaration.get("deployment")
     if not isinstance(deployment, dict) or not isinstance(deployment.get("deployable"), bool):
         finding(findings, "ERROR", "DEPLOYMENT_DECLARATION", "deployment.deployable must be boolean", project_id)
-    elif deployment.get("deployable"):
+    else:
+        compose = deployment.get("compose_file")
+        if compose is not None and (not isinstance(compose, str) or not compose or Path(compose).is_absolute() or ".." in Path(compose).parts):
+            finding(findings, "ERROR", "DEPLOYMENT_COMPOSE", "deployment.compose_file must be repository-relative when present", project_id)
+        template_type = deployment.get("template_type")
+        template_version = deployment.get("template_version")
+        rendered_files = deployment.get("rendered_files")
+        template_state = deployment.get("template_state")
+        if template_type is not None and (not isinstance(template_type, str) or not re.fullmatch(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*", template_type)):
+            finding(findings, "ERROR", "DEPLOYMENT_TEMPLATE", "deployment.template_type must be a kebab-case identifier", project_id)
+        if template_version is not None and (not isinstance(template_version, int) or isinstance(template_version, bool) or template_version < 1):
+            finding(findings, "ERROR", "DEPLOYMENT_TEMPLATE", "deployment.template_version must be a positive integer", project_id)
+        if rendered_files is not None:
+            if not isinstance(rendered_files, list) or len(set(rendered_files)) != len(rendered_files) or any(not isinstance(item, str) or Path(item).is_absolute() or ".." in Path(item).parts for item in rendered_files):
+                finding(findings, "ERROR", "DEPLOYMENT_TEMPLATE", "deployment.rendered_files must contain unique repository-relative paths", project_id)
+        if template_state is not None and template_state not in {"configured", "verified", "blocked"}:
+            finding(findings, "ERROR", "DEPLOYMENT_TEMPLATE", "deployment.template_state is invalid", project_id)
+    if isinstance(deployment, dict) and deployment.get("deployable"):
         compose = deployment.get("compose_file")
         job = deployment.get("jenkins_job")
         if not isinstance(compose, str) or not compose:

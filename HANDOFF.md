@@ -1,5 +1,7 @@
 # Workspace Governance Handoff
 
+current_spec: runtime-template-library-and-renderer
+
 ## Current state
 
 The `repository-discoverability-governance` change is implemented and archived
@@ -9,6 +11,15 @@ GitHub publication evidence. `scripts/init_project.py` performs additive local
 repair, while `scripts/github_metadata.py` requires authenticated `gh`,
 preserves existing remotes/topics, and supports explicit check/apply/publish
 modes without token handling or force-pushes.
+
+The active `runtime-template-library-and-renderer` change adds the reusable
+runtime source library under `templates/runtime`, six typed Dockerfile/Compose
+families, and `scripts/runtime_templates.py` with list/inspect/render/check
+operations. Rendering is repository-relative, secret-free, atomic per output,
+and refuses existing files unless explicitly named with `--replace`. It only
+records configured template metadata and preserves deployment promotion state.
+No product repository, Jenkins consumer, or DriftWatchdog implementation was
+changed.
 
 ## Latest verification evidence
 

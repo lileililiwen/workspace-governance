@@ -6,6 +6,15 @@ evidence vocabulary, and deployment declarations.
 
 It does not own product source code, language runtimes, shared gate runtimes, or production execution.
 
+## Reusable runtime templates
+
+`templates/runtime` contains versioned Dockerfile and Compose families for
+common web, static-site, and worker shapes. Use `scripts/runtime_templates.py`
+to inspect a project, render an explicitly selected family, and check the
+generated contract. Rendering records configuration evidence only; it never
+promotes `deployment.deployable` or embeds secrets. See
+`docs/deployment-templates.md`.
+
 ## Ownership
 
 - `forge` is the portfolio control-plane consumer.
