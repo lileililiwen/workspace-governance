@@ -1,7 +1,5 @@
 # Workspace Governance Handoff
 
-current_spec: runtime-template-library-and-renderer
-
 ## Current state
 
 The `repository-discoverability-governance` change is implemented and archived
@@ -12,18 +10,18 @@ repair, while `scripts/github_metadata.py` requires authenticated `gh`,
 preserves existing remotes/topics, and supports explicit check/apply/publish
 modes without token handling or force-pushes.
 
-The active `runtime-template-library-and-renderer` change adds the reusable
-runtime source library under `templates/runtime`, six typed Dockerfile/Compose
-families, and `scripts/runtime_templates.py` with list/inspect/render/check
-operations. Rendering is repository-relative, secret-free, atomic per output,
-and refuses existing files unless explicitly named with `--replace`. It only
-records configured template metadata and preserves deployment promotion state.
-No product repository, Jenkins consumer, or DriftWatchdog implementation was
-changed.
+The `runtime-template-library-and-renderer` change is implemented and archived
+in commit `138844d`. It adds the reusable runtime source library under
+`templates/runtime`, six typed Dockerfile/Compose families, and
+`scripts/runtime_templates.py` with list/inspect/render/check operations.
+Rendering is repository-relative, secret-free, atomic per output, and refuses
+existing files unless explicitly named with `--replace`. It records configured
+template metadata without changing deployment promotion state. No product
+repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
 ## Latest verification evidence
 
-- `python3 -m unittest discover -s tests -v` — 159 tests, 0 failures.
+- `python3 -m unittest discover -s tests -v` — 167 tests, 0 failures.
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
 - `python3 scripts/check_skill_refs.py` — `SKILL.md + 7 references` valid.
 - `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
@@ -42,6 +40,14 @@ changed.
   capability warnings.
 - `python3 scripts/jenkins_manifest.py --check --root ..` — blocked by the
   same newly exposed portfolio metadata gaps; no deployment manifest changed.
+- `python3 scripts/runtime_templates.py list` — six version-one template
+  families listed from the registry.
+- Runtime template tests — all six families rendered; generated Compose files
+  passed `docker compose config` in the available Docker environment.
+- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings
+  after adding deployment-template metadata validation.
+- `openspec validate --changes --strict --no-interactive` — 1 passed, 0 failed
+  before archive; the archived and canonical specs are now present.
 
 Five changes shipped in sequence.
 
