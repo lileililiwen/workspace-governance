@@ -2,6 +2,15 @@
 
 ## Current state
 
+The `toolchain-decision-register` change is implemented and archived in
+commit `27282ee`. Workspace Governance now ships `decisions.json` at the
+governance root, a fail-closed `scripts/decisions.py` loader, and a
+`workspace_check.py --decisions` summary path. The four toolchain
+decisions resolved on 2026-09-30 are seeded with their owner projects,
+downstream references, and policy-boundary notes; the D2 public-catalog
+exclusion and the D3 capability-registry split are machine-checked by
+`tests/test_decisions.py`.
+
 The `repository-discoverability-governance` change is implemented and archived
 in commit `1c434b5`. Workspace Governance now audits standard adopted projects
 for `LICENSE`, source-backed `.project.json.discoverability`, and separate
@@ -21,12 +30,28 @@ repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
 ## Latest verification evidence
 
-- `python3 -m unittest discover -s tests -v` — 167 tests, 0 failures.
+- `python3 -m unittest discover -s tests -v` — 204 tests, 0 failures (167 prior
+  + 37 new in `tests/test_decisions.py`).
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
-- `python3 scripts/check_skill_refs.py` — `SKILL.md + 7 references` valid.
+- `python3 scripts/workspace_check.py --decisions` — prints D1–D4 summary;
+  `--json` produces a parseable document with `{id,title,status,date}` per
+  entry.
+- `python3 scripts/workspace_check.py --root .. --audit --json` — same 211
+  errors / 17 warnings shape as before; no new project-level finding codes
+  introduced by this change. The +4 errors / -1 warning vs the prior
+  HANDOFF baseline is pre-existing sibling-repo drift, not from this
+  change.
+- `node scripts/check-openspec-change-names.mjs` — valid.
+- `openspec validate --all --strict --no-interactive` — 14 passed, 0 failed
+  (10 canonical specs, 4 active changes; `workspace-decision-register`
+  archived and now lives under `openspec/specs/`).
 - `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
-- `openspec validate --all --strict --no-interactive` — 10 passed, 0 failed.
 - `git diff --check` — clean before the handoff-only update.
+
+Prior evidence (package 5, `post-mvp-readiness`):
+
+- `python3 -m unittest discover -s tests` — 167 tests, 0 failures.
+- `python3 scripts/check_skill_refs.py` — `SKILL.md + 7 references` valid.
 - `gh auth status` — authenticated account `lileililiwen`.
 - `gh repo create` created `https://github.com/lileililiwen/workspace-governance`,
   `main` was pushed through `origin`, and
@@ -49,7 +74,7 @@ repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 - `openspec validate --changes --strict --no-interactive` — 1 passed, 0 failed
   before archive; the archived and canonical specs are now present.
 
-Five changes shipped in sequence.
+Six changes shipped in sequence.
 
 **1. `registry-and-declaration-integrity`** (archived
 `openspec/changes/archive/2026-09-26-registry-and-declaration-integrity/`,
@@ -122,6 +147,27 @@ The read-only **Forge governance adapter**
 (`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
 
+**6. `toolchain-decision-register`** (archived
+`openspec/changes/archive/2026-10-01-toolchain-decision-register/`,
+canonical spec `openspec/specs/workspace-decision-register/spec.md`).
+Adds `decisions.json` at the governance root, a fail-closed
+`scripts/decisions.py` loader mirroring the vocabulary discipline, and a
+`workspace_check.py --decisions` summary path. `workspace_check.py`
+self-check reports `DECISIONS_REGISTER_MISSING` as ERROR when the file
+is absent; portfolio audits emit a single `DECISIONS_REGISTER_ABSENT`
+WARNING; broken shapes and unknown registry references are always
+errors. Seeded with the four accepted toolchain decisions resolved on
+2026-09-30 (D1 agent-runtime split, D2 self-hosted Zitadel with the
+public-catalog exclusion restated in `policy_boundary`, D3
+capability-registry home split with schema=platform-contracts and
+instances=workspace-governance, D4 crates.io publication). The D2
+exclusion and the D3 split are asserted by string in
+`tests/test_decisions.py`. `docs/toolchain-decisions.md` is the human
+view; `docs/capabilities.md` records the D3 ownership note. No
+sibling repository, runtime template, profile, capability schema, or
+promotion-ledger was changed; the public-site boundary in D2 is
+restated from the root ownership table and not weakened.
+
 ## Authored, not yet implemented
 
 Four packages are fully authored as OpenSpec changes and are ready to implement
@@ -136,6 +182,26 @@ in a fresh conversation. Each lives in the repository that owns the work:
 lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
+
+- Package 10 (`toolchain-decision-register`) evidence:
+  `python3 -m unittest discover -s tests` — 204 tests, 0 failures
+  (167 prior + 37 new in `tests/test_decisions.py`);
+  `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings;
+  `python3 scripts/workspace_check.py --decisions` — prints D1–D4; `--json`
+  produces a parseable document with `{id,title,status,date}` per entry;
+  `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS;
+  `node scripts/check-openspec-change-names.mjs` — valid;
+  `openspec validate --all --strict --no-interactive` — 14 passed, 0 failed
+  (10 canonical specs, 4 active changes; `workspace-decision-register`
+  archived to `openspec/specs/workspace-decision-register/spec.md`);
+  `git diff --check` — clean before the handoff-only update. The portfolio
+  audit (`--root .. --audit --json`) is unchanged in shape: 211 errors and
+  17 warnings, with no new project-level finding codes introduced by this
+  change (the +4 errors / -1 warning vs the prior HANDOFF baseline is
+  pre-existing sibling-repo drift, not from this change). The D2 public-
+  catalog exclusion and the D3 capability-registry split are asserted by
+  string in `tests/test_decisions.py`; the seeded downstream references
+  all resolve to live registry ids.
 
 - Package 9 (`post-mvp-readiness`) evidence:
   `python3 -m unittest discover -s tests` — 148 tests, 0 failures;
