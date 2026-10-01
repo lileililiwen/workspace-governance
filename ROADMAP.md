@@ -1,15 +1,18 @@
 # Workspace Governance Roadmap
 
-> **Status (as of 2026-09-26):** Phases 1–4 are shipped and the workspace audit
-> is at 0 errors. Packages 1 (`registry-and-declaration-integrity`), 2
-> (`shared-rules-single-source`) and 3 (`portfolio-vocabulary-normalization`)
-> are archived. Package 8 (`governance-front-door`)
-> is archived as well. Packages 4–7 are specified
-> implementation-ready in `docs/package-backlog.md` and are owned by
-> `driftwatchdog`, `dotnet-platform-libs`, `rust-platform-libs` and
-> `platform-contracts` respectively. Remaining follow-ups: re-promote the pilot
-> projects at their current `HEAD`, replace the pilot-context `release_evidence`
-> placeholders, and replace the 11 scaffold `HANDOFF.md` bodies.
+> **Status (as of 2026-10-01):** Phases 1–4 are shipped. Packages 1
+> (`registry-and-declaration-integrity`), 2 (`shared-rules-single-source`),
+> 3 (`portfolio-vocabulary-normalization`), 8 (`governance-front-door`),
+> 9 (`post-mvp-readiness`), 10 (`toolchain-decision-register`),
+> 11 (`shared-postgres-runtime-profile`), and 12
+> (`standalone-project-boundary`) are all archived in
+> `openspec/changes/archive/` and indexed in `docs/package-backlog.md`.
+> Packages 4–7 are specified implementation-ready in their owning
+> repositories (`driftwatchdog`, `dotnet-platform-libs`,
+> `rust-platform-libs`, and `platform-contracts` respectively).
+> Remaining follow-ups: re-promote the pilot projects at their current
+> `HEAD`, replace the pilot-context `release_evidence` placeholders, and
+> replace the 9 scaffold `HANDOFF.md` bodies.
 
 ## Phase 1 — Registry and mandatory checks
 
@@ -53,13 +56,20 @@
 
 ## Proposed lower-priority runtime-template follow-up
 
-After the active `standalone-project-boundary` work, consider
-`shared-postgres-runtime-profile`: optional .NET/Rust/Python runtime templates
-that connect to an operator-supplied PostgreSQL service without creating a
-per-project database container. The current per-project database templates
-remain the default. Each project must use its own database and role; endpoint
-and credentials are environment-specific, and no Mac hostname is a product
-default.
+> **Status (2026-10-01):** The follow-up is shipped as
+> package 11 (`shared-postgres-runtime-profile`); see
+> `openspec/changes/archive/2026-10-01-shared-postgres-runtime-profile/`
+> and the canonical spec at
+> `openspec/specs/external-postgres-runtime-profile/spec.md`. The four
+> `*-postgres-external` families (`dotnet-web-postgres-external`,
+> `rust-web-postgres-external`, `python-web-postgres-external`,
+> `worker-postgres-external`) connect an app container to a
+> supplied PostgreSQL service without starting a database container,
+> image, volume, or provisioning command. The six per-project
+> container-backed templates remain the default and are byte-identical
+> to their pre-change bytes. Each project must still use its own
+> database and role; endpoint and credentials are environment-specific
+> and no Mac hostname is a product default.
 
 ## Explicit non-goals
 
