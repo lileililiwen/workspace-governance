@@ -292,6 +292,13 @@
       "adoption": "adopted"
     },
     {
+      "id": "kairion",
+      "path": "kairion",
+      "profile": "dotnet-product",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
       "id": "kairosa",
       "path": "kairosa",
       "profile": "product",
