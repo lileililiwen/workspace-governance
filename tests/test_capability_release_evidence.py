@@ -8,15 +8,25 @@ Covers the scenarios in `openspec/changes/platform-capability-and-release-govern
 """
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-import sys
-
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 from workspace_check import run
+
+from _decisions_env import restore_decisions_register, use_empty_decisions_register
+
+
+def setUpModule():
+    use_empty_decisions_register()
+
+
+def tearDownModule():
+    restore_decisions_register()
 
 
 BASE_DECLARATION = {

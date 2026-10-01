@@ -1,12 +1,22 @@
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-import sys
-
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 from auto_gate import run_gate
+
+from _decisions_env import restore_decisions_register, use_empty_decisions_register
+
+
+def setUpModule():
+    use_empty_decisions_register()
+
+
+def tearDownModule():
+    restore_decisions_register()
 
 
 class AutoGateTests(unittest.TestCase):

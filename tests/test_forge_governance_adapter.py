@@ -30,6 +30,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 
 import workspace_check  # noqa: E402
 
@@ -37,6 +38,16 @@ import workspace_check  # noqa: E402
 # registries and workspaces but the adapter module itself is the production
 # code.
 import forge_governance_adapter as adapter  # noqa: E402
+
+from _decisions_env import restore_decisions_register, use_empty_decisions_register  # noqa: E402
+
+
+def setUpModule():
+    use_empty_decisions_register()
+
+
+def tearDownModule():
+    restore_decisions_register()
 
 from workspace_check import Finding, SECRET_WORDS  # noqa: E402
 

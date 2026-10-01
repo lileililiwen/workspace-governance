@@ -79,6 +79,13 @@ host name) may use an explicitly recorded alias.
 `workspace_check.py`; it never computes a second, independent result, so the
 two views cannot disagree.
 
+## Toolchain decision register
+
+`decisions.json` at the governance root is the single machine-readable
+source of accepted workspace toolchain decisions. Inspect it with
+`python3 scripts/workspace_check.py --decisions` (or `--json`); the
+canonical prose view is `docs/toolchain-decisions.md`.
+
 ## Portfolio vocabulary
 
 `vocabulary.json` is the single machine-readable source for the canonical

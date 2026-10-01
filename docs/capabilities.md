@@ -83,6 +83,26 @@ Jenkins manifest.
 | Release evidence generation  | The product or platform that produces the artifacts.                        |
 | Deployment promotion         | `jenkins-local` consuming `deployment/projects.json`.                        |
 
+## Capability registry ownership split (D3)
+
+The capability registry is split between two owners, recorded as
+`D3` in `docs/toolchain-decisions.md`:
+
+- **Entry schema.** `platform-contracts` owns the shape of a capability
+  declaration — the family of names, the `owner`/`evidence_state`/
+  `evidence_ref` fields, and any future additive fields. Consumers that
+  validate a capability declaration read the schema from
+  `platform-contracts`.
+- **Registered instances.** This repository (`workspace-governance`)
+  owns the live records of which projects declare which capabilities,
+  stored next to `projects.json`. The audit cross-references every
+  declared capability against the profile's `supported_capabilities`
+  list, but it does not own the schema.
+
+The two are never merged into a single file. The `D3` entry in
+`decisions.json` is the machine-checkable binding; `tests/test_decisions.py`
+asserts the split is present.
+
 ## Non-goals
 
 - No automatic dependency injection or package installation.

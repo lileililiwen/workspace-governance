@@ -22,7 +22,18 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 import product_code_quality as pcq  # noqa: E402
+
+from _decisions_env import restore_decisions_register, use_empty_decisions_register  # noqa: E402
+
+
+def setUpModule():
+    use_empty_decisions_register()
+
+
+def tearDownModule():
+    restore_decisions_register()
 
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"

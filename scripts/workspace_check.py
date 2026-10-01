@@ -17,6 +17,14 @@ PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 CHANGE_ID = PROJECT_ID
 LIFECYCLES = {"active", "planning", "reference", "inventory", "archived"}
 
+
+# Decision register codes (see scripts/decisions.py and the
+# `workspace-decision-register` canonical spec).
+DECISIONS_REGISTER_MISSING = "DECISIONS_REGISTER_MISSING"
+DECISIONS_REGISTER_ABSENT = "DECISIONS_REGISTER_ABSENT"
+DECISIONS_REGISTER_INVALID = "DECISIONS_REGISTER_INVALID"
+DECISIONS_REGISTRY_REFERENCE = "DECISIONS_REGISTRY_REFERENCE"
+
 # The canonical kind/profile sets and the secret scan pattern live in
 # vocabulary.json (see scripts/vocabulary.py). This module keeps no local
 # duplicate list: SECRET_WORDS and PROFILES resolve lazily from the
@@ -137,6 +145,64 @@ def load_json(path: Path, findings: list[Finding], code: str) -> dict[str, Any] 
         finding(findings, "ERROR", code, f"JSON object required: {path}")
         return None
     return value
+
+
+def load_decisions_register(
+    governance_root: Path,
+    registry: dict[str, Any],
+    findings: list[Finding],
+    *,
+    self_check: bool,
+) -> "list[object] | None":
+    """Load `decisions.json` from the governance root and surface findings.
+
+    The register is governance-owned and is required for the governance
+    self-check (ERROR `DECISIONS_REGISTER_MISSING`). A portfolio audit on
+    sibling repos tolerates the absence of the register (single WARNING
+    `DECISIONS_REGISTER_ABSENT`); broken shapes and unknown registry
+    references are always errors. Returns the parsed decisions on success,
+    `None` on any failure path (the caller does not need the value).
+
+    The `WORKSPACE_DECISIONS_PATH` env var overrides the default location
+    so tests can stage a per-workspace register without touching the
+    governance root file. Production callers never set it.
+    """
+    import decisions as decisions_module
+
+    override = os.environ.get("WORKSPACE_DECISIONS_PATH")
+    if override:
+        register_path = Path(override)
+    else:
+        register_path = decisions_module.decisions_path(governance_root)
+    if not register_path.is_file():
+        if self_check:
+            finding(findings, "ERROR", DECISIONS_REGISTER_MISSING,
+                    f"decisions register missing at {register_path}")
+        else:
+            finding(findings, "WARNING", DECISIONS_REGISTER_ABSENT,
+                    f"decisions register absent at {register_path}; "
+                    "self-check mode requires it")
+        return None
+    try:
+        loaded = decisions_module.load_decisions(register_path)
+    except decisions_module.DecisionError as exc:
+        finding(findings, "ERROR", DECISIONS_REGISTER_INVALID, str(exc))
+        return None
+    registry_ids = {
+        entry.get("id")
+        for entry in (registry.get("projects") or [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+    offenders = decisions_module.validate_against_registry(loaded, registry_ids)
+    if offenders:
+        finding(
+            findings,
+            "ERROR",
+            DECISIONS_REGISTRY_REFERENCE,
+            f"decisions register references unknown registry ids: {offenders}",
+        )
+        return None
+    return loaded
 
 
 def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding], check_paths: bool = True, *, canonical_profiles: set[str] | frozenset[str] | None = None, governance_root: Path | None = None) -> list[dict[str, Any]]:
@@ -616,6 +682,7 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
         workspace_root = Path(configured_root).expanduser().resolve()
     else:
         workspace_root = Path.cwd().resolve()
+    load_decisions_register(governance_root, registry, findings, self_check=bool(args.self_check))
     projects = validate_registry(registry, workspace_root, findings, check_paths=not args.self_check, canonical_profiles=canonical_profiles, governance_root=governance_root)
     validate_profile_docs(governance_root, findings, canonical_profiles=canonical_profiles)
     scan_for_secrets(registry, findings, secret_words=secret_words)
@@ -672,7 +739,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--audit", action="store_true", help="validate every registered project and fail on adoption gaps")
     parser.add_argument("--self-check", action="store_true", help="validate the governance repository only")
     parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument(
+        "--decisions",
+        action="store_true",
+        help="print a summary of the toolchain decision register and exit (loader errors are non-zero)",
+    )
     args = parser.parse_args(argv)
+    if args.decisions:
+        return _print_decisions_summary(args)
     findings, summary = run(args)
     if args.as_json:
         print(json.dumps({"summary": summary, "findings": [asdict(item) for item in findings]}, indent=2, sort_keys=True))
@@ -684,6 +758,64 @@ def main(argv: list[str] | None = None) -> int:
     if any(item.code == "VOCABULARY" for item in findings):
         return 2
     return 1 if summary["errors"] else 0
+
+
+def _print_decisions_summary(args: argparse.Namespace) -> int:
+    """Print the toolchain decision register summary and exit.
+
+    Loader failures (missing file, malformed JSON, bad shape, unknown registry
+    references) produce a non-zero exit and a short message on stderr. The
+    register is owned by the governance root; this summary reads from there
+    regardless of `--root` so the surface is stable for downstream tooling.
+    """
+    import decisions as decisions_module
+
+    governance_root = _default_governance_root()
+    register_path = decisions_module.decisions_path(governance_root)
+    try:
+        loaded = decisions_module.load_decisions(register_path)
+    except decisions_module.DecisionError as exc:
+        print(f"ERROR decisions register: {exc}", file=sys.stderr)
+        return 1
+    registry_path = governance_root / args.registry
+    if not registry_path.is_file():
+        print(
+            f"ERROR decisions register: registry file not found at {registry_path}",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"ERROR decisions register: cannot read registry {registry_path}: {exc}", file=sys.stderr)
+        return 1
+    if not isinstance(registry, dict):
+        print(f"ERROR decisions register: registry must be a JSON object: {registry_path}", file=sys.stderr)
+        return 1
+    registry_ids = {
+        entry.get("id")
+        for entry in (registry.get("projects") or [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+    offenders = decisions_module.validate_against_registry(loaded, registry_ids)
+    if offenders:
+        joined = ", ".join(sorted(offenders))
+        print(
+            f"ERROR decisions register: unknown registry references: {joined}",
+            file=sys.stderr,
+        )
+        return 1
+    summary = [
+        {"id": entry.id, "title": entry.title, "status": entry.status, "date": entry.date}
+        for entry in loaded
+    ]
+    if args.as_json:
+        print(json.dumps({"decisions": summary, "total": len(summary)}, indent=2, sort_keys=True))
+        return 0
+    for entry in summary:
+        print(f"{entry['id']}\t{entry['status']}\t{entry['date']}\t{entry['title']}")
+    print(f"Total decisions: {len(summary)}")
+    return 0
 
 
 if __name__ == "__main__":

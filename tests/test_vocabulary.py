@@ -8,11 +8,22 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 
 import product_code_quality as pcq
 import vocabulary
 from vocabulary import VocabularyError, load_vocabulary
 from workspace_check import run, validate_kind, validate_profile_docs
+
+from _decisions_env import restore_decisions_register, use_empty_decisions_register
+
+
+def setUpModule():
+    use_empty_decisions_register()
+
+
+def tearDownModule():
+    restore_decisions_register()
 
 
 CANONICAL_PROFILES = {
