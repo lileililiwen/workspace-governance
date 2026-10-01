@@ -2,6 +2,22 @@
 
 ## Current state
 
+The `standalone-project-boundary` change is implemented and archived in
+commit `fb5ff5c`. Workspace Governance now ships a fail-closed
+standalone-readiness contract: a project may declare a `standalone`
+block and an `integrations` array in `.project.json`, and the audit
+classifies it as one of six canonical statuses — `standalone`,
+`standalone-with-optional-integrations`, `library-dependent`,
+`workspace-dependent`, `service-dependent`, `blocked` — without
+executing any project command. The Forge governance adapter exposes
+the same classification as four additive observation fields
+(`standalone_status`, `standalone_observed_revision`,
+`standalone_integrations`, `standalone_findings`); existing keys and
+exit codes are unchanged. The schema, vocabulary, audit, and adapter
+all stay backward compatible: existing declarations without the new
+blocks remain valid and report `blocked` with a `STANDALONE_BLOCKED`
+warning.
+
 The `shared-postgres-runtime-profile` change is implemented and archived in
 commit `d5508cc`. Workspace Governance now ships four `*-postgres-external`
 runtime template families (`dotnet-web-postgres-external`,
@@ -41,10 +57,57 @@ existing files unless explicitly named with `--replace`. It records configured
 template metadata without changing deployment promotion state. No product
 repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
+The `toolchain-decision-register` change is implemented and archived in
+commit `27282ee`. Workspace Governance now ships `decisions.json` at the
+governance root, a fail-closed `scripts/decisions.py` loader, and a
+`workspace_check.py --decisions` summary path. The four toolchain
+decisions resolved on 2026-09-30 are seeded with their owner projects,
+downstream references, and policy-boundary notes; the D2 public-catalog
+exclusion and the D3 capability-registry split are machine-checked by
+`tests/test_decisions.py`.
+
+The `repository-discoverability-governance` change is implemented and archived
+in commit `1c434b5`. Workspace Governance now audits standard adopted projects
+for `LICENSE`, source-backed `.project.json.discoverability`, and separate
+GitHub publication evidence. `scripts/init_project.py` performs additive local
+repair, while `scripts/github_metadata.py` requires authenticated `gh`,
+preserves existing remotes/topics, and supports explicit check/apply/publish
+modes without token handling or force-pushes.
+
+The `runtime-template-library-and-renderer` change is implemented and archived
+in commit `138844d`. It adds the reusable runtime source library under
+`templates/runtime`, six typed Dockerfile/Compose families, and
+`scripts/runtime_templates.py` with list/inspect/render/check operations.
+Rendering is repository-relative, secret-free, atomic per output, and refuses
+existing files unless explicitly named with `--replace`. It records configured
+template metadata without changing deployment promotion state. No product
+repository, Jenkins consumer, or DriftWatchdog implementation was changed.
+
 ## Latest verification evidence
 
-- `python3 -m unittest discover -s tests -v` — 217 tests, 0 failures (204 prior
-  + 13 new in `tests/test_runtime_templates.py`).
+- `python3 -m unittest discover -s tests -v` — 253 tests, 0 failures
+  (217 prior + 36 new in `tests/test_standalone_project_boundary.py`:
+  the six canonical statuses, the absolute-path and `..` escape
+  rejections, optional and required integration branches, secret
+  redaction, the bounded static scan, the adapter's new fields, the
+  read-only guarantee, and the vocabulary loader).
+- `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings
+  (the governance repo carries no `standalone` block, so the
+  audit is unchanged for it).
+- `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
+- `python3 scripts/jenkins_manifest.py --check` — 0 projects, 0 errors
+  (the standalone classification does not promote `deployable`).
+- `node scripts/check-openspec-change-names.mjs` — valid.
+- `openspec validate --all --strict --no-interactive` — 14 passed,
+  0 failed (13 canonical specs, 1 active change; the
+  `standalone-project-boundary` change is archived and now lives
+  under `openspec/specs/`).
+- `git diff --check` — clean before the handoff-only update.
+- Portfolio audit (`--root .. --audit --json`) is unchanged in shape:
+  211 errors and 17 warnings, with no new project-level finding
+  codes introduced by this change. The `STANDALONE_*` codes only
+  fire on declarations that opt in, and no adopted project in this
+  workspace has opted in.
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
 - `python3 scripts/workspace_check.py --decisions` — prints D1–D4 summary;
   `--json` produces a parseable document with `{id,title,status,date}` per
@@ -205,6 +268,39 @@ sibling repository, runtime template, profile, capability schema, or
 promotion-ledger was changed; the public-site boundary in D2 is
 restated from the root ownership table and not weakened.
 
+**7. `standalone-project-boundary`** (archived
+`openspec/changes/archive/2026-10-01-standalone-project-boundary/`,
+canonical spec `openspec/specs/standalone-project-boundary/spec.md`).
+Adds a fail-closed standalone-readiness contract: a project may declare
+a `standalone` block and an `integrations` array in `.project.json`,
+and the audit classifies it as one of six canonical statuses —
+`standalone`, `standalone-with-optional-integrations`,
+`library-dependent`, `workspace-dependent`, `service-dependent`,
+`blocked` — without executing any project command. The schema adds
+optional `standalone` and `integrations` blocks plus `$defs.standalone_status`
+and `$defs.integration`; existing declarations remain valid (absent
+block ⇒ `blocked` + `STANDALONE_BLOCKED` warning, never a pass).
+`vocabulary.json` gains `standalone_statuses` (6 values) and
+`integration_required_states` (2 values), and the loader fails closed
+on missing, empty, non-array, or duplicate values. `workspace_check.py`
+adds `validate_standalone` and `classify_standalone` plus 12 finding
+codes (`STANDALONE_BLOCKED`, `STANDALONE_STATUS_INVALID`,
+`STANDALONE_SHAPE`, `STANDALONE_ABSOLUTE_PATH`,
+`STANDALONE_PATH_ESCAPE`, `STANDALONE_REQUIRED_SIBLING`,
+`STANDALONE_REQUIRED_SERVICE`, `STANDALONE_OPTIONAL`,
+`STANDALONE_INTEGRATION_PENDING`, `STANDALONE_EVIDENCE_MISSING`,
+`STANDALONE_SECRET_VALUE`, `STANDALONE_DETECTED_SIBLING`). The
+bounded static scan reads only `Cargo.toml`, `package.json`,
+`pyproject.toml`, and `go.mod`; it never executes the project and
+never overrides the declared status. The Forge governance adapter
+exposes the same classification as four additive observation fields
+(`standalone_status`, `standalone_observed_revision`,
+`standalone_integrations`, `standalone_findings`); existing keys,
+status mappings, and exit codes are unchanged, and
+`build_standalone_observation` never raises. No sibling repository,
+runtime template, profile, capability schema, promotion-ledger,
+Jenkins consumer, or DriftWatchdog implementation was changed.
+
 ## Authored, not yet implemented
 
 Four packages are fully authored as OpenSpec changes and are ready to implement
@@ -219,6 +315,45 @@ in a fresh conversation. Each lives in the repository that owns the work:
 lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
+
+- Package 12 (`standalone-project-boundary`) evidence:
+  `python3 -m unittest discover -s tests` — 253 tests, 0 failures
+  (217 prior + 36 new in `tests/test_standalone_project_boundary.py`:
+  the six canonical statuses, the absolute-path and `..` escape
+  rejections, optional/required integration branches, secret
+  redaction, the bounded static scan, the adapter's new fields, the
+  read-only guarantee, and the vocabulary loader);
+  `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings
+  (the governance repo carries no `standalone` block, so the audit
+  is unchanged for it);
+  `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS;
+  `python3 scripts/jenkins_manifest.py --check` — 0 projects, 0 errors
+  (the standalone classification does not promote `deployable`);
+  `node scripts/check-openspec-change-names.mjs` — valid;
+  `openspec validate --all --strict --no-interactive` — 14 passed,
+  0 failed (13 canonical specs, 1 active change;
+  `standalone-project-boundary` archived and now lives under
+  `openspec/specs/standalone-project-boundary/spec.md`);
+  `git diff --check` — clean before the handoff-only update.
+  The portfolio audit (`--root .. --audit --json`) is unchanged in
+  shape: 211 errors and 17 warnings, with no new project-level
+  finding codes introduced by this change (the `STANDALONE_*` codes
+  only fire on declarations that opt in, and no adopted project in
+  this workspace has opted in). The vocabulary loader now
+  fail-closes on missing, empty, non-array, or duplicate
+  `standalone_statuses` and `integration_required_states` (asserted
+  by `tests/test_standalone_project_boundary.py::VocabularyStandaloneTests`).
+  The Forge governance adapter always emits the four new fields
+  alongside the existing keys; existing keys, status mappings, and
+  exit codes are unchanged (asserted by
+  `tests/test_forge_governance_adapter.py`); secret-shaped values
+  in `standalone` and `integrations` fields are replaced by
+  `[redacted]` in evidence lines, and the read-only guarantee is
+  preserved (asserted by
+  `tests/test_standalone_project_boundary.py::AdapterStandaloneObservationTests`).
+  No sibling repository, runtime template, profile, capability
+  schema, promotion-ledger, Jenkins consumer, or DriftWatchdog
+  implementation was changed.
 
 - Package 11 (`shared-postgres-runtime-profile`) evidence:
   `python3 -m unittest discover -s tests` — 217 tests, 0 failures
