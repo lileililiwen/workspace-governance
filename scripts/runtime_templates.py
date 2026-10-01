@@ -21,6 +21,8 @@ PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 TOKEN_PATTERN = re.compile(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}")
 SECRET_NAME = re.compile(r"(?:password|passwd|secret|token|apikey|api_key|api-key|credential|private[_-]?key|bearer|session[_-]?key)", re.I)
 RELATIVE_VALUE = re.compile(r"^(?!/)(?![A-Za-z]:[\\/])[^\x00]+$")
+EXTERNAL_SUFFIX = "-postgres-external"
+DEFAULT_DB_PORT = "5432"
 
 
 class TemplateError(Exception):
@@ -83,7 +85,8 @@ def _validate_variables(entry: dict[str, Any], variables: dict[str, str]) -> Non
         if SECRET_NAME.search(key):
             raise TemplateError("RENDER_REJECTED", f"secret variable is not accepted: {key}")
     required = set(entry["required_variables"])
-    unknown = sorted(set(variables) - required)
+    optional = set(entry.get("optional_variables", []))
+    unknown = sorted(set(variables) - required - optional)
     if unknown:
         raise TemplateError("TEMPLATE_INVALID", f"unknown variables: {', '.join(unknown)}")
     missing = sorted(required - variables.keys())
@@ -98,6 +101,10 @@ def _validate_variables(entry: dict[str, Any], variables: dict[str, str]) -> Non
             raise TemplateError("RENDER_REJECTED", "project_name must be lowercase kebab-case")
         if key == "port" and (not value.isdigit() or not 1 <= int(value) <= 65535):
             raise TemplateError("RENDER_REJECTED", "port must be between 1 and 65535")
+        if key == "db_port" and (not value.isdigit() or not 1 <= int(value) <= 65535):
+            raise TemplateError("RENDER_REJECTED", "db_port must be between 1 and 65535")
+        if key == "db_host" and ("\n" in value or "\r" in value):
+            raise TemplateError("RENDER_REJECTED", "db_host must be a single line")
 
 
 def _render_text(text: str, variables: dict[str, str]) -> str:
@@ -124,6 +131,56 @@ def _load_declaration(root: Path) -> dict[str, Any]:
     if not isinstance(declaration.get("deployment"), dict):
         raise TemplateError("DECLARATION_INVALID", "project declaration has no deployment object")
     return declaration
+
+
+def _is_external_template(template_id: str) -> bool:
+    return template_id.endswith(EXTERNAL_SUFFIX)
+
+
+def _check_env_ignore_conflict(path: Path) -> None:
+    """Refuse before any write if `.gitignore` would not actually ignore `.env`."""
+    if not path.exists():
+        return
+    if path.is_dir():
+        raise TemplateError("SECRET_IGNORE_CONFLICT", f".gitignore is a directory: {path}")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise TemplateError("SECRET_IGNORE_CONFLICT", f".gitignore is unreadable: {exc}") from exc
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("!") and ".env" in stripped:
+            raise TemplateError("SECRET_IGNORE_CONFLICT", f".gitignore contains an unignore rule for .env: {path}")
+
+
+def _gitignore_already_ignores_env(text: str) -> bool:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped in {".env", "/.env", "**/.env", ".env/*"}:
+            return True
+    return False
+
+
+def _env_ignore_output(text: str | None) -> str:
+    """Return the .gitignore content with `.env` ignored, idempotently."""
+    if text is None:
+        return ".env\n"
+    if _gitignore_already_ignores_env(text):
+        return text
+    suffix = "" if text.endswith("\n") else "\n"
+    return text + suffix + ".env\n"
+
+
+def _apply_optional_defaults(entry: dict[str, Any], variables: dict[str, str]) -> dict[str, str]:
+    """Copy variables and apply optional defaults (e.g. db_port -> 5432)."""
+    result = dict(variables)
+    for key in entry.get("optional_variables", []):
+        if key not in result:
+            if key == "db_port":
+                result[key] = DEFAULT_DB_PORT
+    return result
 
 
 def inspect_target(root: Path) -> dict[str, Any]:
@@ -161,8 +218,15 @@ def render_target(root: Path, template_type: str, variables: dict[str, str], rep
     entry = registry.get(template_type)
     if entry is None:
         raise TemplateError("TEMPLATE_INVALID", f"unknown runtime template: {template_type}")
-    _validate_variables(entry, variables)
+    is_external = _is_external_template(template_type)
+    effective_variables = _apply_optional_defaults(entry, variables)
+    _validate_variables(entry, effective_variables)
     declaration = _load_declaration(root)
+    if is_external:
+        # Refuse BEFORE writing any file: a conflicting .gitignore would leave
+        # the local `.env` exposed in version control. The actual edit happens
+        # atomically with the template file writes below.
+        _check_env_ignore_conflict(root / ".gitignore")
     replace = replace or set()
     outputs: dict[Path, str] = {}
     directory = TEMPLATE_ROOT / template_type
@@ -170,7 +234,11 @@ def render_target(root: Path, template_type: str, variables: dict[str, str], rep
         output = root / relative
         if output.exists() and relative not in replace:
             raise TemplateError("TARGET_EXISTS", f"target exists; name it with --replace: {relative}")
-        outputs[output] = _render_text((directory / relative).read_text(encoding="utf-8"), variables)
+        outputs[output] = _render_text((directory / relative).read_text(encoding="utf-8"), effective_variables)
+    if is_external:
+        gitignore_path = root / ".gitignore"
+        existing = gitignore_path.read_text(encoding="utf-8") if gitignore_path.is_file() else None
+        outputs[gitignore_path] = _env_ignore_output(existing)
 
     updated = json.loads(json.dumps(declaration))
     deployment = updated["deployment"]
@@ -179,6 +247,8 @@ def render_target(root: Path, template_type: str, variables: dict[str, str], rep
     deployment["template_version"] = entry["version"]
     deployment["rendered_files"] = entry["files"]
     deployment["template_state"] = "configured"
+    if is_external:
+        deployment["database_source"] = "external"
     declaration_text = json.dumps(updated, indent=2) + "\n"
     declaration_path = root / ".project.json"
     if declaration_path.exists() and ".project.json" not in replace:

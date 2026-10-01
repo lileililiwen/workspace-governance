@@ -51,6 +51,16 @@
   (`DEPLOYMENT_PROMOTION`) and surfaces stale revisions as a triage warning
   (`DEPLOYMENT_PROMOTION_STALE`).
 
+## Proposed lower-priority runtime-template follow-up
+
+After the active `standalone-project-boundary` work, consider
+`shared-postgres-runtime-profile`: optional .NET/Rust/Python runtime templates
+that connect to an operator-supplied PostgreSQL service without creating a
+per-project database container. The current per-project database templates
+remain the default. Each project must use its own database and role; endpoint
+and credentials are environment-specific, and no Mac hostname is a product
+default.
+
 ## Explicit non-goals
 
 - No universal application framework.

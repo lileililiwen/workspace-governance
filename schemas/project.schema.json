@@ -33,7 +33,8 @@
           "items": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
           "uniqueItems": true
         },
-        "template_state": {"enum": ["configured", "verified", "blocked"]}
+        "template_state": {"enum": ["configured", "verified", "blocked"]},
+        "database_source": {"enum": ["container", "external"], "description": "How the runtime reaches PostgreSQL. 'container' (default for *-postgres templates) starts a per-project container; 'external' (for *-postgres-external templates) reads a connection from a gitignored .env or host secret source and starts no database container."}
       }
     },
     "capabilities": {

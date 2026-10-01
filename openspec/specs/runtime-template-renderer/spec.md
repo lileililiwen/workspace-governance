@@ -12,8 +12,10 @@ versions.
 #### Scenario: List supported types
 
 - **WHEN** an operator runs `runtime_templates.py list`
-- **THEN** the command returns the six supported types with their versions and
-  required variable names
+- **THEN** the command returns the supported types with their versions and
+  required variable names; the list includes both `container`-backed
+  PostgreSQL templates and `external` PostgreSQL templates
+  (`*-postgres-external`)
 
 #### Scenario: Template registry is incomplete
 
@@ -21,6 +23,13 @@ versions.
   generated file
 - **THEN** validation fails with the type and missing path; no renderer run is
   considered valid
+
+#### Scenario: External template declares `.env.example`
+
+- **WHEN** a registry entry is an `external` PostgreSQL template
+- **THEN** its `files` list includes `.env.example`; its `required_variables`
+  include `database_name`, `db_user`, and `db_host`; and `db_port` is listed
+  in `optional_variables` (default `5432`)
 
 ### Requirement: Inspect without mutating
 
@@ -43,7 +52,8 @@ existing runtime files without writing files.
 
 The renderer MUST render the selected versioned template into the target root,
 including Dockerfile, Compose, `.dockerignore`, and deployment documentation,
-using validated project variables.
+using validated project variables. External PostgreSQL templates additionally
+render a `.env.example` and amend the root `.gitignore`.
 
 #### Scenario: Render a .NET web project
 
@@ -59,11 +69,23 @@ using validated project variables.
 - **THEN** the corresponding type-specific Dockerfile and Compose contract is
   rendered without requiring source changes outside generated files
 
+#### Scenario: Render an external PostgreSQL template
+
+- **WHEN** an operator selects a `*-postgres-external` template with the
+  required `database_name`, `db_user`, `db_host` (and optionally `db_port`)
+  variables
+- **THEN** the renderer writes a `.env.example` with non-secret placeholders
+  and a blank password, amends the root `.gitignore` to ignore `.env`, and
+  records `database_source: external` in the project declaration. The
+  generated Compose has no `db` service, no PostgreSQL image, no PostgreSQL
+  volume, and no database provisioning command
+
 ### Requirement: Refuse unsafe or ambiguous writes
 
 The renderer MUST fail closed for unknown types, missing variables, unresolved
 placeholders, secrets, absolute paths, path traversal, invalid declarations,
-and existing target files without explicit per-file replacement.
+existing target files without explicit per-file replacement, and unsafe
+`.gitignore` state for external PostgreSQL templates.
 
 #### Scenario: Existing file
 
@@ -77,11 +99,26 @@ and existing target files without explicit per-file replacement.
   value
 - **THEN** the renderer returns `RENDER_REJECTED` and writes nothing
 
+#### Scenario: External template with conflicting `.gitignore`
+
+- **WHEN** the operator selects an external PostgreSQL template and the root
+  `.gitignore` already contains a `!.env*` unignore rule
+- **THEN** the renderer returns `SECRET_IGNORE_CONFLICT` and writes nothing
+  to the target project
+
+#### Scenario: External template idempotent `.gitignore`
+
+- **WHEN** the operator re-renders an external PostgreSQL template and the
+  root `.gitignore` already ignores `.env`
+- **THEN** the renderer does not duplicate the entry, does not rewrite
+  unrelated bytes, and reports success
+
 ### Requirement: Record configuration evidence without promotion
 
 The renderer MUST record template type, version, rendered files, and relative
 Compose path in `.project.json` while preserving unrelated declaration fields
-and keeping deployment promotion separate.
+and keeping deployment promotion separate. For external PostgreSQL templates,
+the renderer additionally records `database_source: external`.
 
 #### Scenario: Existing deployable declaration
 
@@ -110,3 +147,11 @@ when the Docker Compose executable is available.
 
 - **WHEN** Docker Compose rejects the rendered file
 - **THEN** the check fails with the command output and the target type
+
+#### Scenario: External template Compose contract
+
+- **WHEN** `check` validates an external PostgreSQL template render
+- **THEN** the rendered Compose has exactly one application service, no
+  `db` service, no `volumes:` block, and the `PGHOST`/`PGUSER`/`PGDATABASE`
+  /`PGPASSWORD` environment values are read from the runtime environment
+  (not baked in)
