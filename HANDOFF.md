@@ -2,6 +2,19 @@
 
 ## Current state
 
+The `shared-postgres-runtime-profile` change is implemented and archived in
+commit `d5508cc`. Workspace Governance now ships four `*-postgres-external`
+runtime template families (`dotnet-web-postgres-external`,
+`rust-web-postgres-external`, `python-web-postgres-external`,
+`worker-postgres-external`) that connect an app container to a
+supplied PostgreSQL service without starting a database container or volume.
+`scripts/runtime_templates.py` now supports `optional_variables`, refuses a
+conflicting `!.env*` unignore rule with `SECRET_IGNORE_CONFLICT` before any
+write, idempotently amends the root `.gitignore` to ignore `.env`, writes a
+blank-password `.env.example`, and records `database_source: external` in the
+project declaration. The existing six per-project PostgreSQL container
+templates are byte-identical and unchanged.
+
 The `toolchain-decision-register` change is implemented and archived in
 commit `27282ee`. Workspace Governance now ships `decisions.json` at the
 governance root, a fail-closed `scripts/decisions.py` loader, and a
@@ -30,8 +43,8 @@ repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
 ## Latest verification evidence
 
-- `python3 -m unittest discover -s tests -v` — 204 tests, 0 failures (167 prior
-  + 37 new in `tests/test_decisions.py`).
+- `python3 -m unittest discover -s tests -v` — 217 tests, 0 failures (204 prior
+  + 13 new in `tests/test_runtime_templates.py`).
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
 - `python3 scripts/workspace_check.py --decisions` — prints D1–D4 summary;
   `--json` produces a parseable document with `{id,title,status,date}` per
@@ -41,9 +54,11 @@ repository, Jenkins consumer, or DriftWatchdog implementation was changed.
   introduced by this change. The +4 errors / -1 warning vs the prior
   HANDOFF baseline is pre-existing sibling-repo drift, not from this
   change.
+- `python3 scripts/runtime_templates.py list` — ten version-one template
+  families (six container-backed, four external) listed from the registry.
 - `node scripts/check-openspec-change-names.mjs` — valid.
 - `openspec validate --all --strict --no-interactive` — 14 passed, 0 failed
-  (10 canonical specs, 4 active changes; `workspace-decision-register`
+  (12 canonical specs, 1 active change, `external-postgres-runtime-profile`
   archived and now lives under `openspec/specs/`).
 - `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS.
 - `git diff --check` — clean before the handoff-only update.
@@ -147,6 +162,28 @@ The read-only **Forge governance adapter**
 (`scripts/forge_governance_adapter.py`) is unchanged; its canonical spec is
 `openspec/specs/forge-governance-adapter/spec.md`.
 
+**7. `shared-postgres-runtime-profile`** (archived
+`openspec/changes/archive/2026-10-01-shared-postgres-runtime-profile/`,
+canonical spec `openspec/specs/external-postgres-runtime-profile/spec.md`).
+Adds four external-PostgreSQL runtime template families
+(`dotnet-web-postgres-external`, `rust-web-postgres-external`,
+`python-web-postgres-external`, `worker-postgres-external`) that connect an
+app container to a supplied PostgreSQL service without starting a database
+container, image, volume, or provisioning command. `runtime_templates.py`
+gains `optional_variables` support (e.g. `db_port` defaulting to `5432`),
+refuses a `!.env*` unignore rule with `SECRET_IGNORE_CONFLICT` before any
+write, idempotently amends the root `.gitignore` to ignore `.env`, and
+records `database_source: external` in the project declaration. The
+generated `.env.example` has a blank `PGPASSWORD`; the compose file reads
+`PGHOST`/`PGPORT`/`PGUSER`/`PGDATABASE`/`PGPASSWORD` from the runtime
+environment and never substitutes a password. The deployment schema gains
+`database_source` (`container` | `external`); the existing six per-project
+container-backed templates are byte-identical. The `runtime-template-renderer`
+spec was extended with external-profile scenarios; the canonical
+`external-postgres-runtime-profile` spec captures the new contract. No
+sibling repository, profile, capability schema, promotion-ledger, Jenkins
+consumer, or DriftWatchdog implementation was changed.
+
 **6. `toolchain-decision-register`** (archived
 `openspec/changes/archive/2026-10-01-toolchain-decision-register/`,
 canonical spec `openspec/specs/workspace-decision-register/spec.md`).
@@ -182,6 +219,40 @@ in a fresh conversation. Each lives in the repository that owns the work:
 lives in each change directory, so a package has exactly one source of truth.
 
 ## Evidence
+
+- Package 11 (`shared-postgres-runtime-profile`) evidence:
+  `python3 -m unittest discover -s tests` — 217 tests, 0 failures
+  (204 prior + 13 new in `tests/test_runtime_templates.py`: four
+  `*-postgres-external` template metadata and rendering tests, an
+  idempotence test for `.gitignore`, a `SECRET_IGNORE_CONFLICT` test
+  for the unignore rule, a `TARGET_EXISTS`-before-`.gitignore` test
+  for existing `compose.yaml`, a `db_port` default test, a
+  secret-shaped-variable rejection test, and a container/internal
+  template regression test);
+  `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings;
+  `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS;
+  `python3 scripts/jenkins_manifest.py --check` — 0 projects, 0 errors;
+  `python3 scripts/runtime_templates.py list` — ten version-one
+  template families (six container-backed, four external);
+  `node scripts/check-openspec-change-names.mjs` — valid;
+  `openspec validate --all --strict --no-interactive` — 14 passed, 0 failed
+  (12 canonical specs, 1 active change; `shared-postgres-runtime-profile`
+  archived and now lives under
+  `openspec/specs/external-postgres-runtime-profile/spec.md`);
+  `git diff --check` — clean before the handoff-only update. The portfolio
+  audit (`--root .. --audit --json`) is unchanged in shape: 211 errors and
+  17 warnings, with no new project-level finding codes introduced by this
+  change (the +4 errors / -1 warning vs the prior HANDOFF baseline is
+  pre-existing sibling-repo drift, not from this change). All four new
+  external templates rendered end-to-end and passed `docker compose config`
+  with a dummy `.env` (verified by `check_target`); the existing six
+  per-project container-backed templates remained byte-identical to their
+  pre-change bytes (verified by `git diff` against `HEAD~`); no password
+  or secret-shaped value was ever supplied as a renderer argument, written
+  to `.env.example`, or stored in `.project.json`; the renderer refuses
+  before any file is written when the root `.gitignore` contains a
+  `!.env*` rule or an existing `compose.yaml`/`Dockerfile` is not listed
+  via `--replace`.
 
 - Package 10 (`toolchain-decision-register`) evidence:
   `python3 -m unittest discover -s tests` — 204 tests, 0 failures
