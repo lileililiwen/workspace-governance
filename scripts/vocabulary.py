@@ -22,6 +22,10 @@ from typing import Any
 
 VOCABULARY_FILENAME = "vocabulary.json"
 REQUIRED_KEYS = ("profiles", "kinds", "placeholder_markers", "secret_field_substrings")
+# Additive, fail-closed enums for the standalone-project-boundary capability.
+# Each must be a non-empty list of distinct strings; the loader raises
+# `VocabularyError` if any value is missing, empty, duplicated, or non-string.
+OPTIONAL_ENUM_KEYS = ("standalone_statuses", "integration_required_states")
 
 
 class VocabularyError(ValueError):
@@ -66,6 +70,18 @@ def load_vocabulary(path: Path) -> dict[str, Any]:
         if len(set(value)) != len(value):
             raise VocabularyError(f"vocabulary {key!r} contains a duplicate entry: {path}")
         vocabulary[key] = frozenset(value) if key in ("profiles", "kinds") else tuple(value)
+    for key in OPTIONAL_ENUM_KEYS:
+        if key not in raw:
+            continue
+        value = raw[key]
+        if not isinstance(value, list) or not value:
+            raise VocabularyError(f"vocabulary {key!r} must be a non-empty list: {path}")
+        for entry in value:
+            if not isinstance(entry, str) or not entry:
+                raise VocabularyError(f"vocabulary {key!r} entries must be non-empty strings: {path}")
+        if len(set(value)) != len(value):
+            raise VocabularyError(f"vocabulary {key!r} contains a duplicate entry: {path}")
+        vocabulary[key] = frozenset(value)
     return vocabulary
 
 

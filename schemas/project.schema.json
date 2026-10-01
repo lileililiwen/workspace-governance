@@ -115,9 +115,86 @@
         "state": {"enum": ["unverified", "metadata_verified", "blocked"]},
         "evidence_ref": {"type": "string", "minLength": 1}
       }
+    },
+    "standalone": {
+      "type": "object",
+      "description": "Optional declaration of how a project operates without sibling checkouts or private external services. Declarations are intent, not implementation evidence; the audit uses the shape to derive a classification but never executes project commands.",
+      "additionalProperties": false,
+      "required": ["status", "local_defaults", "required_external_services", "required_sibling_projects"],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/standalone_status",
+          "description": "One of the six canonical statuses from vocabulary.json.standalone_statuses."
+        },
+        "local_defaults": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+          "description": "Repository-relative entries the project uses to satisfy its baseline (e.g. 'sqlite', 'local-fixtures'). Each must be a non-empty, portable, repository-relative path or identifier; absolute paths and '..' segments are rejected."
+        },
+        "required_external_services": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+          "description": "Service identifiers required for the baseline (e.g. 'postgres', 's3'). Each must be a portable, repository-relative identifier; absolute paths and '..' segments are rejected."
+        },
+        "required_sibling_projects": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+          "description": "Sibling project ids required for the baseline. Each must match a canonical project id (kebab-case). The audit does not verify the sibling exists; it only records the donation-readiness signal."
+        },
+        "evidence_ref": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$",
+          "description": "Repository-relative path to the native evidence artefact (e.g. docs/standalone.md). Absolute paths and '..' segments are rejected. Required when evidence_state is 'configured' or 'verified'."
+        },
+        "evidence_state": {
+          "enum": ["declared", "configured", "verified", "unverified"],
+          "default": "declared",
+          "description": "Lifecycle state of the standalone block. The audit enforces the same shape rules as for release_evidence."
+        }
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "description": "Optional list of named external providers the project optionally or mandatorily integrates with. Each entry is a JSON object; absolute paths in 'evidence_ref' are rejected.",
+      "items": {"$ref": "#/$defs/integration"},
+      "uniqueItems": false
     }
   },
   "$defs": {
+    "standalone_status": {
+      "type": "string",
+      "enum": [
+        "standalone",
+        "standalone-with-optional-integrations",
+        "library-dependent",
+        "workspace-dependent",
+        "service-dependent",
+        "blocked"
+      ],
+      "description": "Canonical standalone classification. The vocabulary.json.standalone_statuses list is the source of truth; this enum mirrors it so editors that consult the schema see the same values."
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "required"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "description": "Kebab-case provider identifier (e.g. 'workspace-governance', 'github-actions')."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "true ⇒ the provider is part of the project's baseline; false ⇒ the provider is optional and the baseline still works without it."
+        },
+        "evidence_ref": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$",
+          "description": "Repository-relative path to the native evidence artefact. Required when 'required' is true; the audit emits STANDALONE_INTEGRATION_PENDING if the file is missing."
+        }
+      }
+    },
     "language": {
       "type": "string",
       "enum": ["rust", "python", "typescript", "javascript", "csharp", "go", "generic"],

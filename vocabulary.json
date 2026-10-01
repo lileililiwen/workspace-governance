@@ -56,5 +56,17 @@
     "bearer",
     "session_ke",
     "session_key"
+  ],
+  "standalone_statuses": [
+    "standalone",
+    "standalone-with-optional-integrations",
+    "library-dependent",
+    "workspace-dependent",
+    "service-dependent",
+    "blocked"
+  ],
+  "integration_required_states": [
+    "required",
+    "optional"
   ]
 }

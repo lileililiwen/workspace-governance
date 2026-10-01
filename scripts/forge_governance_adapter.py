@@ -33,6 +33,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from workspace_check import SECRET_WORDS, run as run_workspace_check
+from workspace_check import STANDALONE_BLOCKED
 
 
 PROVIDER = "workspace-governance"
@@ -44,6 +45,11 @@ REGISTRY_SCHEMA_VERSION = 1
 EXIT_OK = 0
 EXIT_BAD_REQUEST = 2
 EXIT_AUDIT_FAILURE = 3
+# Cap for the per-project standalone findings list embedded in the
+# observation document. The list is sorted ERROR-first and then
+# truncated so the observation never grows without bound. A small
+# cap keeps the JSON shape stable for downstream consumers.
+STANDALONE_FINDINGS_CAP = 16
 
 
 # Same keyword set as the checker, but match the keyword plus any
@@ -259,6 +265,124 @@ def build_observation(
     return observation
 
 
+def render_standalone_findings(raw: list[dict[str, Any]]) -> list[str]:
+    """Render the standalone findings list, ERROR-first, scrubbed and capped.
+
+    Each line is `<code>: <message>` truncated to 200 chars, with
+    secret-shaped substrings replaced by `[redacted]`. At most
+    `STANDALONE_FINDINGS_CAP` lines are returned so the observation
+    remains bounded.
+    """
+    ordered = sorted(
+        raw,
+        key=lambda item: (0 if item.get("level") == "ERROR" else 1, 0 if item.get("code") else 1),
+    )
+    lines: list[str] = []
+    for item in ordered:
+        code = str(item.get("code", "STANDALONE"))
+        message = str(item.get("message", ""))
+        line = f"{code}: {message}"
+        line = scrub_line(line)
+        if len(line) > EVIDENCE_LINE_MAX:
+            line = line[: EVIDENCE_LINE_MAX - 1] + "…"
+        lines.append(line)
+        if len(lines) >= STANDALONE_FINDINGS_CAP:
+            break
+    return lines
+
+
+def build_standalone_observation(
+    *,
+    project_id: str,
+    project_path: Path | None,
+    declaration: dict[str, Any] | None,
+    governance_root: Path,
+) -> dict[str, Any]:
+    """Build the additive standalone observation block for the adapter.
+
+    Returns a dict with four keys:
+
+    - `standalone_status`: one of the six canonical statuses
+      (`standalone`, `standalone-with-optional-integrations`,
+      `library-dependent`, `workspace-dependent`, `service-dependent`,
+      `blocked`).
+    - `standalone_observed_revision`: the git HEAD revision if the
+      project is a git repo, otherwise the field is omitted entirely
+      so the contract consumer can rely on the field's presence as a
+      signal.
+    - `standalone_integrations`: the declared `integrations` array
+      normalized to a list of `{"id", "required", "evidence_ref"}`
+      objects.
+    - `standalone_findings`: an ERROR-first, secret-scrubbed,
+      truncated list of audit findings for the standalone block.
+
+    The function never raises. On audit failure or missing project
+    path it returns a `blocked` status and a single STANDALONE_BLOCKED
+    or STANDALONE_SHAPE finding.
+    """
+    from workspace_check import classify_standalone, Finding
+
+    observation: dict[str, Any]
+    if project_path is None:
+        observation = {
+            "standalone_status": "blocked",
+            "standalone_integrations": [],
+            "standalone_findings": [
+                {
+                    "level": "WARNING",
+                    "code": STANDALONE_BLOCKED,
+                    "message": "project is not on disk; cannot classify",
+                }
+            ],
+        }
+        observation["standalone_findings"] = render_standalone_findings(observation["standalone_findings"])
+        return observation
+
+    revision = detect_git_revision(project_path)
+    if not isinstance(declaration, dict):
+        observation = {
+            "standalone_status": "blocked",
+            "standalone_integrations": [],
+            "standalone_findings": [
+                {
+                    "level": "WARNING",
+                    "code": STANDALONE_BLOCKED,
+                    "message": "no declaration available; cannot classify",
+                }
+            ],
+        }
+        if revision is not None:
+            observation["standalone_observed_revision"] = revision
+        observation["standalone_findings"] = render_standalone_findings(observation["standalone_findings"])
+        return observation
+
+    try:
+        block = classify_standalone(
+            declaration,
+            project_path,
+            [],
+            project_id,
+            governance_root=governance_root,
+        )
+    except Exception as exc:  # noqa: BLE001 - adapter must never raise
+        block = {
+            "standalone_status": "blocked",
+            "standalone_integrations": [],
+            "standalone_findings": [
+                Finding("ERROR", STANDALONE_SHAPE, f"standalone audit crashed: {exc}", project_id)
+            ],
+        }
+
+    observation = {
+        "standalone_status": block.get("standalone_status", "blocked"),
+        "standalone_integrations": block.get("standalone_integrations", []),
+        "standalone_findings": render_standalone_findings(block.get("standalone_findings", [])),
+    }
+    if revision is not None:
+        observation["standalone_observed_revision"] = revision
+    return observation
+
+
 def evaluate(
     request: dict[str, Any],
     *,
@@ -297,13 +421,47 @@ def evaluate(
     if candidate is not None and candidate.is_dir():
         source_revision = detect_git_revision(candidate)
 
-    return build_observation(
+    observation = build_observation(
         project_id=request["project_id"],
         status=status,
         findings=project_only,
         entry=entry,
         source_revision=source_revision,
     )
+
+    # Additive standalone observation: always populated, even when the
+    # project is not on disk, so consumers can rely on the field's
+    # presence. The four new fields are added after the existing keys
+    # so existing consumers that only read the first N keys see no
+    # change.
+    standalone = build_standalone_observation(
+        project_id=request["project_id"],
+        project_path=candidate if candidate is not None and candidate.is_dir() else None,
+        declaration=_read_project_declaration(candidate) if candidate is not None and candidate.is_dir() else None,
+        governance_root=governance_root,
+    )
+    observation.update(standalone)
+
+    return observation
+
+
+def _read_project_declaration(project_path: Path) -> dict[str, Any] | None:
+    """Read and parse `.project.json` for a project, returning None on any failure.
+
+    The function never raises: missing files, unreadable files, and
+    non-object JSON all return None so the adapter observation falls
+    back to a `blocked` standalone status without crashing.
+    """
+    declaration_path = project_path / ".project.json"
+    if not declaration_path.is_file():
+        return None
+    try:
+        payload = json.loads(declaration_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
 
 
 def _resolve_workspace_root(governance_root: Path) -> Path:

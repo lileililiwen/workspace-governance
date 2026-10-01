@@ -267,6 +267,23 @@ python3 scripts/init_project.py /path/to/project \
 python3 scripts/workspace_check.py --root .. --project my-project
 ```
 
+## Standalone project boundary
+
+A project may declare a `standalone` block and an `integrations` array in
+its `.project.json` to describe how it operates without sibling checkouts
+or private services. The audit classifies each adopted project as one
+of six canonical statuses — `standalone`,
+`standalone-with-optional-integrations`, `library-dependent`,
+`workspace-dependent`, `service-dependent`, or `blocked` — and reports
+findings for absolute paths, `..` escapes, missing evidence, optional
+provider gaps, and secret-shaped values. The Forge governance adapter
+exposes the same classification as four additive observation fields
+(`standalone_status`, `standalone_observed_revision`,
+`standalone_integrations`, `standalone_findings`); existing keys and
+exit codes are unchanged. See
+`openspec/specs/standalone-project-boundary/spec.md` for the full
+contract and finding codes.
+
 ## License and GitHub discoverability
 
 The governance audit exposes standard projects that lack a root `LICENSE`,
