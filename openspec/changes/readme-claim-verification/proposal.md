@@ -71,21 +71,28 @@ claims, and this change adds one.
 - Add a **closed surface vocabulary** shared with `vocabulary.json`:
   `application-source`, `build`, `test`, `ci`, `runtime`, `api`,
   `web-client`, `mobile-client`, `migrations`, `deployment`,
-  `provider-integration`, `production-evidence`, `data-set`, plus the
+  `provider-integration`, `production-evidence`, plus the
   `repository-content` pseudo-surface that covers "planning artifacts
-  only" and "specifications and documentation only".
+  only" and "specifications and documentation only". Every surface in the
+  set is decidable from bounded file-tree evidence; a surface that is not is
+  not a check and is not in the vocabulary.
 - **A claim is verified only against the surfaces it names.** A claim that
   says nothing is implemented MUST NOT be evaluated against the whole
   repository, and a claim about a subset MUST NOT be evaluated against the
   rest. This is the rule that keeps `kairosa` and `chronicleaf` clean, and
   it is stated as a requirement rather than left to the implementation.
-- **A claim that cannot be resolved is never a pass.** A negative status
-  statement that names no surface from the closed vocabulary is WARNING
-  `QUALITY_README_CLAIM_UNSCOPED` — a claim the checker cannot test is
-  reported as untested, never as true.
+- **A claim that cannot be resolved is never a pass**, and is not a
+  per-repository finding either. A negative status statement that names no
+  surface from the closed vocabulary contributes to `QUALITY_README_CLAIM_UNSCOPED`,
+  which is demoted out of the per-repository findings stream and emitted as
+  a single aggregate CHECKER-COVERAGE metric — a claim the checker cannot
+  test is reported as untested, never as true, and never as a defect
+  attributed to a repository.
 - **A claim contradicted by the tree is a finding**: ERROR
   `QUALITY_README_CLAIM_CONTRADICTED`, one per contradicted surface, naming
   the README line, the surface, and the evidence path that contradicts it.
+  It ships together with the authorized repairs recorded below; the level is
+  not negotiable while those repairs are outstanding.
 - **Additive and claim-triggered, not opt-in gated.** The rule fires only
   when a qualifying claim exists, so the other 72 registered repositories
   produce exactly the findings they produced before. Only 2 of 81
@@ -93,15 +100,20 @@ claims, and this change adds one.
   would leave 79 repositories unchecked; the check is therefore invoked for
   every registered project from `validate_project`, and the claim itself is
   the trigger.
-- **An explicit per-repository off switch and surface extension** via an
-  additive `readme_claims` block: `{"mode": "off"}` suppresses the rule for
-  a repository, and `{"mode": "check", "surfaces": [...]}` adds
-  repository-specific surfaces. Neither is required, and a declaration
-  without the block is unchanged.
-- **This change detects; it does not repair.** Correcting a README is a
-  source edit to a sibling repository, which `AGENTS.md` forbids without
-  scope authorization. The finding names the line and the contradiction; the
-  owner of each repository decides the wording.
+- **No `readme_claims` block, no opt-in, no exemption.** The proposed
+  additive `readme_claims` block is rejected. Every future claim is already
+  checked in every repository today, so `{"mode": "check"}` would add a
+  second, weaker path through the same check, and `{"mode": "off"}` would
+  make the check switchable — the failure mode this workspace has already
+  demonstrated. The schema gains no new field.
+- **This change detects; the repairs are separately authorized.** Correcting
+  a README is a source edit to a sibling repository, which `AGENTS.md`
+  forbids without scope authorization, so this package writes no sibling.
+  The seven repairs named below are authorized as seven separate,
+  individually reviewable cross-repo source edits, one commit per repository,
+  in the recorded blast-radius order. The finding names the line and the
+  contradiction; the wording is the repository owner's, in a commit they
+  review.
 
 ## Package Boundary and Split Assessment
 
@@ -152,14 +164,15 @@ extraction is authorized. `workspace-governance` owns it, and the
 - **State:** a README claim moves `unexamined → verified-consistent` when
   every surface it names is absent, or `unexamined → contradicted` when at
   least one named surface is present. A negative status statement that
-  names no known surface moves `unexamined → untestable` and stays there
-  until the wording or the vocabulary changes.
+  names no known surface does not move per repository: it increments the
+  aggregate CHECKER-COVERAGE metric and is owned by the checker's coverage,
+  not by the repository.
 - **Contracts:** `vocabulary.json` gains `readme_claim_surfaces` and
-  `readme_absence_phrases`; the declaration schema gains an additive
-  `readme_claims` block; `product_code_quality.py` gains rule
+  `readme_absence_phrases`; `product_code_quality.py` gains rule
   `readme-status-claim`; `workspace_check.py` gains
-  `QUALITY_README_CLAIM_CONTRADICTED` and
-  `QUALITY_README_CLAIM_UNSCOPED`.
+  `QUALITY_README_CLAIM_CONTRADICTED` and the aggregate
+  `QUALITY_README_CLAIM_UNSCOPED` coverage metric. The declaration schema
+  gains nothing.
 - **Local files:** `README.md` is **read only**. No sibling repository is
   written. The governance repository's own `README.md`,
   `docs/product-code-quality.md` and `HANDOFF.md` are the only files this
@@ -172,10 +185,10 @@ extraction is authorized. `workspace-governance` owns it, and the
   claim, and the profile requirement `REQUIRED_FILE` already owns that case.
   A README over a bounded size, a claim inside a fenced code block, a claim
   in the future tense, and a claim naming an unknown surface are all
-  non-qualifying and produce no contradicted finding. A claim naming a
-  known surface that the checker cannot evaluate with file-tree evidence
-  alone — `data-set` is the one such surface today — is
-  `QUALITY_README_CLAIM_UNSCOPED`, never a silent pass.
+  non-qualifying and produce no contradicted finding. A claim that names no
+  resolvable surface increments the aggregate CHECKER-COVERAGE metric
+  instead of producing a per-repository finding — never a silent pass, and
+  never a defect attributed to a repository.
 - **Compatibility:** a repository with no qualifying claim produces exactly
   the findings it produced before this change. The 72 registered
   repositories outside the measured corpus are the regression set.
@@ -188,9 +201,11 @@ extraction is authorized. `workspace-governance` owns it, and the
   are passed through the existing `redact` helper.
 - **Verification:** fixtures for each of the 9 corpus repositories; a
   claim-scope fixture proving `kairosa`-shaped wording produces no finding;
-  an unknown-surface fixture proving REVIEW_REQUIRED, not a pass; a
-  code-block and future-tense fixture; a `{"mode": "off"}` fixture; and a
-  read-only proof (recursive tree hash identical before and after).
+  an unknown-surface fixture proving the aggregate coverage metric increments
+  and no repository is flagged; a code-block and future-tense fixture; a
+  fixture proving there is no per-repository opt-in — the rule runs for a
+  repository that declares nothing — and a read-only proof (recursive tree
+  hash identical before and after).
 - **Dependencies:** Python 3.11 standard library only.
 
 ## Capabilities
@@ -208,11 +223,16 @@ extraction is authorized. `workspace-governance` owns it, and the
 
 ## Non-goals
 
-- No edit to any sibling repository's `README.md`, source, or CI. This
-  change detects a contradiction and names it; the repository owner decides
-  which side is wrong.
+- No edit to any sibling repository's `README.md`, source, or CI *inside this
+  package*. This change detects a contradiction and names it; the repository
+  owner decides which side is wrong. The seven repairs recorded in ruling 4
+  are authorized separately, one commit per repository, in the recorded
+  order, and are not part of this package's diff.
 - No automatic rewriting, deletion, or "suggested replacement" text for a
   README claim.
+- No per-repository opt-in, off switch, exemption registry, or
+  repository-specific surface extension. The proposed `readme_claims` block is
+  rejected in full (ruling 5).
 - No requirement that a README carry a status section, and no new required
   field in any schema. A repository with no claim is valid and silent.
 - No judgement about a repository's `lifecycle`, `evidence_status`,
@@ -227,32 +247,59 @@ extraction is authorized. `workspace-governance` owns it, and the
   owns the vocabulary.
 - No new finding code for a missing or unreadable README.
 
-## Open decisions deliberately left to the owner
+## Owner rulings — decided
 
-1. **ERROR or WARNING for a contradicted claim.** This proposal chooses
-   ERROR, because the claim is a factual assertion that the workspace's own
-   duplication-assessment rule consumes, and because a warning that nobody
-   has to clear is how seven stale claims accumulated. The alternative is
-   WARNING with a ramp; that is a one-line change but it leaves the same
-   seven sentences in place.
-2. **Whether `QUALITY_README_CLAIM_UNSCOPED` should exist at all.** With
-   the closed vocabulary as designed, it fires once in the current corpus —
-   on `chronicleaf`, whose ten-item negative list is accurate but names no
-   surface the checker can resolve. The alternative is to stay silent, which
-   means an unverifiable claim is indistinguishable from a verified one.
-3. **Whether `data-set` belongs in the surface vocabulary.** It is the one
-   surface that cannot be decided from a file tree with confidence: a
-   repository can have `fixtures/` and no data set, or a `data/` directory
-   of stubs. This proposal includes it and reports it as untestable rather
-   than guessing. The alternative is to drop it from the vocabulary, which
-   would make `kairosa`'s claim silently half-checked.
-4. **Who fixes the seven, and in which order.** The finding is per
-   repository, but remediation is a sibling source edit requiring
-   authorization. This proposal explicitly does not sequence the repairs; the
-   owner may prefer to fix `careBridge` and `rostera` first because each
-   contradicts 4–5 surfaces, or to fix all seven in one sweep.
-5. **Whether the 72-silent baseline should become an explicit registry of
-   claim-free repositories.** A declaration could opt in to the rule with
-   `readme_claims: {"mode": "check"}` so that a *future* claim is checked
-   too. The current design already checks future claims everywhere, so this
-   is a reporting choice rather than a behaviour change.
+The owner has ruled on all five questions this section previously held open.
+The rulings are binding on the finding levels, the surface vocabulary, the
+schema, and the repair sequence. The corresponding record in design terms is
+`design.md` §10.
+
+1. **`QUALITY_README_CLAIM_CONTRADICTED` is ERROR.** There are 19 findings
+   across 7 repositories, and a warning nobody must clear is precisely the
+   mechanism by which those 7 stale claims accumulated in the first place.
+   The level is not negotiable while the contradictions stand, and it ships
+   together with the repair authorization in ruling 4 — the ERROR and the
+   authorized repairs are one decision, not two.
+2. **`QUALITY_README_CLAIM_UNSCOPED` does exist, but it is demoted out of the
+   per-repository findings stream** and emitted as a single aggregate
+   CHECKER-COVERAGE metric. It fires exactly once, on `chronicleaf`, whose
+   ten-item negative list is accurate: a per-repository finding on an honest
+   repository is a false positive, and false positives train people to ignore
+   the checker. The information the code carries is about the checker's own
+   coverage, not about a repository's defect, so it is reported where it
+   belongs.
+3. **`data-set` is dropped from the surface vocabulary.** The surface cannot
+   be decided from a file tree with confidence — a repository can have
+   `fixtures/` and no data set, or a `data/` directory of stubs — and a
+   surface that cannot be decided is not a check. Retaining it would make the
+   vocabulary overstate its own coverage. With it dropped, `kairosa`'s claim
+   is knowingly unchecked on that axis: the phrase resolves to no surface and
+   nothing is asserted about it. That is consistent with ruling 2 and honest
+   in the direction that matters — the checker no longer implies it verified
+   something it did not. The `kairosa` row in `design.md` §5 is updated so its
+   expected outcome no longer claims coverage of that axis.
+4. **Repair order for the 7 contradicted READMEs is blast radius descending,
+   one commit per repository, each a separately authorized cross-repo source
+   edit.** The order is fixed:
+
+   | Order | Repository | Contradicted surfaces | Measured evidence |
+   |---|---|---|---|
+   | 1 | `rostera` | 5 | 354 `.cs` (1.5 MB), `Rostera.slnx`, `tests/`, `compose.yaml`, `Rostera.Api/Program.cs` + 2 controllers; `provider` is the one named surface not contradicted (no `Platform.*` pin) |
+   | 2 | `careBridge` | 4 | denies platform integration while 7 `Platform.*` packages are pinned, alongside 32 `.cs`, `CareBridge.sln`, `src/CareBridge.Api/Program.cs` and `compose.yaml` |
+   | 3 | `aesthra` | 4 | 137 `.cs`, `Aesthra.sln`, `tests/`, `.github/workflows/governance.yml` |
+   | 4 | `reelio` | 3 | `src/api` 78 `.cs` + `src/client` 9, `.github/workflows/ci.yml`, `Data/Migrations` |
+   | 5 | `pluggify` | 1 | 112 `.ts`, built `packages/shared/dist` |
+   | 6 | `testify` | 1 | 97 source files (86 `.cs`, 10 `.py`), `testify.sln`, `tests/` |
+   | 7 | `shopifireman` | 1 | 115 source files, 770 KB, under `apps/` and `packages/` |
+
+   The rationale: the repositories with the most contradicted surfaces are the
+   most misleading to anyone reasoning about the fleet, so they are repaired
+   first; and each repair is its own reviewable cross-repo commit rather than
+   one sweep, because a seven-repository diff is not reviewable.
+5. **The proposed opt-in `readme_claims: {"mode": "check"}` is REJECTED, and
+   so is the `{"mode": "off"}` exemption with it — the block is rejected in
+   full.** Every future claim is already checked in every repository today, so
+   the opt-in would add a second, weaker path through the same check, and
+   this workspace's demonstrated failure mode is precisely checks that can be
+   switched off. No opt-in, no exemption registry: the declaration schema
+   gains no field, and the rule runs for every registered project.

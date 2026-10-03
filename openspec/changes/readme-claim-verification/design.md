@@ -20,14 +20,14 @@ contradicted claims.
 - `scripts/workspace_check.py` — add `validate_readme_claims`, called from
   `validate_project` for every registered project; declare
   `QUALITY_README_CLAIM_CONTRADICTED` and `QUALITY_README_CLAIM_UNSCOPED`.
-- `schemas/project.schema.json` — additive `readme_claims` block, not in
-  `required`, with `additionalProperties: false`.
 - `docs/product-code-quality.md` — the new rule, the surface table, the two
   codes, and the measured corpus.
 - `README.md` — one short paragraph; link rather than restate.
 - `tests/test_readme_claim_verification.py` (new).
 
-**Must not change:** every sibling repository; `capabilities.json`,
+**Must not change:** every sibling repository; the declaration schema
+`schemas/project.schema.json`, which gains no `readme_claims` block (§10
+ruling 5); `capabilities.json`,
 `decisions.json`, `projects.json`, `deployment/promotions.json`,
 `scripts/promote_project.py`, the `quality` block's existing fields and
 their validation, the `standalone` and `release_evidence` blocks,
@@ -105,7 +105,6 @@ repository's implementation state and produces no contradicted finding.
 | `deployment` | deployment, deployment evidence | a `compose*.y(a)ml` at any depth, a `deployment/` root with a compose or template, or a `deployment.compose_file` in the declaration that resolves |
 | `provider-integration` | provider integration, provider, sibling platform integration | a `capabilities[].consumes[]` record, or a pinned `Platform.*` / sibling package in `Directory.Packages.props`, `*.csproj`, `package.json`, `Cargo.toml` or `pyproject.toml` — reusing `read_manifest_dependencies` |
 | `production-evidence` | production evidence, production verification, release evidence, published, released | a `release_evidence` block in the declaration, or a matching promotion-ledger entry |
-| `data-set` | data set, dataset, seed data | **not decidable from a file tree** — always `QUALITY_README_CLAIM_UNSCOPED` unless the repository declares a data surface (open decision 3) |
 
 `*.slnx` is in the `build` row because `rostera` ships `Rostera.slnx`; a rule
 that recognised only `*.sln` would have missed one of the five surfaces that
@@ -120,9 +119,9 @@ read README.md
   -> for each named surface, evaluate bounded evidence
        present  -> QUALITY_README_CLAIM_CONTRADICTED  (ERROR,   one per surface)
        absent   -> no finding for that surface
-       unknown  -> QUALITY_README_CLAIM_UNSCOPED      (WARNING, once per claim)
+       unknown  -> CHECKER-COVERAGE aggregate          (no per-repository finding)
   -> if no qualifying claim and a non-qualifying negative status statement exists
-       -> QUALITY_README_CLAIM_UNSCOPED                (WARNING, once per project)
+       -> CHECKER-COVERAGE aggregate                    (no per-repository finding)
 ```
 
 One finding per contradicted surface, not per claim, because the remediation
@@ -131,10 +130,10 @@ test, deployment and runtime, and a single "README is wrong" finding would
 hide that. Each message names the README line number, the surface, and the
 evidence path that contradicts it.
 
-`readme_claims: {"mode": "off"}` short-circuits the whole rule for that
-repository. `{"mode": "check", "surfaces": ["…"]}` extends the closed
-vocabulary with repository-specific surfaces. A declaration with no
-`readme_claims` block is checked, because the claim is the trigger.
+There is no per-repository opt-in and no exemption. The rule runs for every
+registered project, nothing in a declaration can switch it off, and the
+closed vocabulary is not extensible per repository (§10 ruling 5). The claim
+is the only trigger.
 
 ## 5. The measured corpus
 
@@ -151,12 +150,15 @@ on 2026-10-03; the numbers are a bounded extension census, not a build.
 | `reelio` | 31 | `application-source`, `test`, `ci`, `migrations`, `deployment` | `src/api` 78 `.cs` + `src/client` 9; `Reelio.Api/Program.cs`; `.github/workflows/ci.yml`; `Data/Migrations`; no tests root, no compose | **ERROR** ×3 |
 | `shopifireman` | 17 | `repository-content` | 115 source files, 770 KB, under `apps/` and `packages/` | **ERROR** ×1 |
 | `rostera` | 44 | `source`, `build`, `test`, `deployment`, `provider`, `runtime` | 354 `.cs` (1.5 MB); `Rostera.slnx`; `tests/`; `compose.yaml`; `Rostera.Api/Program.cs` + 2 controllers; no `Platform.*` pin | **ERROR** ×5 |
-| `kairosa` | 11 | `runtime`, `data-set`, `api`, `web-client`, `mobile-client`, `production-evidence` | **none of the six present** — no entry point, no controller, no client, no data, no `release_evidence`. It has `tests/` and a CI workflow and claims neither | **no finding** |
-| `chronicleaf` | 19 | none in the closed vocabulary (`GitHub integration`, `Evidence Bundles`, `screenshot capture`, `media storage`, `credential vault`, `AI generation`, `Markdown drafts`, `review/approval`, `export`, `Milestone Timeline`) | n/a | **WARNING** ×1 `QUALITY_README_CLAIM_UNSCOPED` |
+| `kairosa` | 11 | `runtime`, `api`, `web-client`, `mobile-client`, `production-evidence`; its `data set` phrase is **not** a surface (§10 ruling 3) | **none of the five present** — no entry point, no controller, no client, no data, no `release_evidence`. It has `tests/` and a CI workflow and claims neither | **no finding** — the `data set` claim is knowingly unchecked, not verified |
+| `chronicleaf` | 19 | none in the closed vocabulary (`GitHub integration`, `Evidence Bundles`, `screenshot capture`, `media storage`, `credential vault`, `AI generation`, `Markdown drafts`, `review/approval`, `export`, `Milestone Timeline`) | n/a | **no per-repository finding** — counts 1 in the aggregate `QUALITY_README_CLAIM_UNSCOPED` CHECKER-COVERAGE metric (§10 ruling 2) |
 
-Totals: **7 repositories contradicted, 19 contradicted surfaces, 1
-untestable negative claim, 2 clean.** The remaining 72 registered
-repositories must produce exactly the findings they produced before.
+Totals: **7 repositories contradicted, 19 contradicted surfaces, 0
+per-repository unscoped findings, 2 clean**, plus **1 aggregate
+CHECKER-COVERAGE gap** — `chronicleaf`'s unresolvable negative list, which is
+about the checker's coverage and not about a repository. The remaining 72
+registered repositories must produce exactly the findings they produced
+before.
 
 ### 5.1 Two corpus facts that contradict the commissioning brief
 
@@ -203,7 +205,7 @@ Claim scope is therefore a requirement, not an implementation detail.
 | Code | Level | Fires when |
 |---|---|---|
 | `QUALITY_README_CLAIM_CONTRADICTED` | ERROR | a surface named by a qualifying README claim is present in the file tree; one per surface, naming line, surface, and evidence path |
-| `QUALITY_README_CLAIM_UNSCOPED` | WARNING | a negative status statement names no surface the checker can resolve, or names a surface with no decidable evidence rule; never a pass |
+| `QUALITY_README_CLAIM_UNSCOPED` | aggregate CHECKER-COVERAGE metric, not a per-repository finding | a negative status statement names no surface the checker can resolve; counted once across the fleet, never attributed to a repository, and never a pass |
 
 - The rule id inside the checker is `readme-status-claim`, following the
   existing `product-test-code` and `placeholder-threshold` convention.
@@ -211,10 +213,6 @@ Claim scope is therefore a requirement, not an implementation detail.
   are unchanged; the report schema is unchanged. `FAIL` promotes to ERROR
   and `REVIEW_REQUIRED` to WARNING through the same translation the existing
   rules use.
-- The declaration schema gains an **additive, optional** `readme_claims`
-  block: `{"mode": "off"}` or `{"mode": "check", "surfaces": [...]}`, with
-  `additionalProperties: false`. It is not added to `required`, so all 81
-  existing declarations remain valid.
 - A README is prose. This change MUST NOT alter any `lifecycle`,
   `evidence_status`, `deployable` flag, promotion-ledger entry, capability
   adoption posture, or `verification.evidence_status`. The documented
@@ -235,13 +233,11 @@ Claim scope is therefore a requirement, not an implementation detail.
 | `README.md` above the bounded read size (64 KiB) | the first 64 KiB is read and the finding message states that the file was truncated; a claim in the tail produces no finding, and that absence is reported as `QUALITY_README_CLAIM_UNSCOPED` |
 | claim inside a fenced code block, HTML comment, or block quote | not a claim; no finding |
 | claim in the future tense or scoped to a release that does not exist yet | not a claim; no finding. This is what keeps `rostera/README.md:20` out and lets `:44` carry the finding |
-| claim names a surface with no evidence rule (`data-set`) | `QUALITY_README_CLAIM_UNSCOPED` WARNING naming the surface; the claim is reported as untested, not as true |
-| claim names only unknown surfaces (`chronicleaf`) | `QUALITY_README_CLAIM_UNSCOPED` WARNING once for the project |
+| claim names a surface that is not in the vocabulary | no contradicted finding for it; the gap is counted in the aggregate CHECKER-COVERAGE metric. The vocabulary is never widened to admit a surface that cannot be decided from the tree (§10 ruling 3) |
+| claim names only unknown surfaces (`chronicleaf`) | no per-repository finding; the claim counts 1 in the aggregate CHECKER-COVERAGE metric, because the repository's claim is accurate and the gap is the checker's (§10 ruling 2) |
 | claim names a surface that is absent | no finding for that surface; the claim is verified as far as it goes |
 | two claims in one README disagree with each other | both are evaluated; each contradicted surface is reported once, against the first claim that names it, and the message names both line numbers |
-| `readme_claims: {"mode": "off"}` | the rule does not run for that repository and no claim finding is produced |
-| `readme_claims: {"mode": "check", "surfaces": ["x"]}` | `x` is added to the closed vocabulary for that repository only; the global vocabulary is unchanged |
-| a `surfaces` entry is not a string, or `mode` is not `off`/`check` | `QUALITY_REVIEW_REQUIRED` WARNING naming the invalid field, following the existing `QUALITY_POLICY` pattern for an invalid policy |
+| a declaration carries a `readme_claims` block | no such field exists; the rule runs for that repository exactly as for every other, and an unknown key is a schema violation like any other |
 | a path escape (`..`) or absolute path in any configuration | refused by the existing `_is_path_safe`; never normalized |
 | a symlinked directory in the walk | not followed, matching `discover_projects` |
 | `vocabulary.json` missing, unparseable, or with an empty surface list | hard non-zero exit naming the file; an empty surface list would make every claim vacuously true |
@@ -252,8 +248,9 @@ Claim scope is therefore a requirement, not an implementation detail.
   corpus fixtures in `tests/test_readme_claim_verification.py`, and no
   existing test changes expectation.
 - **Corpus assertion:** the nine-repository fixture set produces exactly
-  7 contradicted projects, 19 contradicted surfaces, 1
-  `QUALITY_README_CLAIM_UNSCOPED`, and 2 clean projects, matching §5.
+  7 contradicted projects, 19 contradicted surfaces, 0 per-repository
+  `QUALITY_README_CLAIM_UNSCOPED` findings with 1 aggregate coverage gap, and
+  2 clean projects, matching §5.
 - **Must-not-fire assertion:** `kairosa` and `chronicleaf` produce no
   `QUALITY_README_CLAIM_CONTRADICTED`, and the `kairosa` fixture passes even
   though its repository contains source files and a test suite.
@@ -304,25 +301,68 @@ everything else.
   authorization, and the checker cannot know which side of the contradiction
   is wrong.
 - (e) Drop an unverifiable claim silently vs report it → chose
-  **report it** as `QUALITY_README_CLAIM_UNSCOPED`. Silence makes an
-  untestable claim indistinguishable from a verified one, which is the
-  failure mode this change exists to remove.
+  **report it**, as `QUALITY_README_CLAIM_UNSCOPED` demoted by owner ruling
+  to a single aggregate CHECKER-COVERAGE metric rather than a
+  per-repository finding (§10 ruling 2). Silence would make an untestable
+  claim indistinguishable from a verified one, and a per-repository finding
+  on an honest repository would be a false positive that trains people to
+  ignore the checker. Both failure modes are removed by reporting it
+  against the checker's coverage.
 - (f) One finding per claim vs per contradicted surface → chose **per
   surface**. `rostera` contradicts five surfaces with five different
   remediations; one finding would hide four of them.
 - (g) Merge with `identity-and-taxonomy-axis-split` → chose **separate**;
   see the package boundary table.
 
-**Deferred:** a `data-set` evidence rule (open decision 3); binding the rule
+**Deferred:** binding the rule
 as a `driftwatchdog` gate check (owned by that repository); reporting the
 contradiction count per repository in `maturity_audit.py` (display only, and
 only after the seven are repaired); and any automated suggestion of
 replacement README wording.
 
-**Blockers:** none. Open decisions 1–3 are policy choices that change levels
-and vocabulary membership, not the rule's shape, and each is reversible
-without touching the detection logic. Open decisions 4 and 5 are
-sequencing and reporting choices for the owner, outside this package.
+**Blockers:** none. The five open decisions are now owner rulings (§10) and
+none of them changes the rule's detection logic. Ruling 4's repair order is a
+cross-repo source-edit sequence outside this package: this change writes no
+sibling, and each of the seven repairs is separately authorized and reviewed
+on its own.
+
+## 10. Owner rulings — decided
+
+The owner has ruled on the five questions this change held open. The rulings
+are binding on the finding levels, the closed surface vocabulary, the
+declaration schema, and the repair sequence. The rationale is recorded in
+`proposal.md` "Owner rulings — decided"; this section records the same
+rulings in design terms.
+
+| Ruling | Decision | Effect on this design |
+|---|---|---|
+| 1 | `QUALITY_README_CLAIM_CONTRADICTED` is ERROR | §4.3, §6 and §7 keep ERROR, one finding per contradicted surface. The level ships together with the authorized repairs in ruling 4; it is not a ramp. |
+| 2 | `QUALITY_README_CLAIM_UNSCOPED` exists, demoted to an aggregate CHECKER-COVERAGE metric | §4.3's `unknown` branch, §6's code table and §7's `chronicleaf` row count the gap once across the fleet and emit **no per-repository finding**. §5's totals and §8's corpus assertion state 0 per-repository findings and 1 coverage gap. The file-level triggers (unreadable, over-size `README.md`) keep the same code and the same WARNING level: they describe a file the checker could not read, not a claim it could not scope, and no corpus repository exercises them. |
+| 3 | `data-set` is dropped from the surface vocabulary | The `data-set` row is removed from §4.2, and §7 states that the vocabulary is never widened to admit a surface that cannot be decided from the tree. `kairosa`'s §5 row drops `data-set` from its named surfaces and its expected outcome now reads "knowingly unchecked, not verified": the checker asserts nothing about that axis, consistent with ruling 2. |
+| 4 | Repairs run blast radius descending, one authorized commit per repository | `rostera` (5) → `careBridge` (4) → `aesthra` (4) → `reelio` (3) → `pluggify` (1) → `testify` (1) → `shopifireman` (1). §1's boundary is unchanged: this package writes no sibling, and each repair is a separate cross-repo commit outside this diff. §8's "0 errors after the seven repositories have corrected their claims" is the end state of that sequence. |
+| 5 | The `readme_claims` block is rejected | No schema change (§1 moves `schemas/project.schema.json` to *must not change*), no `{"mode": "off"}` exemption, no `{"mode": "check"}` opt-in, no per-repository surface extension. §4.3 has no configuration branch, and §7's configuration row now records that an unknown `readme_claims` key is a schema violation like any other. The rule is invoked for every registered project from `validate_project` and cannot be switched off. |
+
+**Conflicts recorded, not silently resolved.**
+
+- `specs/readme-claim-verification/spec.md` still asserts the pre-ruling
+  contract in four places, and it was **not** edited in this pass: the
+  requirement "A claim that cannot be resolved is reported, never passed"
+  still requires a WARNING `QUALITY_README_CLAIM_UNSCOPED` per project; its
+  scenario "A claim names an undecidable surface" still names `data-set`; and
+  the requirement "The claim check is additive and claim-triggered" still
+  allows `readme_claims` with `mode` `off` or `check`, with three scenarios
+  built on them — including an `audit` mode that appears nowhere in this
+  design. Those scenarios contradict rulings 2, 3 and 5 and must be
+  rewritten before implementation; the spec is the contract and the ruling
+  does not silently rewrite it.
+- `tasks.md` §0 still asks for the level to be decided first and §2.1 still
+  instructs the implementer to include `data-set` "so it reports untestable
+  rather than unchecked". Both are superseded by rulings 1 and 3 and need a
+  follow-up edit outside this pass.
+- Ruling 3 means `kairosa`'s six-part claim is verified on five surfaces and
+  unchecked on one. That is a deliberate reduction in coverage, taken so the
+  vocabulary does not overstate what the checker can decide. It is recorded
+  here so the §5 row is never read as "six surfaces verified".
 
 ## Traceability
 
@@ -332,6 +372,6 @@ sequencing and reporting choices for the owner, outside this package.
 | R2 A claim is verified against the file tree | surface evidence rules | §4.2, §4.3 | `product_code_quality.py` | surface present / absent / unknown | 2.3 | corpus: 19 contradicted surfaces |
 | R3 Claim scope is respected | only named surfaces are tested | §4.1, §5.1 | `product_code_quality.py` | `kairosa` clean / subset claim | 2.3, 3.2 | `kairosa` fixture has no contradicted finding |
 | R4 A contradiction is a finding | `QUALITY_README_CLAIM_CONTRADICTED` | §6, §7 | `validate_readme_claims` | per-surface finding / first line wins | 2.4, 2.5 | 7 contradicted projects |
-| R5 An unverifiable claim is not a pass | `QUALITY_README_CLAIM_UNSCOPED` | §4.3, §7 | `validate_readme_claims` | unknown surface / unreadable / truncated | 2.5 | 1 warning in the corpus |
-| R6 The rule is additive and claim-triggered | 72-silent baseline | §4.3, §6 | `validate_project`, `readme_claims` block | no claim / `mode: off` / invalid config | 2.6, 3.1 | identical findings for 72 repositories |
+| R5 An unverifiable claim is not a pass | `QUALITY_README_CLAIM_UNSCOPED`, aggregate | §4.3, §7, §10 | `validate_readme_claims` | unknown surface / unreadable / truncated | 2.5 | 0 per-repository findings, 1 aggregate coverage gap |
+| R6 The rule is additive and claim-triggered | 72-silent baseline | §4.3, §6, §10 | `validate_project` only — no declaration field | no claim / no opt-in exists / unknown `readme_claims` key | 2.6, 3.1 | identical findings for 72 repositories |
 | R7 Documentation claims never change evidence | prose is not evidence | §6 | none — invariant | contradicted claim with `deployable: true` | 3.4 | no evidence-state change |

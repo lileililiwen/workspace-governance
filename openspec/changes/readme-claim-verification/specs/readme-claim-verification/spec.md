@@ -123,61 +123,67 @@ and SHALL NOT promote a capability to verified.
   and capability adoption posture are exactly what they were before the
   check ran
 
-### Requirement: A claim that cannot be resolved is reported, never passed
+### Requirement: A claim that cannot be resolved is counted, never passed
 
 A negative status statement that names no canonical surface, a claim naming
-a surface for which no decidable evidence rule exists, an unreadable or
-truncated README, and a repository whose only negative status statements
-fail the claim conditions SHALL be reported as WARNING
-`QUALITY_README_CLAIM_UNSCOPED` naming the statement or the surface. An
-unresolved claim SHALL NOT be reported as verified, and SHALL NOT be
-reported as contradicted. A repository with no `README.md` SHALL produce no
-claim finding.
+a surface outside the closed vocabulary, an unreadable or truncated README,
+and a repository whose only negative status statements fail the claim
+conditions SHALL be counted as unscoped coverage. Unscoped statements SHALL
+NOT be reported as verified, and SHALL NOT be reported as contradicted. The
+audit SHALL emit `QUALITY_README_CLAIM_UNSCOPED` as a single aggregate
+checker-coverage metric per run that names each unscoped statement and its
+repository, and SHALL NOT emit it as a per-repository finding: the statement
+carries information about the checker's own coverage, not about a defect in
+the repository. A repository with no `README.md` SHALL produce no claim
+finding.
 
-#### Scenario: A claim names an undecidable surface
+#### Scenario: A claim names a surface outside the vocabulary
 
-- **WHEN** a claim names the `data-set` surface and no evidence rule exists
-  for it
-- **THEN** the audit reports WARNING `QUALITY_README_CLAIM_UNSCOPED` naming
-  the surface, and no contradicted finding for that surface
+- **WHEN** a claim names a subject that is not in the closed surface
+  vocabulary, such as `data-set`, which is deliberately excluded because no
+  evidence rule can decide it from a file tree
+- **THEN** the statement is counted in the unscoped coverage metric, and no
+  contradicted finding is produced for that subject
 
 #### Scenario: A negative list names no canonical surface
 
 - **WHEN** a README lists ten absent features and none is a canonical
-  surface
-- **THEN** the audit reports WARNING `QUALITY_README_CLAIM_UNSCOPED` once for
-  the project and no contradicted finding
+  surface, and every listed item is accurate
+- **THEN** the statements are counted once in the aggregate unscoped coverage
+  metric, no per-repository finding is emitted, and no contradicted finding is
+  produced
 
 #### Scenario: The README cannot be read
 
 - **WHEN** a `README.md` exists but is not valid UTF-8
-- **THEN** the audit reports WARNING `QUALITY_README_CLAIM_UNSCOPED` naming
-  the file, and does not report the claim as verified
+- **THEN** the unreadable file is counted in the unscoped coverage metric, and
+  no claim in it is reported as verified
 
 #### Scenario: The README is truncated by the read bound
 
 - **WHEN** a `README.md` exceeds the bounded read size and an absence
   statement appears beyond the bound
-- **THEN** the finding states that the file was truncated at the bound and no
-  claim beyond it is reported as verified
+- **THEN** the coverage metric states that the file was truncated at the bound
+  and no claim beyond it is reported as verified
 
 #### Scenario: No README at all
 
 - **WHEN** a repository has no `README.md`
 - **THEN** the audit reports no claim finding for that repository
 
-### Requirement: The claim check is additive and claim-triggered
+### Requirement: The claim check is additive, claim-triggered, and cannot be switched off
 
 The claim check SHALL run for every registered project and SHALL be
 triggered by the presence of a qualifying claim, not by an opt-in
 declaration. A repository whose README contains no qualifying claim SHALL
-produce exactly the findings it produced before this capability existed. A
-declaration MAY carry an additive `readme_claims` block whose `mode` is
-`off`, which suppresses the rule for that repository, or `check`, which adds
-repository-specific surfaces; the block SHALL NOT be required, and an
-invalid `mode` or a non-string `surfaces` entry SHALL be reported as
-WARNING `QUALITY_REVIEW_REQUIRED` without disabling the rule or enabling an
-unknown surface.
+produce exactly the findings it produced before this capability existed. The
+declaration schema SHALL NOT gain a `readme_claims` block, and the audit
+SHALL NOT honour any `mode`, opt-out, or per-repository exemption: a check
+that can be switched off is not a check, and an exemption registry is a
+registry of things permitted to be wrong. A declaration carrying a
+`readme_claims` key SHALL be reported as WARNING
+`QUALITY_REVIEW_REQUIRED` naming the unsupported field, and the canonical
+behaviour SHALL apply regardless.
 
 #### Scenario: A repository with no claim is silent
 
@@ -192,25 +198,19 @@ unknown surface.
 - **THEN** each of those repositories produces a finding set identical to the
   one it produced before this capability existed
 
-#### Scenario: Opting out
+#### Scenario: An attempt to opt out is refused
 
-- **WHEN** a declaration carries `readme_claims` with `mode` set to `off`
-- **THEN** no claim finding is produced for that repository and the file tree
-  is not walked
-
-#### Scenario: Extending the surface set per repository
-
-- **WHEN** a declaration carries `readme_claims` with `mode` set to `check`
-  and a `surfaces` entry naming a repository-specific surface
-- **THEN** that surface is evaluated for that repository only, and the
-  canonical surface vocabulary is unchanged
-
-#### Scenario: An invalid claim configuration
-
-- **WHEN** a declaration carries `readme_claims` with `mode` set to `audit`
-  or with a non-string `surfaces` entry
+- **WHEN** a declaration carries a `readme_claims` block with any `mode`
 - **THEN** the audit reports WARNING `QUALITY_REVIEW_REQUIRED` naming the
-  invalid field, and falls back to the canonical behaviour
+  unsupported field, and the claim check still runs for that repository
+
+#### Scenario: An attempt to extend the surface set is refused
+
+- **WHEN** a declaration carries a `readme_claims` block with a
+  repository-specific `surfaces` entry
+- **THEN** the audit reports WARNING `QUALITY_REVIEW_REQUIRED` naming the
+  unsupported field, that surface is not evaluated, and the canonical surface
+  vocabulary is unchanged
 
 ## MODIFIED Requirements
 

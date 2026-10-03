@@ -2,12 +2,13 @@
 
 ## 0. Caveats and confirmations
 
-- [ ] **Agree the level of `QUALITY_README_CLAIM_CONTRADICTED` before
-  implementing it.** ERROR fails the unattended audit for 7 repositories
-  until each README is corrected, and a sibling README edit needs
-  authorization this owner does not hold. WARNING is the alternative
-  (open decision 1). Decide first; do not discover the answer from a red
-  audit.
+- [x] **`QUALITY_README_CLAIM_CONTRADICTED` is ruled ERROR.** ERROR fails the
+  unattended audit for 7 repositories until each README is corrected, and a
+  sibling README edit needs authorization. That authorization has been granted
+  for a fixed repair order (see `design.md` §10, ruling 9), so ERROR ships
+  together with the repair order rather than after a red audit. A warning
+  nobody must clear is the mechanism by which the 7 stale claims accumulated in
+  the first place.
 - [ ] **Do not repair a README in this package.** The finding names the line
   and the contradicting evidence path; the repository owner decides which
   side is wrong. Editing a sibling is out of scope by `AGENTS.md`, and
@@ -18,9 +19,12 @@
   claim — its status block is current and scoped. `reelio`,
   `shopifireman` and `rostera` are not honest stubs: 87, 115 and 354 source
   files respectively sit under their own "no source" claims. The
-  must-not-fire set is `kairosa` and `chronicleaf`. Confirm this before
-  writing the corpus fixtures, because a fixture built on the brief would
-  encode a rule that fires on `kairosa`.
+  must-not-fire set is `kairosa` and `chronicleaf`. This is already
+  measured; confirm it before writing the corpus fixtures, because a fixture
+  built on the brief would encode a rule that fires on `kairosa`. Note the
+  ruled consequence: `chronicleaf` is counted once in the aggregate unscoped
+  coverage metric, but it MUST NOT receive a per-repository finding, because
+  its claim is accurate.
 - [ ] **`kairosa` is the case that decides the design.** It has 22 `.cs`
   files, 124 xUnit tests and a CI workflow, and an accurate status line —
   because the line scopes its absence to six surfaces that are genuinely
@@ -65,8 +69,8 @@
   repository; a claim-scope fixture using `kairosa`'s exact wording; a
   code-block fixture; a future-tense fixture using `rostera/README.md:20`
   (must be ignored) alongside `:44` (must fire); an unknown-surface fixture
-  using `chronicleaf`'s ten-item list; a `{"mode": "off"}` fixture; an
-  invalid-`readme_claims` fixture; a `*.slnx`-only build fixture; and a
+  using `chronicleaf`'s ten-item list; a `{"mode": "off"}` fixture that MUST
+  be refused (the check still runs); a `*.slnx`-only build fixture; and a
   vocabulary-load failure fixture for an empty `readme_claim_surfaces`.
 - [ ] 1.5 Verify the implementation-handoff gate: Python 3.11,
   `workspace-governance`, no shared-library boundary crossed, no sibling
@@ -76,9 +80,10 @@
 
 - [ ] 2.1 R1: add `readme_claim_surfaces` and `readme_absence_phrases` to
   `vocabulary.json`; surface them from `scripts/vocabulary.py` with the
-  existing fail-closed duplicate and empty-list handling. Include
-  `data-set` in the surface set and give it no evidence rule, so it reports
-  untestable rather than unchecked (open decision 3).
+  existing fail-closed duplicate and empty-list handling. Do **not** include
+  `data-set`: it is deliberately dropped from the vocabulary because no
+  evidence rule can decide it from a file tree, and a surface that cannot be
+  decided is not a check (ruled — see `design.md` §10, ruling 8).
 - [ ] 2.2 R1: implement `_readme_claims` — the qualifying-claim extraction
   from `design.md` §4.1. Exclude fenced code blocks, HTML comments, block
   quotes, and future/hypothetical scoping. Report the README byte offset and
@@ -96,29 +101,34 @@
   README line, the surface, and the evidence path. When two claims name the
   same surface, report once against the first claim and name both line
   numbers.
-- [ ] 2.5 R5: emit `QUALITY_README_CLAIM_UNSCOPED` for a claim naming only
-  unknown surfaces, a claim naming a surface with no evidence rule, an
-  unreadable or truncated README, and a negative status statement in a
-  repository with no qualifying claim. `severity: REVIEW_REQUIRED`, never
-  PASS.
-- [ ] 2.6 R6: add the additive `readme_claims` block to
-  `schemas/project.schema.json` (`mode: off | check`, optional `surfaces`),
-  not in `required`. Implement `validate_readme_claims` in
-  `workspace_check.py`, call it from `validate_project` for every registered
-  project — following the unconditional `validate_kind` pattern, not the
-  `quality`-gated one — and translate the report with the existing
-  FAIL→ERROR / REVIEW_REQUIRED→WARNING mapping. Declare
-  `QUALITY_README_CLAIM_CONTRADICTED` and `QUALITY_README_CLAIM_UNSCOPED`;
-  add both to the finding-code table in `docs/vocabulary.md`.
+- [ ] 2.5 R5: emit `QUALITY_README_CLAIM_UNSCOPED` as a **single aggregate
+  coverage metric per run**, not as a per-repository finding. Count a claim
+  naming only unknown surfaces, a claim naming a subject outside the closed
+  vocabulary, an unreadable or truncated README, and a negative status
+  statement in a repository with no qualifying claim. Name each unscoped
+  statement and its repository. `severity: REVIEW_REQUIRED`, never PASS. It
+  fires on `chronicleaf`, whose claim is accurate, so emitting it per
+  repository would be a false positive that trains readers to ignore the
+  checker (ruled — `design.md` §10, ruling 7).
+- [ ] 2.6 R6: add **no** `readme_claims` block to
+  `schemas/project.schema.json`. The claim check runs for every registered
+  project, triggered by claim presence, and the audit honours no `mode`,
+  opt-out, or per-repository exemption. A declaration carrying a
+  `readme_claims` key is reported as WARNING `QUALITY_REVIEW_REQUIRED`
+  naming the unsupported field, and canonical behaviour applies anyway —
+  a check that can be switched off is not a check (ruled — `design.md` §10,
+  ruling 10). Declare `QUALITY_README_CLAIM_CONTRADICTED` and
+  `QUALITY_README_CLAIM_UNSCOPED`; add both to the finding-code table in
+  `docs/vocabulary.md`.
 - [ ] 2.7 R7: add a test asserting that a repository with a contradicted
   claim and `deployable: true`, an `evidence_status`, and a promotion-ledger
   entry reports the same evidence state as before. A README sentence is
   prose; it never becomes evidence.
 - [ ] 2.8 Update `docs/product-code-quality.md` with the rule, the surface
-  table, the two codes, the measured corpus, and the
-  `readme_claims` block. Update `README.md` with one short paragraph and
-  link rather than restate. Record the outcome in `HANDOFF.md` in the second
-  commit.
+  table, the two codes, the measured corpus, the aggregate coverage metric,
+  and the explicit statement that the rule has no opt-out. Update `README.md`
+  with one short paragraph and link rather than restate. Record the outcome
+  in `HANDOFF.md` in the second commit.
 
 ## 3. BFS — Cross-surface regression and completeness
 
@@ -138,13 +148,15 @@
   posture. `measure_capability_adoption` is not called with a claim result.
 - [ ] 3.5 Prove the read-only and bounded properties: a recursive tree hash
   of a fixture project is identical before and after, no child process is
-  spawned, a `..` or absolute path in `readme_claims` is refused without
+  spawned, a `..` or absolute path in a declaration is refused without
   being read, a symlinked directory is not followed, and a README above
   64 KiB is truncated with the truncation stated in the finding.
 - [ ] 3.6 Prove the fail-closed path: a missing or empty
-  `readme_claim_surfaces` exits non-zero naming the file, and a claim whose
-  only named surface is `data-set` reports
-  `QUALITY_README_CLAIM_UNSCOPED` rather than passing.
+  `readme_claim_surfaces` exits non-zero naming the file, and a claim naming a
+  subject outside the closed vocabulary — including `data-set`, which is not in
+  the vocabulary at all — is counted in the aggregate
+  `QUALITY_README_CLAIM_UNSCOPED` coverage metric rather than passing and
+  rather than producing a contradicted finding.
 - [ ] 3.7 Confirm the existing quality gate is untouched:
   `product_code_quality.py` still returns the same status, counts, and exit
   code for `forge` and `workspace-governance` — the only 2 declarations with

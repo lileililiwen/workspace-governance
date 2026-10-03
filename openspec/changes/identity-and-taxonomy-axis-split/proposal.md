@@ -226,40 +226,63 @@ repositories consume it by declaring the same two values.
   census is a one-time migration aid, never an audit signal.
 - No merge of the axis split with `capability-adoption-gate`,
   `cross-repo-adoption-grant`, or `readme-claim-verification`.
-- No `layout` axis for `typescript-monorepo`, and no `secondary_stacks`
-  array for the three repositories that ship a .NET API plus a Flutter
-  client. Both are recorded as open decisions, not silently decided.
+- No `layout` axis for `typescript-monorepo`, and no `stacks` or
+  `secondary_stacks` array for the three repositories that ship a .NET API
+  plus a Flutter client. Both are now decided non-values rather than open
+  questions: the axes stay orthogonal and `stack` stays single-valued, with
+  the revisit trigger recorded in ruling 3 below.
 - No promotion of any repository to `verified`, `deployable`, or any other
   evidence state. A declaration remains intent, not evidence.
 
-## Open decisions deliberately left to the owner
+## Owner rulings — decided
 
-1. **Is `shared-library` a role, or a facet?** `platform-contracts`,
-   `rust-platform-libs` and `dotnet-platform-libs` declare
-   `kind: shared-library`, and `shared-library` is not in the six-value role
-   set. This proposal folds them into `role: platform` (they exist to be
-   consumed) and keeps the distinction in prose. The alternative is a
-   seventh role `library`, which is more faithful but adds a value whose
-   only difference from `platform` is intent. The three rows are marked
-   contested in `design.md` §5 and no code change depends on the answer.
-2. **ERROR or WARNING for `TAXONOMY_MISMATCH`.** This proposal chooses ERROR
-   because two authority surfaces are asserting different facts, and because
-   the migration resolves all 30 in the same package. The alternative is
-   WARNING, which lets a future disagreement accumulate unnoticed. ERROR on
-   day 1 fails the audit for 30 repositories until the migration lands, so
-   the order of `tasks.md` §2 and §3 matters.
-3. **Single-valued `stack` for multi-stack repositories.** `lexora`
-   (24 `.dart` files), `opendockify` (75) and `trippify` (23) ship a .NET
-   implementation *and* a Flutter client. This proposal records
-   `stack: dotnet` — the implementation stack — and leaves the client
-   undescribed. The alternative is a `stacks` array, which is a schema and
-   vocabulary change with no current consumer.
-4. **Does `lileililiwen-site` have a role at all?** Its declaration says
-   `kind: product` and both registry and declaration `profile` say
-   `deployment`; a bounded census finds 12 Python files. It is the one
-   repository where the role is genuinely contested, so `design.md` §5
-   proposes `role: deployment` and flags it.
-5. **Whether `kind` is retired now or kept as a derived field forever.** This
-   proposal keeps `kind` as a derived, deprecated field so that any
-   undocumented consumer of the composite keeps working. The alternative is
-   to remove it and take the unknown-consumer risk.
+The owner has ruled on all five questions this section previously held open.
+The rulings are binding on the vocabulary, the migration table, and the
+finding levels. The corresponding record in design terms is `design.md` §10.
+
+1. **`shared-library` is not a seventh role.** `platform-contracts`,
+   `rust-platform-libs` and `dotnet-platform-libs` fold into
+   `role: platform`, and the role set stays at six values. No consumer
+   branches on the distinction: the capability-adoption gate keys on provider
+   id, and `profile_requirements` is frozen and never reads `role`. The
+   distinction that does carry weight — a library you consume versus a service
+   you run — is already expressed by the frozen `profile` values
+   `dotnet-library` and `rust-platform`, so a seventh role would duplicate a
+   frozen axis instead of adding one. The registry's own three-way
+   disagreement across exactly these three repositories — `tooling`,
+   `rust-platform` and `dotnet-library` — is recorded as **a defect of the
+   composite, not a reason for a new value**.
+2. **`TAXONOMY_MISMATCH` is ERROR**, under a binding sequencing constraint:
+   the check MUST NOT be enabled until the `design.md` §5 migration table has
+   been applied. The same package resolves all 30 disagreements, so on day
+   one the same 30 disagreements the check exists to catch are already
+   resolved and an ERROR enabled before the migration never fires on the
+   fleet — it would be recorded as passing on the exact condition it was
+   written to detect. Check and migration ship together; if they cannot, the
+   severity is WARNING until they do.
+3. **`stack` stays single-valued.** `lexora`, `opendockify` and `trippify`
+   record `stack: dotnet` — the implementation stack — and no `stacks` array
+   is added. The justification is that a multi-valued axis is a schema and
+   vocabulary change with no current consumer. **Revisit trigger:** a
+   `stacks` array is added only when a real consumer needs to query "which
+   repositories ship a Flutter client". The fact is already captured
+   machine-readably today: `forge` declares `flutter-app: tokens: none`.
+4. **`lileililiwen-site` is `role: deployment`.** It is a Hugo static site:
+   `verification.command` is `hugo --gc --minify`, it carries `CNAME` files
+   under `static/` and `public/`, it holds 16 `.html` and 12 `.py` files, it
+   has no application entry point, no compose file and no `Dockerfile`, and
+   it has a `deploy.yml` workflow. It ships no runnable artifact, so it is
+   not a `product`. Both authority surfaces already agree on
+   `profile: deployment`, so following that existing agreement introduces no
+   new vocabulary. This resolves a `TAXONOMY_MISMATCH` — declaration
+   `kind: product` against `profile: deployment` on both surfaces — and is
+   explicitly **not** a vocabulary change. The repository lives on disk at
+   `lileililiwen.github.io` through its registry `path` and is one of the
+   eight alias entries, so its `id` MUST NOT be renamed.
+5. **`kind` is retired as an authored value and retained permanently as a
+   derived, deprecated field.** The derivation is `kind = stack + "-" + role`,
+   or the bare `role` when `stack` is `none`. `kind` is in the schema's
+   `required` list and appears in all 81 declarations, so removing it would
+   require 81 authored-declaration edits that this change's own non-goals
+   forbid. Deriving it costs one function and keeps every undocumented
+   consumer of the composite working.

@@ -69,12 +69,12 @@ Python **3.11**, standard library only.
 | `role` | Meaning | Repositories today (from `kind`) |
 |---|---|---|
 | `product` | Ships a user-facing or business capability of its own | 66 |
-| `platform` | Exists to be consumed by other repositories | 3 (+3 contested, see §5) |
+| `platform` | Exists to be consumed by other repositories | 6 (3 authored `platform` + 3 `shared-library` repositories folded in by owner ruling, §10 ruling 1) |
 | `tooling` | Internal or agent-facing tool, not a shipped product | 6 |
 | `governance` | Owns workspace policy, rules, and registries | 1 (`workspace-governance`) |
 | `deployment` | Owns build, release, and runtime plumbing, not a product | 1 (`jenkins-local`) |
 | `inventory` | Records the portfolio; ships no implementation | 1 (`catchen`) |
-| `shared-library` | **Contested** — a library consumed by siblings | 3 (see open decision 1) |
+| `shared-library` | **Not a role** — folded into `platform` by owner ruling; the library-versus-service distinction is already carried by the frozen `profile` values | 3 (decided, §10 ruling 1) |
 
 | `stack` | Meaning | Repositories today (resolved by §5) |
 |---|---|---|
@@ -145,7 +145,7 @@ repositories. Resolved target for each:
 | `crossalheart` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
 | `crossify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
 | `cvunify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
-| `dotnet-platform-libs` | `shared-library` | `dotnet-library` | `shared-library` → `platform` | `dotnet` | 2 — contested |
+| `dotnet-platform-libs` | `shared-library` | `dotnet-library` | `platform` | `dotnet` | 2 — decided, §10 ruling 1 |
 | `driftwatchdog` | `tooling` | `rust-product` | `tooling` | `rust` | 2 |
 | `forge` | `platform` | `rust-product` | `platform` | `rust` | 2 |
 | `fotofy` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
@@ -155,13 +155,13 @@ repositories. Resolved target for each:
 | `hypora` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
 | `kairion` | `product` | `dotnet-product` | `product` | `dotnet` | 2 |
 | `labrys` | `platform` | `rust-platform` | `platform` | `rust` | 2 |
-| `lexora` | `dotnet-product` | `product` | `product` | `dotnet` | 1 — also ships 24 `.dart`; see open decision 3 |
-| `lileililiwen.github.io` (`lileililiwen-site`) | `product` | `deployment` | `deployment` | `python` | 4 — contested; census: 12 `.py` |
+| `lexora` | `dotnet-product` | `product` | `product` | `dotnet` | 1 — also ships 24 `.dart`; single-valued `stack`, §10 ruling 3 |
+| `lileililiwen.github.io` (`lileililiwen-site`) | `product` | `deployment` | `deployment` | `python` | 4 — decided, §10 ruling 4; census: 12 `.py` |
 | `mortalect` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
-| `opendockify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 — also ships 75 `.dart`; open decision 3 |
-| `platform-contracts` | `shared-library` | `tooling` | `shared-library` → `platform` | `python` or `none` | 4 — contested; 14 `.py` tooling, JSON-schema artifact |
+| `opendockify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 — also ships 75 `.dart`; single-valued `stack`, §10 ruling 3 |
+| `platform-contracts` | `shared-library` | `tooling` | `platform` | `python` or `none` | 4 — decided, §10 ruling 1; 14 `.py` tooling, JSON-schema artifact |
 | `ploutify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
-| `rust-platform-libs` | `shared-library` | `rust-platform` | `shared-library` → `platform` | `rust` | 2 — contested |
+| `rust-platform-libs` | `shared-library` | `rust-platform` | `platform` | `rust` | 2 — decided, §10 ruling 1 |
 | `singleatee` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
 | `sisyphusfy` | `tooling` | `python-product` | `tooling` | `python` | 2 |
 | `somodanote` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
@@ -169,7 +169,7 @@ repositories. Resolved target for each:
 | `sutravia` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
 | `tantalyn` | `dotnet-product` | `product` | `product` | `dotnet` | 1 |
 | `transitfy` | `typescript-product` | `rust-product` | `product` | `typescript` | 1 — registry stack is wrong; 56 `.ts`, 0 `.rs` |
-| `trippify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 — also ships 23 `.dart`; open decision 3 |
+| `trippify` | `dotnet-product` | `product` | `product` | `dotnet` | 1 — also ships 23 `.dart`; single-valued `stack`, §10 ruling 3 |
 
 Nineteen of the thirty are rule-1 rows where the declaration is right about
 the stack and the registry silently lost it — eighteen of those nineteen are
@@ -261,6 +261,7 @@ assertion in §7 is an id-set comparison, not a spot check.
 | `role`/`stack` absent | WARNING `TAXONOMY_AXIS_UNKNOWN`; the declaration remains schema-valid |
 | `role`/`stack` non-canonical | WARNING `TAXONOMY_AXIS_UNKNOWN` naming the value and both sets |
 | registry and declaration disagree on one axis | ERROR `TAXONOMY_MISMATCH` naming both values |
+| `TAXONOMY_MISMATCH` enabled before the §5 migration is applied | sequencing violation. ERROR is valid only in the commit that also applies §5; until then the level is WARNING, because on day one the same package resolves all 30 disagreements and the check would never fire on the fleet (§10 ruling 2) |
 | registry has an axis, declaration does not | WARNING `TAXONOMY_AXIS_UNKNOWN` on the declaration, not a mismatch — an absent value is not a contradiction |
 | stack-qualified composite still present with both axes set | WARNING `TAXONOMY_LEGACY_VALUE`; a hand-authored `kind` that disagrees with its own derived form is the same code, because the derived form is the authority |
 | `id` present but not kebab-case | existing ERROR `PROJECT_ID`; unchanged |
@@ -330,17 +331,60 @@ the repository's most specific self-statement and therefore outranks both
   untouched**. They are already correct and are what the immutable-id rule
   looks like in practice.
 
-**Deferred:** the `library` role decision and the multi-stack `stacks`
-array (open decisions 1 and 3); a `layout` axis for `typescript-monorepo`;
+**Deferred:** a multi-stack `stacks` array, revisited only on the trigger in
+§10 ruling 3; a `layout` axis for `typescript-monorepo`;
 any `platform-contracts` schema-registry alignment; a possible
 `ROLE_*`/`STACK_*` reporting surface in `maturity_audit.py` (display only,
 and only after the axes are stable).
 
-**Blockers:** none for the 30 disagreements, the 4 registrations, or the
-ghost. The three contested `shared-library` rows and
-`lileililiwen-site` need an owner decision before their `role` value is
-written; the change can land with them resolved as proposed here and
-corrected later without any code change, because the axes are descriptive.
+**Blockers:** none. The owner has ruled on the five questions this change
+held open (§10), so the three `shared-library` rows and `lileililiwen-site`
+are decided and their `role` values are written per rulings 1 and 4 rather
+than held for a later correction. The one remaining ordering requirement is
+not a blocker: §10 ruling 2 makes the migration and the enabled
+`TAXONOMY_MISMATCH` check a single commit, so the axes are still
+descriptive and nothing depends on an unanswered question.
+
+## 10. Owner rulings — decided
+
+The owner has ruled on the five questions this change held open. The rulings
+are binding on the vocabulary, the §5 migration table, and the finding
+levels. The rationale is recorded in `proposal.md` "Owner rulings — decided";
+this section records the same rulings in design terms.
+
+| Ruling | Decision | Effect on this design |
+|---|---|---|
+| 1 | `shared-library` is not a role | §4 keeps six roles; the three `shared-library` repositories take `role: platform` in §5.2, so the `platform` count is 6. The library-versus-service distinction stays in the frozen `profile` values `dotnet-library` / `rust-platform`, so no axis is added. The registry's three-way disagreement across exactly these three repositories (`tooling`, `rust-platform`, `dotnet-library`) is recorded as a defect of the composite, not as a reason for a new value. |
+| 2 | `TAXONOMY_MISMATCH` is ERROR | §6 and §7 keep ERROR, conditional on the sequencing constraint below. The two rows that resolved the `shared-library` composite and the `lileililiwen-site` row are no longer flagged contested. |
+| 3 | `stack` stays single-valued | `lexora`, `opendockify` and `trippify` keep `stack: dotnet` in §5.2. No `stacks` array and no `secondary_stacks` field. Revisit trigger: a real consumer querying "which repositories ship a Flutter client"; `forge`'s `flutter-app: tokens: none` already carries that fact machine-readably. |
+| 4 | `lileililiwen-site` is `role: deployment` | §5.2 writes `deployment`; the declaration `kind: product` against `profile: deployment` disagreement on both surfaces is resolved, not carried as contested. The ruling fixes the **role** only — the row's `stack: python` stays as rule 4 resolved it (census: 12 `.py`). No vocabulary value is added, and the entry stays one of the eight §5.5 alias entries: id `lileililiwen-site`, path `lileililiwen.github.io`, not renamed. |
+| 5 | `kind` is retired as authored, retained as derived | The §4 derivation is permanent, not deferred: `stack + "-" + role`, or the bare `role` when `stack` is `none`. `kind` remains in the schema `required` list and remains present in all 81 declarations, derived by the checker and never hand-authored, so no consumer of the composite breaks. |
+
+**Sequencing constraint (ruling 2).** The §5 migration and the enabled
+`TAXONOMY_MISMATCH` check ship in the same commit. Enabling the check
+first resolves nothing on day one — this same package resolves all 30
+disagreements — so an ERROR enabled before the migration would report zero
+fleet findings while the defect is still present, and the check would be
+recorded as passing on the exact condition it exists to catch. If the two
+cannot ship together, the severity is WARNING until they do.
+
+**Conflicts recorded, not silently resolved.**
+
+- §8 expects "exactly 30 `TAXONOMY_MISMATCH` errors" in the pre-migration
+  run, while ruling 2 forbids enabling the check before the migration. Both
+  statements are kept as written: the 30 is the measured disagreement count
+  and stands as the baseline for the fixture and the audit comparison, and
+  the ruling constrains when the check is switched on, not what the count is.
+  An implementer must not read the pre-migration run as a sanctioned state in
+  which to merge the finding.
+- `tasks.md` §0 still records the three `shared-library` rows and
+  `lileililiwen-site` as "proposed … the owner must say yes". That caveat is
+  superseded by rulings 1 and 4; `tasks.md` was not edited in this pass and
+  needs a one-line follow-up before implementation starts.
+- Ruling 1 keeps the composite `kind` in the schema `required` list, so the
+  vocabulary defect (one string answering two questions) survives as a
+  derived projection. That is the accepted cost of ruling 5, and it is why
+  `TAXONOMY_LEGACY_VALUE` and the round-trip test remain in force.
 
 ## Traceability
 

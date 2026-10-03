@@ -2,20 +2,28 @@
 
 ## 0. Caveats and confirmations
 
-- [ ] **Agree the two axis sets before enforcing them.** The 6 roles and 6
-  stacks in `design.md` §4 are derived from the values observed on
-  2026-10-03, not from a product decision. `TAXONOMY_AXIS_UNKNOWN` turns a
-  wrong set into a fleet-wide warning class, so review the sets first.
-- [ ] **Resolve the three contested `shared-library` rows and
-  `lileililiwen-site` before writing their `role`.** `platform-contracts`,
-  `rust-platform-libs` and `dotnet-platform-libs` are proposed as
-  `role: platform`; `lileililiwen-site` is proposed as
-  `role: deployment`. Both are open decisions 1 and 4 in the proposal. The
-  change can land with the proposed values, but the owner must say yes.
-- [ ] **`TAXONOMY_MISMATCH` is ERROR, so the migration must land in the same
-  package.** Do not merge the finding before the 30 rows are resolved, or
+- [x] **The two axis sets are ruled as designed.** The 6 roles and 6 stacks in
+  `design.md` §4 are derived from the values observed on 2026-10-03 and are
+  approved as the canonical sets (`design.md` §10, ruling 1).
+  `TAXONOMY_AXIS_UNKNOWN` remains WARNING, so a later vocabulary addition
+  cannot red the fleet.
+- [x] **The three contested `shared-library` rows and `lileililiwen-site` are
+  ruled.** `platform-contracts`, `rust-platform-libs` and
+  `dotnet-platform-libs` take `role: platform` — `shared-library` is **not** a
+  seventh role, because no consumer branches on it and the distinction that
+  carries weight is already carried by the frozen `profile` values
+  `dotnet-library` / `rust-platform`. `lileililiwen-site` takes
+  `role: deployment`: it is a Hugo static site
+  (`verification.command` is `hugo --gc --minify`, `CNAME` files, 16 `.html`,
+  12 `.py`, no entry point, no compose, no Dockerfile) that ships no runnable
+  artifact, and both authority surfaces already agree on
+  `profile: deployment`. See `design.md` §10, rulings 1 and 4.
+- [ ] **`TAXONOMY_MISMATCH` is ruled ERROR, so the migration must land in the
+  same package.** Do not enable the finding before the 30 rows are resolved, or
   the audit fails for 30 repositories with no owner action recorded. The
-  pre-migration count of 30 is the expected state, not a defect to hide.
+  pre-migration count of 30 is a **fixture baseline**, not a sanctioned merge
+  state: it is what the test asserts against, and it is not a state the branch
+  may be merged in. See `design.md` §10, ruling 2.
 - [ ] **Assert id immutability as a set comparison, not a spot check.** The
   8 `campusMesh`-style entries (`campus-mesh`, `care-bridge`,
   `hestia-lab`, `lore-mix`, `lileililiwen-site`, `open-teacher-kit`,
