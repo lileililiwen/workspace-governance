@@ -3,6 +3,10 @@
   "after": "129d7bf933747ed386eba14f753419c1539581b7",
   "before": "70c14947e4dc555943df916535d2e8da1024c1b2"
  },
+ "aegify": {
+  "after": "f5c4f478f43ad3bff1d91c2b9a53fe7383894c20",
+  "before": "caba4f2004604159a3cf567c92b2c72a5c28ff00"
+ },
  "aesthra": {
   "after": "b1cea0d501488c0d971c2f5f88c2f78e49fe1605",
   "before": "c8eecf711c930cebbf7e432c0df507c02586b19b"
@@ -14,6 +18,14 @@
  "alltools-platform": {
   "after": "fce4d80d61c6d4c1f8d447798e15ad37e3f7a9f4",
   "before": "1e14afdffae8f69a40556dd9343f657ed3f27ccf"
+ },
+ "argoscope": {
+  "after": "fcf8095319ae9dc3fe44d2ef48400eb1c62ab19b",
+  "before": "1aed1a8d48e625c75c55dbab743fb6972fc057b9"
+ },
+ "argoset": {
+  "after": "c2a1e926f91ad8663d5e2fef3da5fdb7704990ff",
+  "before": "68b7fc778c82c4214dcabd7db52020071d165006"
  },
  "ariadex": {
   "after": "fd855fcf9a4b86f28f3dc8693da4cb6ca8a6b037",
@@ -302,6 +314,10 @@
  "vowra": {
   "after": "b3146d05547c29f6e62f2517933ee348b7b6b6bf",
   "before": "538852dffbbbd78bdcd62b42a5273aa43a039f9d"
+ },
+ "workspace-governance": {
+  "after": "bb5ca6f3bfb1bedb78839b4237146bf13963b265",
+  "before": "ff336614283b7bf69fca2f737dbb3f3b365fa1ee"
  },
  "ziban": {
   "after": "e52dc567472e448a61beb49df28b7411074a38d9",

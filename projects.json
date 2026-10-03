@@ -725,7 +725,7 @@
       "id": "devloom",
       "path": "devloom",
       "profile": "dotnet-product",
-      "lifecycle": "scaffold",
+      "lifecycle": "active",
       "adoption": "adopted",
       "role": "product",
       "stack": "dotnet"
