@@ -359,7 +359,7 @@ SPEC_PURPOSE_SPECS_DIR = "openspec/specs"
 # exact change that releases it. The flag is the sequencing hold; it is not
 # sufficient on its own to make this rule gate anything.
 SPEC_PURPOSE_PLACEHOLDER_LEVEL = "ERROR"
-SPEC_PURPOSE_AUDIT_ENABLED = False
+SPEC_PURPOSE_AUDIT_ENABLED = True
 
 
 def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:

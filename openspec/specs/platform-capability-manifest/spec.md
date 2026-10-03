@@ -1,7 +1,8 @@
 # platform-capability-manifest Specification
 
 ## Purpose
-TBD - created by archiving change platform-capability-and-release-governance. Update Purpose after archive.
+
+The portfolio now has shared runtime libraries, a Gate executor, and repeated release scripts, but no common capability vocabulary showing which projects need identity, admin, jobs, billing, storage, or release evidence. Without that vocabulary, adoption becomes package copying rather than controlled reuse.
 ## Requirements
 ### Requirement: Declare reusable capabilities explicitly
 

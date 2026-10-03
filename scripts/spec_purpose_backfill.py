@@ -243,7 +243,8 @@ def read_why(archive_dir: Path) -> str | None:
     return why if len(why) >= MIN_WHY_CHARS else None
 
 
-def plan_spec(project: str, spec_path: Path, workspace_root: Path, index: dict[str, list[Path]]) -> SpecPlan | None:
+def plan_spec(project: str, spec_path: Path, workspace_root: Path, index: dict[str, list[Path]],
+              *, resolve_ambiguous_as_derived: bool = False) -> SpecPlan | None:
     """Resolve one spec, or return `None` when it holds no TBD marker."""
     try:
         text = spec_path.read_text(encoding="utf-8")
@@ -261,7 +262,7 @@ def plan_spec(project: str, spec_path: Path, workspace_root: Path, index: dict[s
     change = name_match.group("name")
     archive_dir, ambiguous = resolve_change(index, change)
     relative = spec_path.relative_to(workspace_root).as_posix()
-    if ambiguous:
+    if ambiguous and not resolve_ambiguous_as_derived:
         # Recorded, not resolved, and never guessed: the output is a published
         # sentence, and two archive directories under one change name are two
         # different changes. The row stays in the plan so the other 1,234 are
@@ -293,18 +294,30 @@ def plan_spec(project: str, spec_path: Path, workspace_root: Path, index: dict[s
                 marker=line,
             )
     source = SOURCE_REQUIREMENT if REQUIREMENT_RE.search(text) else SOURCE_CAPABILITY
+    # With the owner opt-in, an ambiguous change name no longer blocks the write,
+    # but it must still be visible in the record: the candidates stay in `evidence`
+    # so a reader can see which archives were declined, and why the sentence is
+    # derived from the spec's own requirements rather than from any `## Why`.
     return SpecPlan(
         project=project,
         spec=relative,
         change=change,
         source=source,
         purpose=derive_purpose(text, capability),
-        evidence=None,
+        evidence=(
+            "declined-ambiguous-archive: "
+            + "|".join(
+                f"openspec/changes/archive/{item.name}/proposal.md" for item in (ambiguous or [])
+            )
+            if resolve_ambiguous_as_derived and ambiguous
+            else None
+        ),
         marker=line,
     )
 
 
-def build_plan(workspace_root: Path, governance_root: Path, *, verify_committed: bool = True) -> dict[str, Any]:
+def build_plan(workspace_root: Path, governance_root: Path, *, verify_committed: bool = True,
+               resolve_ambiguous_as_derived: bool = False) -> dict[str, Any]:
     """Plan every TBD marker in the fleet, or raise `BackfillError`.
 
     `verify_committed` is the drift refusal, and it is a *plan-time* guard: it
@@ -327,7 +340,8 @@ def build_plan(workspace_root: Path, governance_root: Path, *, verify_committed:
         for spec in sorted(specs_root.rglob("spec.md")):
             if not spec.is_file() or spec.is_symlink():
                 continue
-            plan = plan_spec(child.name, spec, workspace_root, index)
+            plan = plan_spec(child.name, spec, workspace_root, index,
+                              resolve_ambiguous_as_derived=resolve_ambiguous_as_derived)
             if plan is not None:
                 plans.append(plan)
                 contributing.add(child.name)
@@ -490,8 +504,13 @@ def apply_plan(plan: dict[str, Any], workspace_root: Path) -> list[str]:
             raise BackfillError(
                 f"{record['spec']}: TBD marker changed since the plan was computed; refusing to write"
             )
+        # A function replacement, not a string: the Purpose is archived prose
+        # and may legitimately contain a backslash, which `re.sub` would
+        # otherwise read as an escape (`\s` is "bad escape" and raises). The
+        # text must be inserted literally.
+        replacement = f"## Purpose\n\n{record['purpose']}\n"
         updated = PLACEHOLDER_RE.sub(
-            f"## Purpose\n\n{record['purpose']}\n", text, count=1,
+            lambda _match, value=replacement: value, text, count=1,
         )
         path.write_text(updated, encoding="utf-8")
         written.append(f"{record['spec']}: Purpose from {record['source']}")
@@ -553,6 +572,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="report whether the backfill has been applied")
     parser.add_argument("--apply", action="store_true", help="WRITE the Purpose to the fleet (authorized step)")
     parser.add_argument("--write-plan", action="store_true", help="refresh the committed plan file from a dry run")
+    parser.add_argument("--resolve-ambiguous-as-derived", action="store_true",
+                        dest="resolve_ambiguous",
+                        help="owner decision: when a change name matches more than one archive "
+                             "directory, derive the Purpose from the spec's own requirements and "
+                             "record the declined candidates, instead of refusing the write")
     args = parser.parse_args(argv)
 
     workspace_root = Path(args.root).expanduser().resolve()
@@ -563,7 +587,8 @@ def main(argv: list[str] | None = None) -> int:
     # the refusal, because it refreshes the record the refusal guards.
     verify_committed = not args.check or args.write_plan
     try:
-        plan = build_plan(workspace_root, governance_root, verify_committed=verify_committed)
+        plan = build_plan(workspace_root, governance_root, verify_committed=verify_committed,
+                          resolve_ambiguous_as_derived=args.resolve_ambiguous)
     except BackfillError as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1

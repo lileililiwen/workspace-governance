@@ -1,7 +1,8 @@
 # deployable-batch-onboarding Specification
 
 ## Purpose
-TBD - created by archiving change deployable-batch-onboarding. Update Purpose after archive.
+
+`deployment/projects.json` is documented as the safe handoff to jenkins-local, but the manifest is empty: every `.project.json` declares `deployable: false`, and the adoption queue holds 18+ structurally-adopted products "non-deployable until their declared verification commands and release evidence are run and reviewed." Jenkins-side changes now exist that consume this manifest (jenkins-local `manifest-driven-deployment-eligibility` and its gate stack) — consumed fail-closed, an empty manifest means nothing can deploy. The portfolio needs the missing definition: objective promotion criteria, an auditable promotion record, a script that applies them, and a first real batch through the door.
 ## Requirements
 ### Requirement: Evidence-backed promotion transaction
 

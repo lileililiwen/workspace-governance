@@ -1,7 +1,8 @@
 # runtime-template-renderer Specification
 
 ## Purpose
-TBD - created by archiving change runtime-template-library-and-renderer. Update Purpose after archive.
+
+The workspace has many product repositories with different runtimes but no reusable, source-backed way to create Dockerfiles and Compose stacks. Copying a generic sample produces invalid or misleading deployment configuration.
 ## Requirements
 ### Requirement: Provide versioned runtime template types
 

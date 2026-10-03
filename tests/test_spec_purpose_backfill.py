@@ -267,12 +267,12 @@ class FenceTests(unittest.TestCase):
         workspace_check.SPEC_PURPOSE_AUDIT_ENABLED = value
         self.addCleanup(setattr, workspace_check, "SPEC_PURPOSE_AUDIT_ENABLED", original)
 
-    def test_the_committed_constant_is_false(self):
-        # The hold is shut. The fleet has not been backfilled and the
-        # `governance-quality` concern cannot yet see this code (design.md §6),
-        # so enabling it would turn this repository's CI red while the fleet
-        # gate reports green.
-        self.assertFalse(SPEC_PURPOSE_AUDIT_ENABLED)
+    def test_the_committed_constant_is_true(self):
+        # The hold is open. The fleet write has landed (0 markers remain) and
+        # the `governance-quality` concern now declares this code
+        # (driftwatchdog `6390ab9`, measured PASS/exit 0 -> FAIL/exit 1), so
+        # the rule is both wired and satisfied. Severity never softened.
+        self.assertTrue(SPEC_PURPOSE_AUDIT_ENABLED)
         self.assertEqual(SPEC_PURPOSE_PLACEHOLDER_LEVEL, "ERROR")
 
     def test_the_fence_closed_reports_nothing_on_the_unmigrated_corpus(self):
@@ -317,11 +317,17 @@ class FenceTests(unittest.TestCase):
         self.assertEqual(len(marker_findings(findings)), 2)
 
     def test_the_fence_is_a_committed_constant_not_an_environment_variable(self):
+        # The point is not the value but the provenance: the resolved value
+        # tracks the committed constant whatever the environment says. Setting
+        # the variable to the *opposite* of the constant must not flip it.
+        opposite = "0" if SPEC_PURPOSE_AUDIT_ENABLED else "1"
         previous = os.environ.get("SPEC_PURPOSE_AUDIT_ENABLED")
-        os.environ["SPEC_PURPOSE_AUDIT_ENABLED"] = "1"
+        os.environ["SPEC_PURPOSE_AUDIT_ENABLED"] = opposite
         try:
-            self.assertEqual(spec_purpose_audit_enabled(), SPEC_PURPOSE_AUDIT_ENABLED)
-            self.assertFalse(spec_purpose_audit_enabled())
+            resolved = spec_purpose_audit_enabled()
+            self.assertEqual(resolved, SPEC_PURPOSE_AUDIT_ENABLED)
+            self.assertNotEqual(resolved, opposite == "1",
+                                "the environment must not be able to set the fence")
         finally:
             if previous is None:
                 del os.environ["SPEC_PURPOSE_AUDIT_ENABLED"]
@@ -509,6 +515,89 @@ class AmbiguousArchiveTests(unittest.TestCase):
 
     def build(self, **kwargs):
         return build_plan(self.workspace, self.governance, **kwargs)
+
+
+class AmbiguousAsDerivedTests(unittest.TestCase):
+    """The owner opt-in: decline the archives, derive from the spec itself.
+
+    Two archive directories under one change name are two different changes, so
+    the tool refuses rather than guess a `## Why`. `--resolve-ambiguous-as-derived`
+    is the recorded way out: the Purpose comes from the spec's own first
+    requirement, which asserts nothing about which change produced it, and the
+    declined candidates stay in `evidence` so the reader can still see them.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace = Path(self.temp.name) / "workspace"
+        self.workspace.mkdir()
+        self.governance = Path(self.temp.name) / "governance"
+        self.governance.mkdir()
+        self.project = make_project(self.workspace, "alpha")
+        self.spec = place_spec(
+            self.project, "toolkit", "TBD - created by archiving change platform-testing-toolkit."
+        )
+        place_archive(self.project, "2026-09-08-platform-testing-toolkit", USABLE_WHY)
+        place_archive(self.project, "2026-09-10-platform-testing-toolkit", USABLE_WHY + " Second.")
+
+    def build(self, **kwargs):
+        return build_plan(self.workspace, self.governance, **kwargs)
+
+    def test_the_opt_in_resolves_the_row_and_records_the_declined_archives(self):
+        plan = self.build(resolve_ambiguous_as_derived=True)
+        self.assertEqual(plan["totals"]["requires_owner_decision"], 0)
+        row = plan["specs"][0]
+        self.assertNotIn("requires_owner_decision", row)
+        self.assertTrue(row["purpose"])
+        self.assertIn("declined-ambiguous-archive", row["evidence"])
+        self.assertIn("2026-09-08-platform-testing-toolkit", row["evidence"])
+        self.assertIn("2026-09-10-platform-testing-toolkit", row["evidence"])
+        self.assertNotIn(USABLE_WHY[:40], row["purpose"],
+                         "the sentence must not come from either declined archive")
+
+    def test_the_opt_in_writes_a_purpose(self):
+        apply_plan(self.build(resolve_ambiguous_as_derived=True), self.workspace)
+        text = self.spec.read_text(encoding="utf-8")
+        self.assertNotIn("TBD - created by archiving change", text)
+        self.assertIn("## Purpose", text)
+
+
+class BackslashInArchivedProseTests(unittest.TestCase):
+    """Archived `## Why` prose is inserted literally.
+
+    A `re.sub` *string* replacement treats a backslash in the replacement as an
+    escape, so a spec whose archived rationale contains one (a regex, a Windows
+    path, an escaped quote) raised `re.error: bad escape` part-way through the
+    fleet and left the write half applied. The replacement is a function.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace = Path(self.temp.name) / "workspace"
+        self.workspace.mkdir()
+        self.governance = Path(self.temp.name) / "governance"
+        self.governance.mkdir()
+        self.project = make_project(self.workspace, "alpha")
+        self.spec = place_spec(self.project, "retention", CURRENT_MARKER)
+        self.why = (
+            "Audit rows are written with a pattern that matches \\s+ and a literal "
+            "backslash in the payload, and the reference implementation uses "
+            "C:\\temp\\audit as its scratch path. " + "Filler prose to clear the "
+            "minimum length floor for a usable archived rationale. " * 2
+        )
+        place_archive(self.project, "2026-09-18-add-retention-policy", self.why)
+
+    def test_the_purpose_is_written_literally_and_the_marker_is_gone(self):
+        plan = build_plan(self.workspace, self.governance)
+        self.assertEqual(plan["totals"]["requires_owner_decision"], 0)
+        self.assertIn("\\s+", plan["specs"][0]["purpose"])
+        apply_plan(plan, self.workspace)
+        text = self.spec.read_text(encoding="utf-8")
+        self.assertNotIn("TBD - created by archiving change", text)
+        self.assertIn("\\s+", text, "a backslash in archived prose must survive the write verbatim")
+        self.assertIn("C:\\temp\\audit", text)
 
 
 # ---------------------------------------------------------------------------
@@ -753,13 +842,14 @@ class FenceIsTheOnlyMechanismTests(unittest.TestCase):
 
     def test_no_environment_variable_can_reach_the_fence(self):
         text = self.source()
-        # One committed assignment, read only through the resolver.
+        # One committed assignment, read only through the resolver. The
+        # literal is whatever the fence currently holds, so this test tracks
+        # the constant instead of pinning the value it had when written.
         self.assertEqual(text.count("SPEC_PURPOSE_AUDIT_ENABLED = "), 1)
         self.assertIn("return SPEC_PURPOSE_AUDIT_ENABLED if explicit is None else explicit", text)
-        self.assertNotIn("os.environ", self.source()[
-            self.source().index("SPEC_PURPOSE_AUDIT_ENABLED = False"):
-            self.source().index("SPEC_PURPOSE_AUDIT_ENABLED = False") + 400].replace(
-                "os.environ.get", "ENV_SENTINEL_ABSENT"))
+        anchor = text.index(f"SPEC_PURPOSE_AUDIT_ENABLED = {SPEC_PURPOSE_AUDIT_ENABLED}")
+        window = text[anchor:anchor + 400].replace("os.environ.get", "ENV_SENTINEL_ABSENT")
+        self.assertNotIn("os.environ", window)
 
     def test_the_tool_and_the_checker_agree_on_the_fence_name(self):
         text = (REPO_ROOT / "scripts" / "spec_purpose_backfill.py").read_text(encoding="utf-8")

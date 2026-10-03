@@ -1,7 +1,8 @@
 # portfolio-vocabulary Specification
 
 ## Purpose
-TBD - created by archiving change portfolio-vocabulary-normalization. Update Purpose after archive.
+
+Two vocabularies drifted without a source of truth. **Kind and profile.** The 77 declarations carry **22 distinct `kind` values and 17 distinct `profile` values**, several of them one-off prose (`cross-border-care-platform`, `privacy-sensitive-web-saas`, `web-platform`, `mobile-platform`, `open-source-knowledge-platform`, `runtime-operator`, `quality-gate`, `control-plane`). The checker admits profiles through an ad-hoc allow-list plus suffix rules (`workspace_check.validate_registry`), so a descriptive value silently passes or fails depending on spelling, and `profiles/*.json` describes only 6 of the 17 in use. **Shared word lists.** The placeholder markers and secret-field substrings that decide whether a check fires are declared in more than one place: `scripts/product_code_quality.py:DEFAULT_PLACEHOLDER_MARKERS`, `scripts/workspace_check.py:SECRET_WORDS`, `platform-contracts/schemas/registry.json:secret_field_substrings`, and `rust-platform-libs/crates/platform-testing/src/reasons.rs`. Driftwatchdog documents the same placeholder vocabulary for its `placeholder-threshold` concern without owning a copy. A word added in one place does not reach the others. Both are governance-owned vocabulary, so this is the same owner, lifecycle and oracle as the two shipped packages.
 ## Requirements
 ### Requirement: One machine-readable vocabulary source
 

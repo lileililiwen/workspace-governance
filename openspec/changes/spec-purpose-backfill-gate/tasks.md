@@ -151,31 +151,53 @@
 
 ## 4. Unchecked, and why
 
-- [ ] **D18 is unmet: the rule is not carried by a gate that blocks.** The
-  `governance-quality` concern's declared code set does not include
-  `SPEC_PURPOSE_PLACEHOLDER`, the adapter filters it out (`mod.rs:453`), and the
-  checker's exit 1 is an expected exit (`mod.rs:84`), so the concern would
-  report `PASS` while the checker fails. **Not completable here:** the fix is an
-  edit to `driftwatchdog`, which is outside this change's authority and is being
-  concurrently edited by another agent. It is specified in `design.md` §6 for a
-  separately authorized step, and `SPEC_PURPOSE_AUDIT_ENABLED` stays `False`
-  until it lands. Unchecked deliberately: checking it would assert a wiring
-  change that does not exist.
+These five were open when this change was first committed. Two have since been
+completed by separately authorized steps; the record is updated rather than
+rewritten, so the original reasoning stays visible.
+
+- [x] **D18 is now met.** The `governance-quality` concern's declared code set
+  did not include `SPEC_PURPOSE_PLACEHOLDER`, the adapter filtered it out
+  (`mod.rs:453`), and the checker's exit 1 was an expected exit (`mod.rs:84`),
+  so the concern reported `PASS` while the checker failed. **Landed in
+  `driftwatchdog`:** `SPEC_PURPOSE_PLACEHOLDER` was added to
+  `GOVERNANCE_QUALITY_DECLARED_CODES` (`6390ab9`), and the before/after was
+  measured on a real binding — `PASS`/exit 0 became `FAIL`/exit 1 with the
+  finding reported. `SPEC_PURPOSE_AUDIT_ENABLED` is therefore `True`.
 - [ ] **The declared-code allow-list's silent-gap weakness is unfixed.** See
   `design.md` §6.1 for the candidate guard and for why a guard cannot live in
   this repository. **Not completable here:** the guard is Rust in
-  `driftwatchdog`. The residual weakness — an inventory is still a second
-  hand-maintained list — is stated in the design rather than presented as
-  solved.
-- [ ] **The 1,234-file fleet write is not applied.** **Not in this change's
-  scope by ruling:** it is a cross-repo source edit requiring explicit
-  authorization, exactly like `axis_migration.py`. The tool is the reviewable
-  artifact for that step; its dry run is the plan.
-- [ ] **The two ambiguous rows are unresolved.** `dotnet-platform-libs`
-  `platform-testing-toolkit` and `rust-ecommerce` `audit-log-immutability` each
-  match two archive directories. **Not completable mechanically:** choosing
-  between two changes is a guess about authorship, and `--apply` refuses to
-  write while either exists. An owner decides these two by hand.
-- [ ] **The change is not archived.** The fence is shut and the gate-wiring
-  dependency is unmet, so archiving would claim a finished gate that does not
-  exist. It is committed unarchived.
+  `driftwatchdog`, and it needs an envelope contract this repository owns —
+  `--json` gaining an `emittable_codes` key. The residual weakness — an
+  inventory is still a second hand-maintained list — is stated in the design
+  rather than presented as solved.
+- [x] **The 1,234-file fleet write is applied.** Authorized and run with
+  `python3 scripts/spec_purpose_backfill.py --apply
+  --resolve-ambiguous-as-derived`, then committed across 70 repositories.
+  `rollback-manifest.json` records the before/after SHA of each. Re-measured
+  after the write: **0** spec files hold the marker, and with the fence open the
+  audit reports **0** `SPEC_PURPOSE_PLACEHOLDER` findings at
+  `ERROR=205 WARNING=18`.
+- [x] **The two ambiguous rows are resolved, by declining both archives.**
+  `dotnet-platform-libs` `platform-testing-toolkit` and `rust-ecommerce`
+  `audit-log-immutability` each match two archive directories holding two
+  genuinely different changes. The tool still refuses by default. The owner
+  opt-in `--resolve-ambiguous-as-derived` derives the Purpose from the spec's
+  own first requirement instead, which asserts nothing about authorship, and
+  records the declined candidates in `evidence` so the reader still sees them.
+  Covered by `AmbiguousAsDerivedTests`.
+- [ ] **The change is not archived.** The D18 wiring is now met, so the original
+  reason for leaving it open is gone, but archiving is a separate explicit step
+  and is not taken here. It remains committed unarchived.
+
+## 5. Two defects found while applying, both fixed at the cause
+
+1. **`re.sub` read archived prose as a replacement template.** The write used a
+   string replacement, so a backslash in a `## Why` (a regex, a Windows path) was
+   parsed as an escape and raised `re.error: bad escape \s` part-way through the
+   fleet, leaving 320 of 1,234 files written. The replacement is now a function,
+   so the text is inserted literally, and the tool is resumable: re-running
+   planned only the rows still holding a marker. Covered by
+   `BackslashInArchivedProseTests`, which reproduces the original exception
+   against the previous behaviour.
+2. **The 2 ambiguous rows blocked the whole write.** Resolved as described above
+   rather than by deleting rows from the plan.

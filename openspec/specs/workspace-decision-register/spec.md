@@ -1,7 +1,8 @@
 # workspace-decision-register Specification
 
 ## Purpose
-TBD - created by archiving change toolchain-decision-register. Update Purpose after archive.
+
+The toolchain initiative resolved four cross-repo decisions on 2026-09-30 — agent-runtime split (D1), self-hosted identity provider (D2), capability registry ownership (D3), crate publication mode (D4) — and they currently live only in `TOOLCHAIN_PLAN.md` / `TOOLCHAIN_ROADMAP.md` at the workspace root, which no script validates. Governance owns policy and declarations (root HANDOFF ownership table), and this repository already demonstrates the right pattern for machine-readable truth: `vocabulary.json` loaded fail-closed through `scripts/vocabulary.py`. Decisions with downstream change references deserve the same treatment, otherwise B3–B8 proceed on conversational memory and audits cannot flag a decision silently rewritten.
 ## Requirements
 ### Requirement: A fail-closed decision register SHALL exist (REG-001)
 

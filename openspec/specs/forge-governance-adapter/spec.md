@@ -1,7 +1,8 @@
 # forge-governance-adapter Specification
 
 ## Purpose
-TBD - created by archiving change forge-governance-adapter. Update Purpose after archive.
+
+Forge exposes a versioned governance-provider contract (v0.1.0: a JSON request on stdin, a normalized observation on stdout) and advertises `workspace-governance` as an optional provider id — but no adapter exists anywhere, so the portfolio's real governance facts (`workspace_check.py --audit --json`: ERROR/WARN findings, adoption gaps, per-project codes) never reach Forge's doctor, portal or release surfaces. Workspace Governance owns those facts; the missing piece is a small executable shim in this repository that translates one audit result into one contract observation. This gives the audit a machine consumer without this repo gaining any UI, and gives Forge real portfolio evidence.
 ## Requirements
 ### Requirement: Contract-shaped check response
 

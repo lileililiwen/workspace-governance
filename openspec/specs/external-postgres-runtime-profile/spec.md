@@ -1,8 +1,8 @@
 # external-postgres-runtime-profile Specification
 
 ## Purpose
-TBD - created by archiving change shared-postgres-runtime-profile. Update Purpose after archive.
 
+Workspace runtime templates currently start a separate PostgreSQL container and persistent volume for each project. The user currently runs one PostgreSQL service on a capacity-limited Mac and wants projects to reuse it, while retaining the option to move projects to standalone containers/databases on cloud hosts later.
 ## Requirements
 
 ### Requirement: Render an external PostgreSQL runtime profile

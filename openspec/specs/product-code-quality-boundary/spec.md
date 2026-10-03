@@ -1,7 +1,8 @@
 # product-code-quality-boundary Specification
 
 ## Purpose
-TBD - created by archiving change product-code-quality-gates. Update Purpose after archive.
+
+The portfolio currently declares generic build, test, and security concerns, but it has no shared, executable control that detects test or integration code leaking into product source or placeholder-heavy product code. A project can therefore report a structurally complete Gate while shipping code that is unfinished or placed in the wrong boundary. AI-generated changes make this failure mode common enough to require a deterministic repository check.
 ## Requirements
 ### Requirement: Declare product source boundaries
 
