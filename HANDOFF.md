@@ -82,6 +82,33 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- `identity-and-taxonomy-axis-split` (`29dea92`) evidence. `role` and `stack`
+  are now independent axes; `kind` is the derived, deprecated composite
+  `<stack>-<role>`, or the bare `<role>` when stack is `none`. Three new codes:
+  `TAXONOMY_MISMATCH` (ERROR), `TAXONOMY_LEGACY_VALUE`, `TAXONOMY_AXIS_UNKNOWN`
+  (WARNING). `python3 -m unittest discover -s tests` — 456 tests, 0 failures
+  (389 prior + 67 new); `workspace_check --self-check` 0/0; `auto_gate
+  --self-check` PASS; `check_skill_refs` ok; `openspec validate --all --strict`
+  18/18; `rules_drift` unchanged at 148; `git diff --check` clean. From
+  `/home/paul/code` the fleet audit is **unchanged** at `errors=211 warnings=17`
+  with zero `TAXONOMY_*` findings, and **0 of the 80** sibling `.project.json`
+  files carry a `role` — the migration was not applied.
+  **The check enforces nothing yet.** `TAXONOMY_AUDIT_ENABLED = False` holds it
+  off the fleet because the migration has not run; a test proves the env var
+  cannot turn it on. The migration is a reviewable artifact:
+  `python3 scripts/axis_migration.py` is a dry run, `--check` reports
+  outstanding rows, `--apply` is the authorized write. It would touch **81
+  declarations and 77 registry entries**, add `argoscope`/`chronicleaf`/
+  `devloom`/`kairovia`, and remove `jenkins-bootstrap`.
+  Three rulings were added during implementation, all in `design.md` §10: the
+  migration also writes the derived `kind` (47 of 81 differ), the drift guard
+  consequently accepts the derived form so the tool stays idempotent, and
+  `platform-rust` was a spec typo corrected to `rust-platform`. Two of those
+  were owner rulings against the implementation as first written.
+  Evidence boundary: this change can prove the axes resolve, the codes fire at
+  the right severity, and the migration is staged. It cannot prove any
+  repository has been migrated, because none has.
+
 - `rules-drift-gate-wiring` (`4a9edfc`) evidence. Archived as
   `2026-10-03-rules-drift-gate-wiring`; canonical spec
   `openspec/specs/rules-baseline/spec.md` (+4 added, 2 modified, 0 removed).
