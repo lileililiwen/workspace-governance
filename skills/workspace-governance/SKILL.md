@@ -18,10 +18,11 @@ beside an existing one.
 | Is the workspace healthy / why is the audit red | `skills/workspace-governance/references/declaration.md`, then `python3 scripts/workspace_check.py --root .. --audit` |
 | Add or fix a project declaration | `skills/workspace-governance/references/declaration.md` (`scripts/init_project.py`, `schemas/project.schema.json`) |
 | Gate, evidence, or release readiness | `skills/workspace-governance/references/gate-and-evidence.md` (driftwatchdog, `docs/capabilities.md`, `scripts/promote_project.py`) |
+| Shared capability adoption finding, or permission to adopt one | `skills/workspace-governance/references/platform-adoption.md` (`capabilities.json`, `docs/capabilities.md`, `docs/adoption-grant.md`) |
 | Kind, profile, marker, or secret vocabulary | `skills/workspace-governance/references/vocabulary.md` (`vocabulary.json`) |
 | Shared rules, `.ai-rules`, or handoff shape | `skills/workspace-governance/references/rules-baseline.md` (`scripts/rules_drift.py`, `openspec/specs/rules-baseline/spec.md`) |
 | License, discoverability, GitHub metadata, or repository publication | `skills/workspace-governance/references/repository-metadata.md` (`scripts/repository_metadata.py`, `scripts/github_metadata.py`, `scripts/init_project.py`) |
-| Shared library adoption (.NET / Rust) | `skills/workspace-governance/references/platform-adoption.md` (dotnet-platform-libs, rust-platform-libs) |
+| Shared library adoption (.NET / Rust) | `skills/workspace-governance/references/platform-adoption.md` (dotnet-platform-libs, rust-platform-libs, `docs/capabilities.md`) |
 | Shared contracts or schemas | `skills/workspace-governance/references/contracts.md` (platform-contracts) |
 | Unknown or ambiguous | Safe default: `python3 scripts/workspace_check.py --root .. --audit`, then `openspec list`. Say that no route matched; never guess. |
 

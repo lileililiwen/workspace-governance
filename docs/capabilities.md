@@ -22,10 +22,25 @@ A capability declaration has the shape:
   "<name>": {
     "owner": "platform | product | shared | external | <project-id>",
     "evidence_state": "declared | configured | verified | unverified | blocked",
-    "evidence_ref": "relative/path/within/project"
+    "evidence_ref": "relative/path/within/project",
+    "consumes": [
+      {
+        "provider": "<registered-project-id>",
+        "package": "Platform.Idempotency",
+        "version": "0.1.0",
+        "evidence_ref": "relative/path/within/project",
+        "local_implementation": "src/Infrastructure/IdempotencyGuard.cs"
+      }
+    ]
   }
 }
 ```
+
+`consumes` is optional and additive. A declaration without it remains valid and
+emits no adoption finding. `provider`, `package`, and `evidence_ref` are
+required per entry; `version` and `local_implementation` are optional. An
+absolute or `..`-bearing `evidence_ref` is refused and never normalized into a
+portable form.
 
 | State        | Meaning                                                                                       | Audit behaviour                                                          |
 |--------------|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
@@ -73,6 +88,116 @@ A `deployable: true` project must have each required field either in
 Anything else raises `RELEASE_EVIDENCE_INSUFFICIENT` (ERROR) and blocks the
 Jenkins manifest.
 
+## Capability adoption is measured, not declared
+
+`capabilities.json` at the governance root binds each capability id to exactly
+one provider and assigns it a posture. The audit joins **three** sources and
+all three must agree before a capability counts as adopted:
+
+1. the **registry** entry names exactly one provider and a posture;
+2. the consumer's **own manifests** carry a pinned coordinate for the package;
+3. the consumer's **declaration** records the pairing in `consumes[]`.
+
+| Side present | Result | Finding |
+|---|---|---|
+| registry + manifest + `consumes[]` | adopted | none |
+| registry + manifest, no `consumes[]` | adopted, undocumented | `CAPABILITY_ADOPTION_UNEVIDENCED` (WARNING) |
+| registry + `consumes[]`, no manifest edge | declared, not wired | `CAPABILITY_ADOPTION_MISSING` |
+| registry only | not consumed | `CAPABILITY_ADOPTION_MISSING` |
+| declared local implementation, no edge | duplicated | `CAPABILITY_ADOPTION_MISSING`, message names the local path |
+
+The measurement is **read-only**. It executes no project command, invokes no
+package manager, resolves no lockfile or transitive graph, and makes no network
+request. It reads only the dependency stanza of `Directory.Packages.props`,
+`*.csproj`, `package.json`, `Cargo.toml`, `pyproject.toml`, and
+`requirements*.txt`, within a bounded walk that skips build and vendor trees.
+A manifest that exists but cannot be parsed is reported as *unproven*, never as
+proof of absence and never as a failure.
+
+A repository cannot mark itself compliant: `consumes[]` is a declaration, and
+the manifest is the only trusted side. A hand-written consumption record with no
+resolvable manifest edge is exactly the failure the gate exists to catch.
+
+### Postures and the WARN → FAIL ramp
+
+| Posture | Level of an adoption finding | Meaning |
+|---|---|---|
+| `exempt` | none | Requires a recorded `reason`. The pressure valve. |
+| `expected` | WARNING | A new capability always starts here. |
+| `required` | ERROR (fails `auto_gate.py`) | Requires a recorded graduation. |
+
+Promotion to `required` needs **all three** of: a provider whose capability is
+`verified` with a resolving `evidence_ref`; a recorded `audit_count` reaching
+`graduation_audits` (default 3); and a matching entry appended to the
+`graduations` list. **Elapsed wall-clock time is never a substitute** — an
+audit that has not run is not evidence that a repository refused to adopt. A
+capability whose posture says `required` without a valid graduation entry is
+silently demoted back to `expected`, so lowering a counter or editing a date
+cannot manufacture a fleet error.
+
+The registry this repository currently ships records every measured capability
+as `exempt` with reason `provider-unavailable`: no provider in the fleet
+declares a `verified` capability yet, so charging consumers for a provider gap
+would be noise. Moving one capability to `expected` is the single edit that
+starts the ramp for it.
+
+### Declining a capability
+
+Legitimate non-adoption is a first-class, reviewable answer rather than
+silence. A decline is the only exit the gate accepts besides adoption:
+
+```json
+"declines": [
+  {
+    "capability": "idempotency",
+    "rationale": "dependency-direction",
+    "evidence_ref": "docs/shared-ownership.md",
+    "review_by": "2026-12-01"
+  }
+]
+```
+
+`evidence_ref` is **required** and must resolve inside the project root: an
+assertion is not a boundary argument, which is the same failure mode as a
+hand-declared adoption. `review_by` is advisory and never auto-expires a
+decline — a stale decline is a governance conversation, not a machine decision.
+
+The rationale vocabulary is closed:
+
+| Rationale | Boundary |
+|---|---|
+| `ownership` | The provider's owner will not accept the responsibility. |
+| `privacy` | Adoption would move data across a declared boundary. |
+| `lifecycle` | The two projects ship and deprecate on incompatible schedules. |
+| `dependency-direction` | Adopting would invert the dependency direction. |
+| `naming-symmetry` | Extraction is motivated by symmetry, not by a consumer boundary. |
+| `not-applicable` | The capability does not apply to this repository's role. |
+| `provider-unavailable` | No published, verified provider exists. |
+
+A decline is **repo-local and capability-scoped**. It never suppresses a finding
+for any other capability, and never suppresses a finding in any other
+repository. That containment is deliberate: a fleet-wide "this is a platform
+problem" exemption is how cross-cutting disagreement becomes invisible.
+
+### Adoption findings
+
+| Code | Level | Meaning |
+|---|---|---|
+| `CAPABILITY_ADOPTION_MISSING` | WARNING (`expected`) / ERROR (`required`) | No consumption edge for a registered capability. Names the provider, the package, and any declared local implementation. |
+| `CAPABILITY_ADOPTION_UNEVIDENCED` | WARNING | The manifest proves consumption but `consumes[]` is missing, has no `evidence_ref`, or a manifest could not be read. The edge is real; the record is not. |
+| `CAPABILITY_ADOPTION_EVIDENCE_STALE` | WARNING | A `consumes[].evidence_ref` is absolute, escapes the project root, or no longer resolves. |
+| `CAPABILITY_ADOPTION_DECLINE_UNRECORDED` | WARNING | A project's own documentation states a non-adoption boundary but no `declines[]` record exists. Names the document. |
+| `CAPABILITY_ADOPTION_UNRESOLVED` | WARNING (review-required) | The capability id does not bind to exactly one provider. Never escalates to an error, and is never attributed to the project under audit. |
+| `CAPABILITY_REGISTRY_INVALID` | ERROR (governance) | `capabilities.json` is missing, unparseable, or empty. There is no empty-registry fallback. |
+
+`CAPABILITY_ADOPTION_UNRESOLVED` is the deliberate fail-*soft* branch. Three
+incompatible definitions of "capability" exist in this workspace today, and
+this check does not merge them. A finding that cannot be attributed to one
+provider is not the consumer's fault to fix, so it is reported for review and
+never escalated. The audit still **never promotes a capability to `verified`
+on its own** — a measured adoption is a declared intent to restore an artifact,
+not a proof that the restore succeeded.
+
 ## Ownership
 
 | Surface                      | Owner                                                                       |
@@ -80,6 +205,7 @@ Jenkins manifest.
 | Vocabulary and policy        | Workspace Governance (this repository).                                     |
 | Capability implementation    | Platform repositories (`dotnet-platform-libs`, `labrys`, `alltools-platform`). |
 | Capability adoption          | Each product repository via `.project.json` capabilities block.            |
+| Capability registry (instances) | Workspace Governance — `capabilities.json`, next to `projects.json`.    |
 | Release evidence generation  | The product or platform that produces the artifacts.                        |
 | Deployment promotion         | `jenkins-local` consuming `deployment/projects.json`.                        |
 
@@ -110,3 +236,6 @@ asserts the split is present.
 - No replacement for Driftwatchdog, Jenkins, Forge, or native toolchains.
 - The audit does not, and will not, promote a capability or release field to
   `verified` based on planning artifacts.
+- Measuring non-adoption is not permission to fix it. Repointing a consumer
+  onto a provider is a separate, bounded authorization — see
+  `docs/adoption-grant.md`.

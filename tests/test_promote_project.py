@@ -104,9 +104,11 @@ def setup_sandboxed_governance_root(governance_root: Path):
         else:
             shutil.copy2(child, target)
     (sandbox / "deployment").mkdir()
-    # vocabulary.json and profiles/ are load-bearing governance-root files
-    # (the audit fails closed without them), so the sandbox needs copies.
+    # vocabulary.json, capabilities.json, and profiles/ are load-bearing
+    # governance-root files (the audit fails closed without them), so the
+    # sandbox needs copies.
     shutil.copy2(governance_root / "vocabulary.json", sandbox / "vocabulary.json")
+    shutil.copy2(governance_root / "capabilities.json", sandbox / "capabilities.json")
     if (governance_root / "profiles").is_dir():
         shutil.copytree(governance_root / "profiles", sandbox / "profiles")
     return temp, sandbox

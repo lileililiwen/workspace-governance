@@ -6,6 +6,8 @@
 - Run `python3 scripts/workspace_check.py --self-check` before completion.
 - Run `python3 scripts/jenkins_manifest.py --check` for deployment-related changes.
 - Existing projects keep declarations and exceptions; shared runtimes remain centralized.
+- Assess shared infrastructure before duplication; name the specific sibling, project id, or package you assessed — an un-named assessment is not an assessment. Under a valid `adoption_grant`, a consumer may repoint onto a registered provider without cross-repo approval; see `docs/adoption-grant.md`.
+- Do not edit a sibling repository without scope authorization. Source edits are still gated; consuming a pinned published artifact is not. A `ProjectReference`, relative path, `../` sibling dependency, provider version bump, and promotion to `deployable: true` remain forbidden regardless of any grant.
 - Build/test success is not runtime or release evidence.
 - Keep exactly one `current_spec` line in `HANDOFF.md` while work is active.
 - Each completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit.

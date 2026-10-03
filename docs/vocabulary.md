@@ -16,6 +16,10 @@ project to deployable on metadata alone.
 | Declaration (`.project.json`) | Intent: what a project claims (identity, verification command, deployment flags, capabilities, evidence blocks). | `schemas/project.schema.json`, `openspec/specs/registry-integrity/spec.md` |
 | `evidence_status` | Verification state of the declaration: `declared`, `configured`, `verified`, `unverified` (plus the `planned` value still found in un-remediated siblings). | `docs/capabilities.md` |
 | `capabilities` | Declared reusable platform capabilities (`identity`, `admin`, `tenancy`, `billing`, `jobs`, `storage`, `release`, and project-defined names) with an owner and an evidence state. | `docs/capabilities.md` |
+| Capability adoption | Whether a project consumes a registered shared capability, **measured** by joining `capabilities.json` with the consumer's manifests and its `consumes[]` record. Not a self-declared state. | `docs/capabilities.md`, `capabilities.json` |
+| `declines` | Evidence-backed non-adoption record; the lawful exit from a capability adoption finding other than adoption, with a closed rationale vocabulary. | `docs/capabilities.md` |
+| `adoption_grant` | Bounded, single-use, expiring permission to repoint this repository onto one registered provider for one capability, without cross-repo authorization. The provider root is always read-only. | `docs/adoption-grant.md` |
+| Adoption ledger | Append-only, chained record of executed adoptions in `adoption/adoptions.json`. Adoption is not promotion. | `docs/adoption-grant.md` |
 | `release_evidence` | Producer-neutral record (revision, version, toolchain, artifacts, digests, SBOM, provenance, checks, publication) backing a deployment. | `docs/capabilities.md` |
 | `deployable: true` | Requires **both** a matching promotion-ledger entry **and** a complete `release_evidence` block; neither alone suffices. | `openspec/specs/deployable-batch-onboarding/spec.md`, `docs/deployment-promotion.md` |
 | Promotion ledger | Tamper-evident record of promotion decisions in `deployment/promotions.json` (with `deployment/promotions.sha256` sidecar). | `docs/deployment-promotion.md` |

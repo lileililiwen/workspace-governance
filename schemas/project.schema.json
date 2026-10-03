@@ -43,6 +43,76 @@
       "additionalProperties": {"$ref": "#/$defs/capability"},
       "propertyNames": {"pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"}
     },
+    "declines": {
+      "type": "array",
+      "description": "Optional evidence-backed non-adoption records. A decline is the lawful exit from a capability adoption finding other than adopting the provider. See docs/capabilities.md.",
+      "items": {"$ref": "#/$defs/decline"}
+    },
+    "adoption_grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A bounded, single-use, expiring permission for one named actor to repoint THIS repository onto one registered shared provider for one capability, without separate cross-repo authorization. The provider repository is read-only at all times. The executed outcome is appended to adoption/adoptions.json. See docs/adoption-grant.md.",
+      "required": ["capability", "provider", "package", "actor", "issued_at", "expires_at", "write_set"],
+      "properties": {
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "description": "A capability id that must ALREADY be bound to this provider in capabilities.json. A grant may not create the binding it consumes."
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "description": "Registered project id of the shared provider. The provider root is never writable under this grant."
+        },
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The published package the consumer is permitted to pin, e.g. 'Platform.Idempotency'."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The exact provider version this grant authorizes. Consuming a different version is a provider change and is refused as ADOPTION_GRANT_SCOPE_VIOLATION."
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The single agent session the grant binds, e.g. 'agent:<session-id>'."
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Issue timestamp (ISO 8601). A grant is not active before this time."
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Mandatory expiry (ISO 8601) so a grant cannot silently become standing authorization. A past expiry is ADOPTION_GRANT_STALE and does not retroactively legalize a repoint."
+        },
+        "write_set": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Repository-relative glob patterns the grant may write. Every pattern must resolve inside this repository's root. Patterns naming the provider, the promotion ledger, or a source-level coupling are refused.",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"
+          }
+        },
+        "rollback_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How to undo the repoint, e.g. an OpenSpec change id. Recorded verbatim in the adoption row."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "revoked"],
+          "description": "Defaults to 'active'. A revoked grant is ADOPTION_GRANT_STALE for any further repoint."
+        }
+      }
+    },
     "release_evidence": {
       "type": "object",
       "description": "Optional release evidence record. Each field is one of revision, version, toolchain, artifacts, digests, sbom, provenance, checks, publication. Missing or unverified fields do not satisfy a deployable gate.",
@@ -223,6 +293,74 @@
         "evidence_ref": {
           "type": "string",
           "description": "Repository-relative path to the native evidence artefact when evidence_state is 'configured' or 'verified'."
+        },
+        "consumes": {
+          "type": "array",
+          "description": "Additive consumer-side consumption edges. The audit joins this record with capabilities.json and the project's own manifests; all three must agree before the capability counts as adopted. A declaration is intent, not a verification of behaviour.",
+          "items": {"$ref": "#/$defs/capability_consumes_entry"}
+        }
+      }
+    },
+    "capability_consumes_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "package", "evidence_ref"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "description": "Registered project id providing the package. Must match the provider the capability binds to in capabilities.json."
+        },
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Published package name the consumer pins, e.g. 'Platform.Idempotency'."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The exact pinned version. A floating range is not a consumption edge."
+        },
+        "evidence_ref": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$",
+          "description": "Repository-relative path to the consumer's own evidence for the edge. An absolute or '..'-bearing value is refused and never normalized; a value that stops resolving emits CAPABILITY_ADOPTION_EVIDENCE_STALE."
+        },
+        "local_implementation": {
+          "description": "Repository-relative path, or list of paths, of a local implementation this adoption would replace. Bounded to declaration-supplied paths: the audit never infers an undeclared duplicate.",
+          "anyOf": [
+            {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+            {"type": "array", "items": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"}}
+          ]
+        }
+      }
+    },
+    "decline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "rationale", "evidence_ref"],
+      "description": "An evidence-backed decision not to adopt a capability. A decline exempts this project for this capability only; it never suppresses a finding in another project or for another capability.",
+      "properties": {
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "description": "A capability id registered in capabilities.json."
+        },
+        "rationale": {
+          "type": "string",
+          "enum": ["ownership", "privacy", "lifecycle", "dependency-direction", "naming-symmetry", "not-applicable", "provider-unavailable"],
+          "description": "Closed boundary vocabulary. Any other value emits CAPABILITY_ADOPTION_DECLINE_UNRECORDED and does not exempt the capability."
+        },
+        "evidence_ref": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$",
+          "description": "Repository-relative document stating the boundary. Required: an assertion is not a boundary argument, and a decline without a resolving document is reported."
+        },
+        "review_by": {
+          "type": "string",
+          "description": "Advisory review date. It never auto-expires a decline; a stale decline is a governance conversation, not a machine decision."
         }
       }
     },

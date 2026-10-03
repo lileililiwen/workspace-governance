@@ -30,8 +30,10 @@ Projects may add two optional blocks to `.project.json`:
 
 - `capabilities` — declares reusable platform capabilities (identity, admin,
   tenancy, billing, jobs, storage, release, and project-defined names) with
-  an owner and an evidence state. Declarations are intent, not implementation
-  evidence. See `docs/capabilities.md` for the canonical vocabulary.
+  an owner and an evidence state, plus an optional additive `consumes[]` array
+  recording which registered provider package this project pins.
+  Declarations are intent, not implementation evidence. See
+  `docs/capabilities.md` for the canonical vocabulary.
 - `release_evidence` — a producer-neutral record (revision, version,
   toolchain, artifacts, digests, SBOM, provenance, checks, publication) that
   backs a deployment. A `deployable: true` project must carry a complete
@@ -42,6 +44,30 @@ Projects may add two optional blocks to `.project.json`:
 Both blocks are additive. Existing declarations without them remain valid;
 the audit only surfaces findings for projects that opt in. The new fields do
 not, and never will, promote a project to deployable on their own.
+
+## Capability adoption gate
+
+Whether a project actually consumes a registered shared capability is
+**measured, not declared**. `capabilities.json` binds each capability id to
+exactly one provider and assigns a posture; the audit joins that registry with
+the consumer's own manifests and the consumer's `consumes[]` record, and all
+three must agree.
+
+- a repository cannot mark itself compliant — a hand-written `consumes[]`
+  entry with no resolvable manifest edge is a finding;
+- findings escalate from WARNING to ERROR only on a **recorded** graduation
+  (verified provider + consecutive audit count + an appended ledger entry),
+  never on elapsed time;
+- legitimate non-adoption stays possible through an evidence-backed
+  `declines[]` record with a closed rationale vocabulary.
+
+The measurement is read-only: no project command is executed, no package
+manager is invoked, no lockfile is resolved, and no network request is made.
+Six new finding codes (`CAPABILITY_ADOPTION_MISSING`, `_UNEVIDENCED`,
+`_EVIDENCE_STALE`, `_DECLINE_UNRECORDED`, `_UNRESOLVED`, plus the governance
+`CAPABILITY_REGISTRY_INVALID`) are additive; every existing finding code,
+severity, exit code, report key, and Forge adapter observation key is unchanged.
+See `docs/capabilities.md` and `docs/adoption-grant.md`.
 
 ## Product-code quality gate
 
