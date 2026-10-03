@@ -8,25 +8,34 @@ under `pluggify/node_modules`), so the defect cannot be fixed where it is born �
 it has to be fixed by a tool this repository owns and a rule that stops the next
 one from appearing.
 
-**Measured across the fleet on 2026-10-03.** 78 repositories hold 1,957 spec
-files under `openspec/specs/<capability>/spec.md`. **1,236 of them still hold
-the placeholder** — 1,231 in the current form and 5 in the older short form the
-archiver used before it learned to append `Update Purpose after archive.`:
+**Measured across the fleet on 2026-10-03.** 79 repositories hold 1,958 spec
+files under `openspec/specs/<capability>/spec.md`. **1,234 of them still hold
+the marker**, across 71 repositories — 1,229 in the current form and 5 in the
+older short form the archiver used before it learned to append
+`Update Purpose after archive.`:
 
 ```markdown
 ## Purpose
 TBD - created by archiving change work-on-main-baseline-rule. Update Purpose after archive.
 ```
 
-1,161 of the 1,236 name a change whose archive directory still exists, and
+The marker must be the whole `## Purpose` **section** body, not merely a line
+starting with it, so a real sentence appended after the marker is a real purpose
+and never a finding; 7 of the 1,234 carry a blank line between the heading and
+the marker, and a section-strict pattern matches exactly the same 1,234 files
+fleet-wide that a looser line pattern does, so the strictness is free.
+
+1,161 of the 1,234 name a change whose archive directory still exists, and
 1,159 of those carry a real `## Why` section of prose in the change's own
-`proposal.md`. The placeholder is therefore not information the fleet lost: it
+`proposal.md`. The marker is therefore not information the fleet lost: it
 is information the fleet already wrote down one directory away and never
-promoted. Only 77 placeholders have no recoverable `## Why` — 75 because the
-archived proposal genuinely has no `## Why` heading, 6 because the archive
-directory has no `proposal.md`, and 4 because no archive directory exists at
-all. 2 change names are ambiguous, appearing under two archive directories each,
-and must be refused rather than guessed.
+promoted. 1,089 clear the 120-character floor this change adopts and become the
+resolved Purpose; the remainder fall back to the derived sentence. Only 77
+markers have no recoverable `## Why` — 75 because the archived proposal
+genuinely has no `## Why` heading, 6 because the archive directory has no
+`proposal.md`, and 4 because no archive directory exists at all. 2 change names
+are ambiguous, appearing under two archive directories each, and must be refused
+rather than guessed.
 
 **The defect is invisible to the audit.** No rule reads `## Purpose`, so a spec
 whose purpose is literally the string `TBD` reads as a finished spec. The
@@ -39,7 +48,7 @@ implements a mechanical derivation and was run in that one repository only. It
 is a single-repository script: it resolves `ROOT` from its own location, walks
 one `openspec/specs` tree, has no notion of the archive, and offers no plan
 review before writing. It also has no dry-run-by-default and no drift refusal,
-so it is not a fleet tool and could not be run against 78 repositories
+so it is not a fleet tool and could not be run against 79 repositories
 unsupervised.
 
 **The gate wiring this needs does not exist yet.** Owner ruling D18 states that a
@@ -87,7 +96,7 @@ corpus with no measurement.
 
 | Package | Single outcome | Owner / language | Boundary and contract | Depends on | Independent oracle |
 |---|---|---|---|---|---|
-| `spec-purpose-backfill-gate` (this) | Every spec `## Purpose` is real prose, and a new placeholder blocks | `workspace-governance`, Python 3.11 stdlib | `scripts/spec_purpose_backfill.py`, `SPEC_PURPOSE_PLACEHOLDER`, `SPEC_PURPOSE_AUDIT_ENABLED` | the `## Purpose` heading and the `### Requirement:` heading the archiver already emits | 1,236 placeholders measured; 1,159 have a recoverable `## Why` |
+| `spec-purpose-backfill-gate` (this) | Every spec `## Purpose` is real prose, and a new placeholder blocks | `workspace-governance`, Python 3.11 stdlib | `scripts/spec_purpose_backfill.py`, `SPEC_PURPOSE_PLACEHOLDER`, `SPEC_PURPOSE_AUDIT_ENABLED` | the `## Purpose` heading and the `### Requirement:` heading the archiver already emits | 1,234 markers measured across 71 of 79 repositories; 1,089 clear the `## Why` floor |
 | `driftwatchdog` gate wiring (**not in this change**) | The new code is inside the concern's declared set so a real ERROR fails a real gate | `driftwatchdog`, Rust | `GOVERNANCE_QUALITY_DECLARED_CODES` | the JSON envelope this change adds a code to | the adapter's own filter test |
 | `axis_migration` (shipped) | Nothing — reused only for its tool shape | `workspace-governance` | dry-run default, `--apply`, drift refusal, committed plan | the fleet's `.project.json` files | already green |
 
@@ -156,11 +165,11 @@ corpus with no measurement.
 1. **`SPEC_PURPOSE_PLACEHOLDER` is ERROR**, and the whole spec-purpose audit is
    held off the fleet until the backfill has been applied, under a committed
    constant. The severity is *not* softened to WARNING to achieve that. This is
-   the taxonomy rule's shape, verbatim, and the reason is the same: 1,236
+   the taxonomy rule's shape, verbatim, and the reason is the same: 1,234
    violations exist today, so enabling the rule first would turn the audit red
    for everyone with no recorded owner action.
 2. **The requirement-derived fallback is preserved byte-for-byte.** It is
-   judgment-free, which is the only property that makes a 1,236-file write
+   judgment-free, which is the only property that makes a 1,234-file write
    reviewable. Three changes were made, and none of them alter the derived
    string for a spec that has a `### Requirement:` heading: the source is now
    read and recorded per row, the change-name → archive-directory resolution was

@@ -183,3 +183,86 @@ the evidence behind it. The tool reads the decided rows out of the change's
 `design.md` rather than keeping a second copy, and refuses to plan if the fleet
 has drifted from that table or if any existing registry `id`/`path` pair would
 move.
+
+## The archived-change Purpose marker
+
+Archiving a change writes one line into the `## Purpose` of every spec that
+change produced:
+
+```markdown
+## Purpose
+TBD - created by archiving change <name>. Update Purpose after archive.
+```
+
+The archiver is third-party (`@fission-ai/openspec`), so the defect is held here
+instead: `scripts/spec_purpose_backfill.py` resolves each one mechanically and
+`SPEC_PURPOSE_PLACEHOLDER` stops the next from appearing. A spec whose purpose is
+the string `TBD` reads as a finished spec, and 1,234 of them did.
+
+Two generations exist and are one defect: the current form with the trailing
+`Update Purpose after archive.` sentence (1,229 files) and the earlier short form
+without it (5 files). 7 of the 1,234 carry a blank line between the heading and
+the marker. The change name is the **bare** name while the archive directory is
+date-prefixed (`archive/2026-10-03-work-on-main-baseline-rule/`), so the two are
+joined by stripping `YYYY-MM-DD-`, never by concatenation.
+
+The marker must be the whole `## Purpose` **section** body, not merely a line
+starting with it: a real sentence appended after the marker is a real purpose and
+is never a finding. The change name is bound to `[\w.-]+` to make that hold, since
+a change name has no spaces and trailing prose can never be absorbed into one.
+
+### Finding codes
+
+| Code | Level | Fires when |
+|---|---|---|
+| `SPEC_PURPOSE_PLACEHOLDER` | ERROR | A spec file's `## Purpose` section still holds the marker. The message names the spec path relative to its repository and the change the marker records, so the remediation is "resolve this spec from this change". A repository with no `openspec/specs` tree is skipped, and the rule is not gated on `profile_requirements` — a descriptive rule must not become a requirements driver. |
+
+Its own family: separate from `QUALITY_*` and from `TAXONOMY_*`, and no existing
+code is renamed, narrowed, or reused. See
+`openspec/changes/spec-purpose-backfill-gate/`.
+
+### Migration state — not applied, and the check is fenced
+
+`SPEC_PURPOSE_PLACEHOLDER` is ERROR by owner ruling, and the whole spec-purpose
+audit is held off the fleet until the backfill has been applied. The flag
+`SPEC_PURPOSE_AUDIT_ENABLED` in `scripts/workspace_check.py` is therefore
+**False**, and the severity was never softened to WARNING to get there. The
+sequencing is enforced by the checker itself, not by a comment and not by an
+environment variable: with the flag on, the same unmigrated corpus that is silent
+with the flag off reports ERROR — measured on the real fleet, 205 errors become
+1,439, the 1,234 markers and nothing else.
+
+Measured on 2026-10-03: 79 repositories carry an `openspec/specs` tree holding
+1,958 spec files, of which 1,234 across 71 repositories hold the marker. The
+fleet write is a cross-repo source edit requiring explicit authorization, exactly
+like the axis migration, and is not applied by the change that ships the tool and
+the rule. The sequencing is:
+
+```bash
+# 1. review the plan (dry run; writes nothing)
+python3 scripts/spec_purpose_backfill.py
+
+# 2. has it been applied? exit 3 while any row is outstanding
+python3 scripts/spec_purpose_backfill.py --check
+
+# 3. apply it, then set SPEC_PURPOSE_AUDIT_ENABLED = True in the same commit
+python3 scripts/spec_purpose_backfill.py --apply
+```
+
+The tool is stdlib-only, dry run is its only default, and `--apply` is its only
+write path. Each plan row records the spec, the change, the source used, the
+resolved sentence, and the evidence path, so a reviewer can tell which sentences
+are the author's own archived prose and which are derived. A change name matching
+more than one archive directory is refused, not guessed, and the refusal is
+row-level: the other 1,232 rows stay reviewable, while `--apply` stays
+all-or-nothing so the fleet is never half-migrated.
+
+Unlike the taxonomy fence, the constant is **not sufficient on its own** to gate
+this rule. The `governance-quality` concern in `driftwatchdog` filters its verdict
+to the closed allow-list `GOVERNANCE_QUALITY_DECLARED_CODES` and treats the
+checker's exit 1 as an *expected* exit, so with this code outside that set the
+concern would report `PASS` while the checker fails. Adding
+`"SPEC_PURPOSE_PLACEHOLDER"` to that set is a separately authorized cross-repo
+step in a repository this change does not own; `SPEC_PURPOSE_AUDIT_ENABLED` must
+stay `False` until it lands. Recorded as a blocker in `design.md` §6 rather than
+claimed as wiring.

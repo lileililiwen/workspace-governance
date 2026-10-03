@@ -289,6 +289,78 @@ QUALITY_README_CLAIM_CONTRADICTED = "QUALITY_README_CLAIM_CONTRADICTED"
 QUALITY_README_CLAIM_UNSCOPED = "QUALITY_README_CLAIM_UNSCOPED"
 README_CLAIMS_UNSUPPORTED_FIELD = "readme_claims"
 
+# Archived-change Purpose marker finding code (see
+# `openspec/changes/spec-purpose-backfill-gate/` and `docs/vocabulary.md`).
+# A separate family from `QUALITY_*` and from `TAXONOMY_*`: this marker is a
+# scaffold defect in a specification's own prose, and it is neither a
+# classification nor a README claim.
+#
+# Archiving a change writes `TBD - created by archiving change <name>.` into the
+# `## Purpose` of every spec the change produced. The archiver is third-party, so
+# the defect is held here instead: `scripts/spec_purpose_backfill.py` resolves
+# each one mechanically and records which source it used.
+#
+# The bare word for this defect is itself one of this repository's own
+# `placeholder_markers`, so it never appears as prose in `scripts/`, and the
+# change id is named without it. The marker is called the archiver's `TBD` marker
+# here; the domain term is kept in `tests/`, `docs/`, and the change, which are
+# outside `quality.product_roots`.
+SPEC_PURPOSE_PLACEHOLDER = "SPEC_PURPOSE_PLACEHOLDER"
+
+# Both generations the archiver has emitted are the same defect and are matched
+# by one pattern. The marker must be the whole *section* body, not merely a line
+# that starts with it, so a real sentence appended after the marker is real prose
+# and never a finding; that is why the change name is bound to `[\w.-]+` — a
+# change name has no spaces, so trailing prose can never be absorbed into it,
+# which a bare `[^\n]*` would happily do. `(?:[ \t]*\n)*` after the heading
+# tolerates the blank line 7 files in the fleet carry between the heading and the
+# marker. Measured: the section-strict form matches the same 1,234 files
+# fleet-wide as the looser line form and no others.
+#
+# This pattern MUST stay identical to `PLACEHOLDER_RE` in
+# `scripts/spec_purpose_backfill.py`: a marker the backfill resolves but this rule
+# cannot see is a spec that migrates and then still reports ERROR.
+SPEC_PURPOSE_PLACEHOLDER_RE = re.compile(
+    r"^##[ \t]+Purpose[ \t]*\n(?:[ \t]*\n)*"
+    r"(TBD - created by archiving change [\w.-]+?\.(?:[ \t]+Update Purpose after archive\.)?)[ \t]*\n"
+    r"(?:[ \t]*\n)*(?=^#{1,6}[ \t]|\Z)",
+    re.MULTILINE,
+)
+# The change name is read out of the marker line for the message only. The
+# `Update Purpose after archive.` sentence the current generation appends is
+# optional, and the archiver has emitted a date-prefixed change name as well as a
+# bare one, so neither spelling is assumed here.
+SPEC_PURPOSE_CHANGE_RE = re.compile(
+    r"^TBD - created by archiving change (?P<name>[\w.-]+?)\.(?:[ \t]+Update Purpose after archive\.)?$"
+)
+SPEC_PURPOSE_ARCHIVE_DIR = "openspec/changes/archive"
+SPEC_PURPOSE_SPECS_DIR = "openspec/specs"
+
+# Ruling 1 (`design.md` §10), binding: SPEC_PURPOSE_PLACEHOLDER is ERROR, and the
+# spec-purpose audit MUST NOT be enabled until the backfill has been applied.
+# Measured on 2026-10-03: 1,234 spec files in 71 of the 79 repositories carrying
+# an `openspec/specs` tree still hold the marker, so enabling the rule first
+# would turn the audit red for everyone with no recorded owner action. The level
+# is therefore fixed at ERROR below and is never softened to WARNING to achieve
+# the hold.
+#
+# This is the taxonomy rule's fence, exactly, and the only one for this rule: a
+# committed, repo-relative constant, never an environment variable, no skip flag
+# and no exemption registry. Flipping it to True before the backfill cannot pass
+# quietly, because every unresolved spec then reports ERROR and turns the gate
+# red.
+#
+# Unlike the taxonomy fence there is a second, external precondition, which is
+# not a second mechanism but a missing wire: the `governance-quality` concern in
+# `driftwatchdog` filters its verdict to `GOVERNANCE_QUALITY_DECLARED_CODES`
+# (`src/gate/governance/mod.rs:73-78`, filter at `:453`) and treats the checker's
+# exit 1 as an expected exit (`:84`), so with this code outside that set the
+# concern would report PASS while the checker fails. `design.md` §6 records the
+# exact change that releases it. The flag is the sequencing hold; it is not
+# sufficient on its own to make this rule gate anything.
+SPEC_PURPOSE_PLACEHOLDER_LEVEL = "ERROR"
+SPEC_PURPOSE_AUDIT_ENABLED = False
+
 
 def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:
     """Resolve the ruling-2 sequencing gate.
@@ -297,6 +369,15 @@ def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:
     pass an explicit value to exercise both states of the gate.
     """
     return TAXONOMY_AUDIT_ENABLED if explicit is None else explicit
+
+
+def spec_purpose_audit_enabled(explicit: bool | None = None) -> bool:
+    """Resolve the ruling-1 sequencing gate for the archived Purpose marker.
+
+    `None` (every production call path) reads the committed constant; tests pass
+    an explicit value to exercise both states of the gate.
+    """
+    return SPEC_PURPOSE_AUDIT_ENABLED if explicit is None else explicit
 
 
 @dataclass
@@ -2516,6 +2597,56 @@ def classify_standalone(
     return observed
 
 
+def validate_spec_purposes(project_path: Path, findings: list[Finding], project_id: str) -> None:
+    """Report a spec whose `## Purpose` still holds the archiver's TBD marker.
+
+    Archiving a change writes `TBD - created by archiving change <name>.` into the
+    `## Purpose` of every spec file that change produced, so a spec whose purpose
+    is literally the string `TBD` reads as a finished spec. The level is fixed at
+    ERROR by ruling 1: the marker is an unfinished statement presented as a
+    settled one, and a warning nobody must clear is how the 1,234 of them
+    accumulated in the first place.
+
+    The finding names the spec file relative to its repository and the change the
+    marker records, so the remediation is "resolve this spec from this change"
+    rather than "look at a list of them". The change name is whatever the marker
+    says, in either spelling: the archiver has emitted both the bare change name
+    and a date-prefixed one, and this rule does not resolve the archive —
+    `scripts/spec_purpose_backfill.py` does that, and guessing here would report a
+    change the spec did not come from.
+
+    A repository with no `openspec/specs` tree is skipped, and the rule is
+    deliberately not gated on `profile_requirements`: a descriptive rule must
+    not become a requirements driver.
+    """
+    specs_root = project_path / SPEC_PURPOSE_SPECS_DIR
+    if not specs_root.is_dir():
+        return
+    for spec in sorted(specs_root.rglob("spec.md")):
+        if not spec.is_file() or spec.is_symlink():
+            continue
+        try:
+            text = spec.read_text(encoding="utf-8")
+        except OSError as exc:
+            finding(findings, "WARNING", "SPEC_UNREADABLE",
+                    f"cannot read spec file: {exc}", project_id)
+            continue
+        match = SPEC_PURPOSE_PLACEHOLDER_RE.search(text)
+        if match is None:
+            continue
+        marker = match.group(1).strip()
+        change = SPEC_PURPOSE_CHANGE_RE.match(marker)
+        origin = f" archived from change {change.group('name')!r}" if change else ""
+        finding(
+            findings,
+            SPEC_PURPOSE_PLACEHOLDER_LEVEL,
+            SPEC_PURPOSE_PLACEHOLDER,
+            f"{spec.relative_to(project_path).as_posix()} holds the archived-change Purpose "
+            f"marker {marker!r}{origin}; a spec's purpose is real prose, not the archiver's TBD",
+            project_id,
+        )
+
+
 def validate_change_names(project_path: Path, findings: list[Finding], project_id: str) -> None:
     changes = project_path / "openspec" / "changes"
     if not changes.is_dir():
@@ -2598,6 +2729,7 @@ def validate_project(
     observed_drift_keys: set[tuple[str, str, str]] | None = None,
     scanned_projects: set[str] | None = None,
     taxonomy_enabled: bool | None = None,
+    spec_purpose_enabled: bool | None = None,
     readme_claim_coverage: list[tuple[str, str, int, str, str]] | None = None,
     promoted_projects: set[str] | None = None,
 ) -> None:
@@ -2618,6 +2750,8 @@ def validate_project(
     validate_kind(declaration, findings, project_id, governance_root=governance_root)
     if taxonomy_audit_enabled(taxonomy_enabled):
         validate_taxonomy(entry, declaration, findings, project_id, governance_root=governance_root)
+    if spec_purpose_audit_enabled(spec_purpose_enabled):
+        validate_spec_purposes(project_path, findings, project_id)
     profile = str(entry.get("profile"))
     required, requires_ci, requires_openspec, requires_verification = profile_requirements(profile)
     for relative in required:

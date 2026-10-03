@@ -63,20 +63,29 @@ PLAN_RELATIVE = f"migration/{CHANGE_ID}.json"
 # accepted on both sides rather than assuming one.
 DATE_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 
-# Both generations: the current form and the older short form. `[^\n]*` absorbs
-# the absent trailing sentence, which is the prior art's pattern kept unchanged.
+# Both generations: the current form and the older short form. The marker must be
+# the whole *section* body, not merely a line that starts with it, so a real
+# sentence appended after the marker makes the section a real purpose and this
+# tool must not overwrite it. That is why the change name is bound to `[\w.-]+`:
+# a change name has no spaces, so trailing prose can never be absorbed into it,
+# which a bare `[^\n]*` would happily do. `(?:[ \t]*\n)*` after the heading
+# absorbs the blank line 7 files in the fleet carry, which the prior art's
+# pattern silently missed.
 #
-# `(?:[ \t]*\n)*` is an addition: 7 files in the fleet carry a blank line between
-# `## Purpose` and the marker, and the prior art's pattern silently missed all 7.
+# Measured: the section-strict form matches the same 1,234 files fleet-wide as the
+# looser line form and no others, so this is free on the real corpus.
+#
 # Detection here and in `scripts/workspace_check.py` MUST stay identical — a
 # marker this tool resolves but the rule cannot see is a spec that migrates and
 # then still reports ERROR.
 PLACEHOLDER_RE = re.compile(
-    r"^##[ \t]+Purpose[ \t]*\n(?:[ \t]*\n)*(TBD - created by archiving change [^\n]*)\n",
+    r"^##[ \t]+Purpose[ \t]*\n(?:[ \t]*\n)*"
+    r"(TBD - created by archiving change [\w.-]+?\.(?:[ \t]+Update Purpose after archive\.)?)[ \t]*\n"
+    r"(?:[ \t]*\n)*(?=^#{1,6}[ \t]|\Z)",
     re.MULTILINE,
 )
 PLACEHOLDER_NAME_RE = re.compile(
-    r"^TBD - created by archiving change (?P<name>.+?)\.(?:[ \t]+Update Purpose after archive\.)?$"
+    r"^TBD - created by archiving change (?P<name>[\w.-]+?)\.(?:[ \t]+Update Purpose after archive\.)?$"
 )
 
 # Verbatim from `openlearning/scripts/fill_spec_purposes.py`; both derived
@@ -295,8 +304,15 @@ def plan_spec(project: str, spec_path: Path, workspace_root: Path, index: dict[s
     )
 
 
-def build_plan(workspace_root: Path, governance_root: Path) -> dict[str, Any]:
-    """Plan every TBD marker in the fleet, or raise `BackfillError`."""
+def build_plan(workspace_root: Path, governance_root: Path, *, verify_committed: bool = True) -> dict[str, Any]:
+    """Plan every TBD marker in the fleet, or raise `BackfillError`.
+
+    `verify_committed` is the drift refusal, and it is a *plan-time* guard: it
+    exists so a write never lands on a fleet nobody inspected. `--check` turns it
+    off, because a fully applied fleet is exactly the state in which every
+    planned marker is legitimately absent, and reporting that as drift would make
+    "is the backfill applied?" the one question the tool cannot answer.
+    """
     plans: list[SpecPlan] = []
     scanned = 0
     contributing: set[str] = set()
@@ -370,7 +386,8 @@ def build_plan(workspace_root: Path, governance_root: Path) -> dict[str, Any]:
         "specs": [plan.as_dict() for plan in plans],
     }
 
-    _assert_matches_committed_plan(record, workspace_root, governance_root)
+    if verify_committed:
+        _assert_matches_committed_plan(record, workspace_root, governance_root)
     return record
 
 
@@ -540,8 +557,13 @@ def main(argv: list[str] | None = None) -> int:
 
     workspace_root = Path(args.root).expanduser().resolve()
     governance_root = Path(args.governance_root).expanduser().resolve() if args.governance_root else GOVERNANCE_ROOT
+    # `--check` reports state and must never be refused for drift: a fully applied
+    # fleet is the state in which every planned marker is legitimately gone.
+    # `--write-plan` alone with `--check` is the one combination that still wants
+    # the refusal, because it refreshes the record the refusal guards.
+    verify_committed = not args.check or args.write_plan
     try:
-        plan = build_plan(workspace_root, governance_root)
+        plan = build_plan(workspace_root, governance_root, verify_committed=verify_committed)
     except BackfillError as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1

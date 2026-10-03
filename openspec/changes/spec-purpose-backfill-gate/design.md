@@ -10,7 +10,7 @@ This change ships two things inside this repository and edits nothing else:
 - `SPEC_PURPOSE_PLACEHOLDER` plus the `SPEC_PURPOSE_AUDIT_ENABLED` fence in
   `scripts/workspace_check.py`.
 
-The 1,236-file fleet write is **not** applied here. It is a cross-repo source
+The 1,234-file fleet write is **not** applied here. It is a cross-repo source
 edit and is a separately authorized step, exactly as the axis migration was.
 
 The prior art stays where it is. `openlearning/scripts/fill_spec_purposes.py` is
@@ -18,25 +18,33 @@ a record of the first application of this derivation in one repository; deleting
 or editing it would rewrite that repository's history for no gain, and this
 change has no authority over that repository's source.
 
-## 2. What the placeholder is, exactly
+## 2. What the marker is, exactly
 
 Two generations exist in the fleet. Both are one line, immediately under
-`## Purpose`, and both are detected by the prior art's single pattern, which is
-kept unchanged:
+`## Purpose`, and both are matched by one pattern:
 
 ```
-TBD - created by archiving change <name>. Update Purpose after archive.   # 1,231 files
+TBD - created by archiving change <name>. Update Purpose after archive.   # 1,229 files
 TBD - created by archiving change <name>.                                 #     5 files
 ```
 
 | Generation | Files | Matched by |
 |---|---|---|
-| current | 1,231 | `^## Purpose\s*\nTBD - created by archiving change [^\n]*\n` |
-| legacy | 5 | same pattern — `[^\n]*` absorbs the absent sentence |
+| current | 1,229 | the tail sentence is one alternative of the marker grammar |
+| legacy | 5 | the same pattern — the tail is optional |
 
-Total 1,236 of 1,957 spec files in 78 repositories. The `## Purpose` body was
-checked by section, not by line, so a heading followed by any prose is not a
-placeholder regardless of wording.
+Total 1,234 of 1,958 spec files in the 79 repositories that carry an
+`openspec/specs` tree, across 71 of them. 7 of the 1,234 carry a blank line
+between the heading and the marker.
+
+The `## Purpose` body is matched as a **section**, not as a line: the marker must
+be the whole body, with only blank lines around it. That is what makes a
+`## Purpose` holding real prose never a finding whatever its wording, and it is
+why the change name is bound to `[\w.-]+` rather than `[^\n]*` — a change name
+has no spaces, so a real sentence appended after the marker can never be
+absorbed into the name. Measured: the section-strict pattern matches exactly the
+same 1,234 files fleet-wide that a looser line pattern does, and no others, so
+the strictness costs nothing on the real corpus.
 
 The change name in the placeholder is the **bare** change name. The archive
 directory is **date-prefixed**:
@@ -50,7 +58,7 @@ directly — the obvious implementation — resolves nothing. The resolution str
 `openspec/changes/archive/<date>-<name>/proposal.md`, the `## Why` section up to
 the next `##` heading, whitespace-collapsed to one paragraph. This is real
 prose written by the author at the time, so it is the honest Purpose. It
-applies to 1,159 of the 1,236.
+applies to 1,159 of the 1,234 markers, and 1,089 of those clear the 120-character floor below.
 
 **Source 2 — the requirement-derived sentence.** Preserved byte-for-byte from
 the prior art so the fleet write is reproducible against the result that script
@@ -83,8 +91,7 @@ who disagrees changes one number in one place.
 
 Judged, not copied. Three changes, and an explicit statement of what was kept:
 
-**Kept unchanged, deliberately.** The `## Purpose` + placeholder detection
-pattern; the `### Requirement:` extraction; the capability-name resolution; both
+**Kept unchanged, deliberately.** The `### Requirement:` extraction; the capability-name resolution; both
 derived sentences verbatim; the single-substitution rewrite; the
 stdlib-only, no-third-party-import constraint. For any spec that has a
 `### Requirement:` heading, the shared tool produces the same string the
@@ -128,14 +135,30 @@ without trusting a stale record.
 
 **The generated plan is not committed**, which is a deliberate difference from
 `axis_migration.py`'s `migration/identity-and-taxonomy-axis-split.json`. Measured:
-the fleet plan is **976 KB across 1,234 rows**, because 1,089 rows carry the
-archived `## Why` prose verbatim and the longest is 3,398 characters. That is
-16× the axis plan and it is fully regenerable in about a second, so committing it
-would add a half-megabyte of generated content to the repository and require
+the fleet plan is **954 KB across 1,234 rows**, because 1,089 rows carry the
+archived `## Why` prose verbatim and the longest is 3,398 characters. That is 16×
+the 58 KB axis plan and it is fully regenerable in about a second, so committing
+it would add a megabyte of generated content to the repository and require
 re-committing it on every unrelated archive in the fleet, without recording a
 single decision. The tool is the artifact; the plan is its output. The reviewer
 reads it from a dry run, and the operator can still commit one with
-`--write-plan` at apply time.
+`--write-plan` at apply time. This is a re-affirmation of the decision reached
+when the tool was written, on a fresh measurement of the current fleet.
+
+### 5.1 `--check` is exempt from the drift refusal, and must be
+
+The drift refusal exists so a *write* never lands on a fleet nobody inspected.
+`--check` is not a write path, and applying the refusal there made the tool
+unable to answer the one question it exists to answer: on a fully applied fleet
+every planned marker is legitimately absent, which the refusal reports as 1,234
+rows of drift, so `--check` exited 1 in all three states and never once reported
+"applied".
+
+`build_plan` therefore takes `verify_committed`, and `--check` passes `False`.
+The one combination that still wants the refusal is `--check --write-plan`,
+because that refreshes the record the refusal guards, and it keeps it. All three
+states are asserted: not applied exits 3 naming the outstanding rows, applied
+exits 0, and re-applied is idempotent at 0.
 
 The drift refusal is unaffected: `_assert_matches_committed_plan` compares
 against `migration/spec-purpose-backfill-gate.json` **whenever that file exists**.
@@ -256,17 +279,29 @@ claim `AGENTS.md` rejects.
 
 ## 8. Verification oracle
 
-- `python3 -m unittest discover -s tests` — 492 before, 492 + the new tests
-  after, zero failures, no existing test weakened.
+- `python3 -m pytest tests` — 501 before, **553 after** (52 new tests), zero
+  failures, no existing test weakened.
 - `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings.
-- `python3 scripts/workspace_check.py --root .. --audit --json` — unchanged
-  `errors`/`warnings` with the fence closed, because the rule emits nothing.
+- `python3 scripts/workspace_check.py --root .. --audit` — unchanged
+  `errors=205` / `warnings=18` with the fence closed, because the rule emits
+  nothing.
+- The same fleet audit with `SPEC_PURPOSE_AUDIT_ENABLED` flipped to `True`:
+  **1,439 errors**, i.e. 205 + exactly the 1,234 markers and nothing else. This
+  is the fence-open proof, measured on the real corpus rather than only on a
+  fixture, and the constant is committed back at `False`.
 - A dry run of `scripts/spec_purpose_backfill.py` over the real fleet, proving
   the fleet is byte-identical afterwards.
 - A fixture-based test proving the same unmigrated corpus reports ERROR and turns
   the gate red with `SPEC_PURPOSE_AUDIT_ENABLED = True`, and reports nothing with
   it `False`.
 - A test proving the environment variable cannot open the fence.
+- A test proving the checker's pattern and the tool's pattern are the same
+  pattern, and a test proving the section-strict form still matches exactly the
+  1,234 fleet files.
+- A test pinning all three `--check` states, including the applied state with a
+  committed plan present.
+- A fixture test for the drift refusal, which is inert against the live fleet
+  because no plan is committed.
 - `openspec validate spec-purpose-backfill-gate --strict`.
 
 ## 9. Decision ledger
@@ -274,8 +309,11 @@ claim `AGENTS.md` rejects.
 | # | Decision | Why |
 |---|---|---|
 | 1 | The rule is ERROR and fenced by a committed constant | Ruling 1; the taxonomy rule's exact shape. Softening to WARNING would make a permanent warning nobody can clear. |
-| 2 | The requirement-derived fallback is preserved verbatim | It is the only property that makes a 1,236-file write reviewable, and it keeps the shared tool's output identical to what `openlearning` already committed. |
-| 3 | `## Why` below 120 characters is treated as absent | A recorded threshold beats an unrecorded judgment; 120 keeps fragments out and admits 1,091 real sections. |
-| 4 | An ambiguous archive name refuses the plan | The output is a published sentence; a guess about which change authored it is not reviewable. |
+| 2 | The requirement-derived fallback is preserved verbatim | It is the only property that makes a 1,234-file write reviewable, and it keeps the shared tool's output identical to what `openlearning` already committed. |
+| 3 | `## Why` below 120 characters is treated as absent | A recorded threshold beats an unrecorded judgment; 120 keeps fragments out and admits 1,089 real sections. |
+| 4 | An ambiguous archive name refuses the plan row-level, while `apply` is all-or-nothing | The output is a published sentence, so a guess about which change authored it is not reviewable — but refusing the whole plan would make the tool unable to produce a reviewable plan at all. All-or-nothing at write time keeps a half-migrated fleet from being invisible to a closed fence. |
 | 5 | D18 is reported unmet, with the file and line that must change | A verifier that no gate runs does not gate, and the check as it stands would be reported green while failing. Naming the fix is more useful than asserting success. |
 | 6 | No sibling repository and no archiver is touched | `AGENTS.md` cross-repo boundary; the archiver is third-party and the durable fix is owned here. |
+| 7 | The marker must be the whole `## Purpose` section, and the change name is bound to `[\w.-]+` | A `## Purpose` holding real prose is not a defect whatever its wording, and a change name has no spaces, so this is the only way trailing prose cannot be mistaken for a long name. Costs nothing on the real corpus: the same 1,234 files match either way. |
+| 8 | `--check` is exempt from the drift refusal | The refusal guards writes. A backfilled fleet is exactly the state in which every planned marker is legitimately gone, so applying the refusal to `--check` made "is it applied?" unanswerable. |
+| 9 | The generated plan is still not committed | Re-measured at 954 KB and regenerable in a second; it records no decision, and the drift refusal it would activate is covered by a fixture test instead. |

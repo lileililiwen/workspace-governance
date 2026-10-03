@@ -126,11 +126,19 @@ a human-edited Purpose is never silently re-derived.
 
 - **WHEN** `--check` runs after the apply
 - **THEN** it reports the backfill applied and exits 0; before the apply it exits
-  3 and names the outstanding rows
+  3 and names the outstanding rows; and re-running after a successful apply is
+  idempotent and still exits 0
+
+#### Scenario: `--check` is not refused for drift
+
+- **WHEN** `--check` runs while a committed plan exists and the fleet is fully
+  applied, so every planned marker is legitimately absent
+- **THEN** it reports the backfill applied and exits 0, because the drift refusal
+  guards writes and a backfilled fleet is not drift
 
 ### Requirement: The spec-purpose audit is fenced off the fleet by a committed constant
 
-Because 1,236 spec files hold the placeholder, `SPEC_PURPOSE_PLACEHOLDER` SHALL
+Because 1,234 spec files hold the marker, `SPEC_PURPOSE_PLACEHOLDER` SHALL
 be ERROR and the whole spec-purpose audit SHALL be held off the fleet by the
 committed, repo-relative constant `SPEC_PURPOSE_AUDIT_ENABLED = False` in
 `scripts/workspace_check.py`. The severity SHALL NOT be softened to WARNING to
@@ -151,6 +159,14 @@ one and only fencing mechanism for this rule.
 - **WHEN** the same corpus is audited with `SPEC_PURPOSE_AUDIT_ENABLED = True`
 - **THEN** every un-backfilled spec reports ERROR `SPEC_PURPOSE_PLACEHOLDER` and
   the gate fails
+
+#### Scenario: A real sentence after the marker is a purpose, not a defect
+
+- **WHEN** a `## Purpose` body is the marker line followed on the same line by a
+  real sentence, or followed by any further prose in the section
+- **THEN** the audit reports no `SPEC_PURPOSE_PLACEHOLDER`, because the marker
+  must be the whole section body to be a finding and the change name may not
+  absorb trailing words
 
 #### Scenario: The fence is not an environment variable
 

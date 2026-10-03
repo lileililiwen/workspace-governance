@@ -149,6 +149,11 @@ requirements. The taxonomy audit — including ERROR `TAXONOMY_MISMATCH` — is
 `scripts/axis_migration.py` is the reviewable tool that applies it. See
 `docs/vocabulary.md`.
 
+Archiving a change writes a marker into the `## Purpose` of every spec it
+produced. ERROR `SPEC_PURPOSE_PLACEHOLDER` is **not enabled** until the backfill
+is applied, and `scripts/spec_purpose_backfill.py` is the reviewable tool that
+applies it. See `docs/vocabulary.md`.
+
 ## Vocabulary
 
 `docs/vocabulary.md` is the one entry point for the registry and
