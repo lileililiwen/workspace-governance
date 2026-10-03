@@ -523,15 +523,56 @@ def validate_profile_docs(governance_root: Path, findings: list[Finding], *, can
             finding(findings, "ERROR", "PROFILE_DOC_UNKNOWN", f"profile document {child.name} names a non-canonical profile: {documented!r}; canonical profiles: {sorted(profiles)}")
 
 
-def validate_kind(declaration: dict[str, Any], findings: list[Finding], project_id: str, *, canonical_kinds: set[str] | frozenset[str] | None = None, governance_root: Path | None = None) -> None:
-    """A declaration whose `kind` is outside the canonical set is WARNING `KIND_UNKNOWN`.
+def _is_self_consistent_derived_kind(
+    declaration: dict[str, Any],
+    kind: str,
+    *,
+    canonical_roles: set[str] | frozenset[str],
+    canonical_stacks: set[str] | frozenset[str],
+) -> bool:
+    """Is `kind` the canonical form derived from this declaration's own axes?
+
+    True only when both axes are present, both are canonical, and `kind`
+    equals `derive_kind(role, stack)`. `kind` is a *derived, deprecated*
+    composite, so its canonical form is whatever the two axes derive — and the
+    derivation is a product of two enumerated sets, so it is not enumerable as
+    a hand-maintained list. Absent or non-canonical axes return False: nothing
+    has been derived yet, so the legacy form is not measurable.
+    """
+    role = declaration.get("role")
+    stack = declaration.get("stack")
+    if not isinstance(role, str) or not isinstance(stack, str):
+        return False
+    if role not in canonical_roles or stack not in canonical_stacks:
+        return False
+    return kind == derive_kind(role, stack)
+
+
+def validate_kind(declaration: dict[str, Any], findings: list[Finding], project_id: str, *, canonical_kinds: set[str] | frozenset[str] | None = None, governance_root: Path | None = None, canonical_roles: set[str] | frozenset[str] | None = None, canonical_stacks: set[str] | frozenset[str] | None = None) -> None:
+    """A declaration whose `kind` is neither canonical nor self-consistent is WARNING `KIND_UNKNOWN`.
+
+    A `kind` outside the legacy `kinds` vocabulary is known when it is the
+    value its own two axes derive, because the field is derived and deprecated
+    and the axes are its authority. `kinds` is the frozen legacy vocabulary, not
+    the authority on derived values, so a canonical derivation is not held to
+    it; everything else — a hand-authored legacy value that disagrees with its
+    own derivation, a one-off value in neither form, and any value whose axes
+    are absent or non-canonical — still reports.
 
     Kind is descriptive and never drives profile requirements.
     """
     kinds = canonical_kinds if canonical_kinds is not None else canonical_kinds_for(governance_root)
     kind = declaration.get("kind")
-    if not isinstance(kind, str) or kind not in kinds:
-        finding(findings, "WARNING", "KIND_UNKNOWN", f"unknown kind: {kind!r}; canonical kinds: {sorted(kinds)}", project_id)
+    if isinstance(kind, str) and kind in kinds:
+        return
+    if isinstance(kind, str):
+        # Only the value that would otherwise be reported consults the axes, so
+        # a canonical `kind` keeps resolving with no vocabulary read at all.
+        roles = canonical_roles if canonical_roles is not None else canonical_roles_for(governance_root)
+        stacks = canonical_stacks if canonical_stacks is not None else canonical_stacks_for(governance_root)
+        if _is_self_consistent_derived_kind(declaration, kind, canonical_roles=roles, canonical_stacks=stacks):
+            return
+    finding(findings, "WARNING", "KIND_UNKNOWN", f"unknown kind: {kind!r}; canonical kinds: {sorted(kinds)}", project_id)
 
 
 def _resolve_axes(

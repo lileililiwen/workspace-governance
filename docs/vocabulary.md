@@ -24,7 +24,7 @@ project to deployable on metadata alone.
 | `deployable: true` | Requires **both** a matching promotion-ledger entry **and** a complete `release_evidence` block; neither alone suffices. | `openspec/specs/deployable-batch-onboarding/spec.md`, `docs/deployment-promotion.md` |
 | Promotion ledger | Tamper-evident record of promotion decisions in `deployment/promotions.json` (with `deployment/promotions.sha256` sidecar). | `docs/deployment-promotion.md` |
 | Finding code | A stable audit result name with a level (`ERROR`/`WARNING`), e.g. `DECLARATION_ID`, `KIND_UNKNOWN`, `HANDOFF_SCAFFOLD`, `DEPLOYMENT_PROMOTION_STALE`. | `openspec/specs/registry-integrity/spec.md` |
-| `kind` / `profile` | Descriptive project classification drawn from the canonical sets (12 kinds, 15 profiles). | `vocabulary.json`, `openspec/specs/portfolio-vocabulary/spec.md` |
+| `kind` / `profile` | Descriptive project classification. `profile` is drawn from the 15 canonical profiles; `kind` is the derived, deprecated composite of `role` and `stack`, so its authority is the two axes rather than the frozen legacy 12-value `kinds` list. | `vocabulary.json`, `openspec/specs/portfolio-vocabulary/spec.md` |
 | `role` / `stack` | The two independent classification axes: what a project is **for**, and what it is written **in**. `stack` is single-valued; there is no `stacks` array. | `vocabulary.json` `roles`/`stacks`, `openspec/changes/identity-and-taxonomy-axis-split/specs/identity-and-taxonomy/spec.md` |
 | Identity (`id` / `path` / `alias`) | `id` is the immutable join key and is never derived from or renamed to match `path`. `path` is a registry-only resolution detail. A directory whose name is not a valid identifier records an explicit `alias`; the eight `campusMesh`-style entries are already correct and must not be churned. | `openspec/specs/registry-integrity/spec.md`, `scripts/init_project.py` |
 | Quality gate (`quality` block) | Opt-in product-code rule (test code in product scope, placeholder debt); fail-closed, never a guessed pass. | `docs/product-code-quality.md`, `openspec/specs/product-code-quality-boundary/spec.md` |
@@ -62,6 +62,49 @@ the old string from breaking. It is never written by hand and never newly
 required; the migration does not rewrite it, so a hand-authored value that
 disagrees with its own axes is still visible as `TAXONOMY_LEGACY_VALUE`.
 
+### The derived form is the rule; `kinds` is a legacy vocabulary
+
+`kinds` in `vocabulary.json` is the original 12 hand-authored values. It is a
+**legacy vocabulary, not the authority on a derived value**, and it is
+deliberately left frozen at 12.
+
+A `kind` is canonical when it is either
+
+1. a member of the legacy `kinds` list, or
+2. the value its own two axes derive — `kind == derive_kind(role, stack)` with
+   both axes present and canonical.
+
+That second clause exists because the derivation is a **product of two
+enumerated axis sets**: 6 roles × 6 stacks is 36 values, of which **27 are not
+in `kinds`**. A `kind` that is correct by the current rule is therefore often
+absent from the list, and holding a derived value to the list reports a defect
+that no owner can act on. The 17 findings that motivated this
+(`rust-platform` on `forge`, `rust-tooling` on `driftwatchdog`,
+`python-governance` on this repository, and 14 others) were all of that shape.
+
+Extending `kinds` to cover the derivation would relocate the problem rather
+than solve it: the list would need re-extending for every future axis
+combination, which is the same unbounded manual-maintenance point found in
+`driftwatchdog`'s `GOVERNANCE_QUALITY_DECLARED_CODES` allow-list. It would
+also freeze a derived field's value space into a second, contradictory source
+of truth. So `kinds` stays 12, and the axes are the authority.
+
+The rule is symmetric in what it refuses. All of the following still report
+`KIND_UNKNOWN` at WARNING, because none of them is a self-consistent
+derivation:
+
+| Declaration | Reports | Why |
+|---|---|---|
+| `role: platform, stack: rust, kind: rust-governance` | `KIND_UNKNOWN` + `TAXONOMY_LEGACY_VALUE` | a hand-authored composite that disagrees with its own axes |
+| `role: tooling, stack: rust, kind: quality-gate` | `KIND_UNKNOWN` | in neither the legacy list nor the derived form |
+| `kind: rust-platform` with no axes | `KIND_UNKNOWN` | nothing has been derived, so the value is not measurable |
+| `role: library, stack: rust, kind: rust-platform` | `KIND_UNKNOWN` + `TAXONOMY_AXIS_UNKNOWN` | the axes are non-canonical, so there is no derivation to compare against |
+| `kind` absent or not a string | `KIND_UNKNOWN` | unchanged |
+
+`KIND_UNKNOWN` stays WARNING and is not repurposed, narrowed away, or
+silenced: a value that is neither legacy nor derived is still a finding, and
+`validate_kind` is the same single place that reports it.
+
 ### Finding codes
 
 | Code | Level | Fires when |
@@ -70,8 +113,9 @@ disagrees with its own axes is still visible as `TAXONOMY_LEGACY_VALUE`.
 | `TAXONOMY_MISMATCH` | ERROR | The registry entry and the declaration disagree on `role` or `stack`; the message names both values and the project id. |
 | `TAXONOMY_LEGACY_VALUE` | WARNING | A `kind` disagrees with the value derived from its own axes, including a stack-qualified composite still present while both axes are declared. |
 
-`KIND_UNKNOWN` keeps its shipped meaning (a `kind` outside the 12 canonical
-kinds) and is not repurposed.
+`KIND_UNKNOWN` keeps its shipped meaning and its WARNING level (a `kind` that
+is neither in the legacy 12-value list nor the value its own axes derive) and
+is not repurposed.
 
 ### README-claim vocabulary
 

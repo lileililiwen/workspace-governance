@@ -131,7 +131,8 @@ canonical prose view is `docs/toolchain-decisions.md`.
 `roles` (6) and `stacks` (6), `placeholder_markers`, and
 `secret_field_substrings`. `workspace_check.py` enforces the canonical sets
 (a non-canonical registry `profile` is ERROR `PROFILE_UNKNOWN`; a
-non-canonical declaration `kind` is WARNING `KIND_UNKNOWN`; a
+declaration `kind` that is neither a member of the legacy `kinds` list nor the
+value its own canonical `role`/`stack` derive is WARNING `KIND_UNKNOWN`; a
 `profiles/<name>.json` document naming a non-canonical profile is ERROR
 `PROFILE_DOC_UNKNOWN`) and scans secrets with the vocabulary substrings, while
 `product_code_quality.py` defaults its placeholder markers from the same file.

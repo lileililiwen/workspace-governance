@@ -13,9 +13,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 import product_code_quality as pcq
 import vocabulary
 from vocabulary import VocabularyError, load_vocabulary
-from workspace_check import run, validate_kind, validate_profile_docs
+from workspace_check import derive_kind, run, validate_kind, validate_profile_docs
 
 from _decisions_env import restore_decisions_register, use_empty_decisions_register
+
+REPO_ROOT = Path(__file__).parents[1]
 
 
 def setUpModule():
@@ -246,6 +248,89 @@ class KindEnforcementTests(unittest.TestCase):
         for old, new in REMAPPED_KINDS.items():
             self.assertNotIn(old, CANONICAL_KINDS)
             self.assertIn(new, CANONICAL_KINDS)
+
+
+class DerivedKindKnownTests(unittest.TestCase):
+    """`kind` is derived and deprecated, so its canonical form is whatever the
+    two axes derive. `kinds` is the frozen legacy vocabulary and is not the
+    authority on a derived value: the derivation is a product of two enumerated
+    axis sets, so it is deliberately not a hand-maintained list. Every side of
+    the rule is pinned — a self-consistent derivation is known, and the three
+    ways of *not* being one still report, at WARNING."""
+
+    ROLES = {"product", "platform", "tooling", "governance", "deployment", "inventory"}
+    STACKS = {"dotnet", "rust", "typescript", "python", "flutter", "none"}
+
+    def collected(self, declaration):
+        findings: list = []
+        validate_kind(declaration, findings, "demo-project",
+                      canonical_kinds=CANONICAL_KINDS,
+                      canonical_roles=self.ROLES, canonical_stacks=self.STACKS)
+        return findings
+
+    def test_a_self_consistent_derived_value_produces_no_finding(self):
+        # `rust-platform` is deliberately NOT in the frozen 12, and is known
+        # anyway because it is what `platform`/`rust` derive.
+        self.assertNotIn("rust-platform", CANONICAL_KINDS)
+        declaration = {"kind": "rust-platform", "role": "platform", "stack": "rust"}
+        self.assertEqual(self.collected(declaration), [])
+
+    def test_every_derived_value_outside_the_legacy_vocabulary_is_known(self):
+        # The whole derivation space, measured against the real axis sets and
+        # the frozen 12. This is the sweep that the hand-maintained list could
+        # not express: no combination is enumerated here.
+        vocab = vocabulary.load_vocabulary_for_governance_root(REPO_ROOT)
+        unlisted = 0
+        for role in vocab["roles"]:
+            for stack in vocab["stacks"]:
+                kind = derive_kind(role, stack)
+                if kind not in CANONICAL_KINDS:
+                    unlisted += 1
+                declaration = {"kind": kind, "role": role, "stack": stack}
+                self.assertEqual(self.collected(declaration), [], f"{role}/{stack}")
+        # The space is genuinely larger than the legacy list, so the sweep
+        # cannot pass by accident on a vocabulary that already covers it.
+        self.assertGreater(unlisted, 0)
+
+    def test_a_legacy_value_that_disagrees_with_its_own_derivation_still_reports(self):
+        declaration = {"kind": "rust-governance", "role": "governance", "stack": "python"}
+        self.assertNotEqual(declaration["kind"], derive_kind("governance", "python"))
+        found = self.collected(declaration)
+        self.assertEqual([item.code for item in found], ["KIND_UNKNOWN"])
+        self.assertEqual(found[0].level, "WARNING")
+
+    def test_a_value_in_neither_form_still_reports(self):
+        declaration = {"kind": "quality-gate", "role": "tooling", "stack": "rust"}
+        found = self.collected(declaration)
+        self.assertEqual([item.code for item in found], ["KIND_UNKNOWN"])
+        self.assertEqual(found[0].level, "WARNING")
+        self.assertIn("quality-gate", found[0].message)
+
+    def test_absent_axes_behave_as_before(self):
+        # Nothing has been derived, so an unlisted value is still unmeasured.
+        found = self.collected({"kind": "rust-platform"})
+        self.assertEqual([item.code for item in found], ["KIND_UNKNOWN"])
+        self.assertEqual(found[0].level, "WARNING")
+
+    def test_a_half_declared_axis_pair_behaves_as_before(self):
+        found = self.collected({"kind": "rust-platform", "role": "platform"})
+        self.assertEqual([item.code for item in found], ["KIND_UNKNOWN"])
+
+    def test_non_canonical_axes_behave_as_before(self):
+        # Both axes are present but `role` is outside its set, so the derived
+        # form is not measurable and the rule does not excuse the value.
+        for axes in ({"role": "library", "stack": "rust"},
+                     {"role": "platform", "stack": "haskell"}):
+            found = self.collected({"kind": "rust-platform", **axes})
+            self.assertEqual([item.code for item in found], ["KIND_UNKNOWN"], axes)
+
+    def test_an_absent_or_non_string_kind_still_reports(self):
+        for declaration in ({}, {"kind": None}, {"kind": 7}):
+            found = self.collected(declaration)
+            self.assertEqual([item.code for item in found], ["KIND_UNKNOWN"], declaration)
+
+    def test_a_canonical_kind_stays_known_with_unrelated_axes(self):
+        self.assertEqual(self.collected({"kind": "shared-library", "role": "platform", "stack": "rust"}), [])
 
 
 class SharedWordListTests(unittest.TestCase):
