@@ -4,6 +4,16 @@
 - Use OpenSpec for non-trivial governance changes.
 - Use BFS → DFS → BFS: map portfolio impact, implement one coherent contract, then re-audit all consumers.
 - Work directly on `main` by default; do not create a branch or worktree unless the user asks for one or designates one. Preserve unrelated uncommitted work and never sweep it into a commit.
+- `main` is the only development branch in this workspace. There is one owner and
+  one agent at a time, so there is no concurrent-workload reason to branch, and a
+  branch only pollutes the commit line, invites conflicts, and gets forgotten
+  unmerged. Do not open one "just to be safe" or "for isolation".
+- When a branch does exist because the owner designated it, the work does not end
+  until `main` carries it **and the branch is deleted**. A finished change left on
+  a branch is unfinished work: land it on `main`, then remove the branch. Never
+  leave a change stranded off `main`, and never leave a merged branch behind.
+- Never put a spec on `main` while the change that justifies it is still
+  unmerged elsewhere. That splits one decision across two histories.
 - Run `python3 scripts/workspace_check.py --self-check` before completion.
 - Run `python3 scripts/jenkins_manifest.py --check` for deployment-related changes.
 - Existing projects keep declarations and exceptions; shared runtimes remain centralized.
