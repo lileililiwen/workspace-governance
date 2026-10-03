@@ -2,6 +2,17 @@
 
 ## Current state
 
+current_spec: derived-kind-canonical-form
+
+Implemented and committed at `97f6c68`, **not archived**. It is a one-rule
+checker fix: a `kind` outside the frozen 12-value `kinds` vocabulary is now
+known when it is the value its own canonical `role`/`stack` derive, so the 17
+`KIND_UNKNOWN` warnings the fleet audit reported — every one of them a correct
+value — are gone. The four ways of *not* being self-consistent still report at
+WARNING, `kinds` stays 12, and no declaration and no sibling repository was
+written. See `openspec/changes/derived-kind-canonical-form/` and the evidence
+entry below.
+
 The `standalone-project-boundary` change is implemented and archived in
 commit `fb5ff5c`. Workspace Governance now ships a fail-closed
 standalone-readiness contract: a project may declare a `standalone`
@@ -82,6 +93,68 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- `derived-kind-canonical-form` (`97f6c68`) evidence. This is a **checker**
+  defect, not 17 portfolio defects: every one of the 17 `KIND_UNKNOWN`
+  warnings the fleet audit reported was a *correct* value.
+  `identity-and-taxonomy-axis-split` made `kind` a derived, deprecated
+  composite, so its authority is the `role`/`stack` pair — and the derivation
+  is a product of two enumerated axis sets, 6 × 6 = **36** values, of which
+  **27 are absent** from the deliberately frozen 12-value `kinds` list. A
+  value that is correct by the current rule is therefore often not in the list,
+  so holding a derived value to the list reported a defect no owner could act
+  on. `forge` (`rust-platform`), `driftwatchdog` (`rust-tooling`) and this
+  repository (`python-governance`) each carried a permanent warning.
+
+  `validate_kind` now asks one more question before reporting: a `kind` outside
+  `kinds` is **known** when it equals `derive_kind(role, stack)` with both axes
+  present and both canonical. Each precondition is load-bearing, and the four
+  ways of *not* being self-consistent all still report at WARNING — a
+  hand-authored value that disagrees with its own axes, a one-off value in
+  neither form, absent/half-declared/non-canonical axes, and an absent or
+  non-string `kind`. `KIND_UNKNOWN` is not repurposed, renamed, or silenced,
+  and the level stays WARNING. The axis lookup happens *after* the membership
+  test, so a canonical `kind` still reads no axis set at all.
+
+  `kinds` stays 12 and no declaration is written. Extending the list was the
+  smaller diff and is ruled out in `design.md` §2: it would need re-extending
+  for every future axis combination (the unbounded manual-maintenance point
+  already found in `driftwatchdog`'s `GOVERNANCE_QUALITY_DECLARED_CODES`
+  allow-list), it would freeze a derived field into a second source of truth,
+  and it would break `test_existing_arrays_are_unchanged`, so adopting it means
+  weakening a test to make a code change go green. Rewriting the 17
+  declarations back to bare role words is rejected for the opposite reason: it
+  reintroduces the role/stack conflation the split removed and would trade 17
+  `KIND_UNKNOWN` for 17 `TAXONOMY_LEGACY_VALUE`.
+
+  Nine tests pin both sides of the rule. **Verified to bite**: against the
+  pre-fix body the two new-behaviour tests fail and the seven
+  unchanged-behaviour tests pass, so the fix widens knowledge only where it
+  should. The sweep test measures the whole 36-value space and asserts the
+  unlisted count is non-zero, so it cannot pass on a vocabulary that already
+  covered it.
+
+  Measured: `python3 -m pytest tests` — **501 tests, OK** (492 prior + 9 new);
+  fleet audit **errors=205 unchanged, warnings 35 → 18**, `KIND_UNKNOWN`
+  **17 → 0**; `workspace_check --self-check` **0 errors / 0 warnings**;
+  `openspec validate derived-kind-canonical-form --strict` passes;
+  `openspec validate --changes --strict` 6/6; change names valid; `git diff
+  --check` clean. The 18 remaining warnings are `HANDOFF_SCAFFOLD` 8,
+  `DEPLOYMENT_PROMOTION_STALE` 7, `CAPABILITY_BLOCKED` 2,
+  `DISCOVERABILITY_INVALID` 2, `CI_MISSING` 2,
+  `QUALITY_README_CLAIM_UNSCOPED` 1 — none is a `KIND_UNKNOWN`, and no finding
+  other than the 17 cleared ones moved. Spec delta MODIFIES the existing
+  `Canonical kinds are enforced` requirement in
+  `openspec/specs/portfolio-vocabulary/spec.md`; `identity-and-taxonomy` is not
+  a target because that capability spec is still unarchived and its derived-kind
+  requirement is unchanged by this fix. **Not archived, by instruction**, and
+  `identity-and-taxonomy-axis-split` is likewise left unarchived.
+
+  Evidence boundary: this change proves the checker no longer rejects a
+  self-consistent derived value, and that it still rejects everything else. It
+  does not prove that a repository's `kind` *means* anything — the axes remain
+  descriptive and drive no required file, CI requirement, verification command,
+  or evidence, deployment, or promotion state.
+
 - `readme-claim-verification` (`f8df5ea`) evidence. A README status block is
   now checked against the tree. `QUALITY_README_CLAIM_CONTRADICTED` is ERROR
   and `QUALITY_README_CLAIM_UNSCOPED` is one aggregate coverage finding per
@@ -152,8 +225,8 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
   guard consequently accepts the derived form so the tool stays idempotent, and
   `platform-rust` was a spec typo corrected to `rust-platform`. Two of those
   were owner rulings against the implementation as first written.
-  Two things are **not** clean, both recorded in `tasks.md` §5 notes 7 and 8
-  rather than fixed in passing: `workspace_check --self-check` is 1 error /
+  Two things were **not** clean, both recorded in `tasks.md` §5 notes 7 and 8
+  rather than fixed in passing: `workspace_check --self-check` was 1 error /
   1 warning (`devloom`'s non-canonical `lifecycle: scaffold`, now visible
   because the repository is registered; and this repository's own derived
   `python-governance` `kind`, which is absent from the deliberately
@@ -161,6 +234,13 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
   `rollback-manifest.json` maps 77 of the 80 migrated siblings —
   `aegify`, `argoscope` and `argoset` have no before/after SHA pair, so a
   manifest-driven rollback would skip them.
+  **Both of the self-check's two items are now clear at `97f6c68`**
+  (`derived-kind-canonical-form`): `devloom` is registered `active`, and the
+  self-check reads **0 errors / 0 warnings**. The `python-governance` warning
+  was a checker defect — a correct derived value held to the frozen 12-value
+  `kinds` list — not a declaration defect, so no portfolio file was written.
+  `rollback-manifest.json` is extended to all 81 repositories at `4b6f49c` and
+  is no longer outstanding.
 
 - `rules-drift-gate-wiring` (`4a9edfc`) evidence. Archived as
   `2026-10-03-rules-drift-gate-wiring`; canonical spec
@@ -598,14 +678,22 @@ sibling repository.
 
 ## Next action
 
-1. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
+1. Archive `derived-kind-canonical-form` and `identity-and-taxonomy-axis-split`
+   when the owner is ready. Both are implemented, committed, and validated
+   strictly; neither is archived. Archiving the first folds the MODIFIED
+   `Canonical kinds are enforced` requirement into
+   `openspec/specs/portfolio-vocabulary/spec.md`, and archiving the second is
+   what finally lands the `identity-and-taxonomy` capability spec. Archiving
+   them in that order keeps the derived-kind requirement on `main` from being
+   split across two histories.
+2. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
    each is a separate conversation and a separate repository.
-2. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
+3. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
    recorded (product-owned work).
-3. Re-promote each pilot project at its current `HEAD` once its release pipeline
+4. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-4. Commit the sibling declaration/rules edits in their own repositories when
+5. Commit the sibling declaration/rules edits in their own repositories when
    those repositories' pending work is ready.
 
 ## Evidence boundary
