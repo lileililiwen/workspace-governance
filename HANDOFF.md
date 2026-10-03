@@ -89,20 +89,42 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
   prior + 33 new); `workspace_check --self-check` 0/0; `auto_gate --self-check`
   PASS; `check_skill_refs` ok; `openspec validate --all --strict` 18/18;
   `rules_drift` unchanged at 148; `jenkins_manifest --check` projects=0
-  errors=0; `git diff --check` clean. From `/home/paul/code` the fleet audit
-  moved `errors=211 warnings=17` → **`errors=215 warnings=18`**: exactly +4
-  `CONTRADICTED` (argoset:31, care-bridge:17, retake-kit:42, devloom:9) and
-  +1 aggregate `UNSCOPED` naming 3 statements. No other code changed count.
+  errors=0; `git diff --check` clean. At that commit the fleet audit moved
+  `errors=211 warnings=17` → `errors=215 warnings=18`: +4 `CONTRADICTED`
+  (argoset:31, care-bridge:17, retake-kit:42, devloom:9) and +1 aggregate
+  `UNSCOPED` naming 3 statements. No other code changed count. **That +4 was
+  itself a defect and is corrected at `833ca9c` below** — read the two numbers
+  together, not the first alone.
   Read-only proved by hashing 17 real trees before and after a claim run.
-  **The design's 7-repository corpus is stale and the change says so**: 5 of
+  **The design's 7-repository corpus is stale and the change says so**: 6 of
   the 7 (`rostera`, `aesthra`, `reelio`, `pluggify`, `testify`,
-  `shopifireman` were repaired 2026-10-03) now carry accurate claims, and 2 of
-  the 4 live findings are in repositories the design never measured.
-  **The fleet is now red on purpose.** Four repositories make a claim their
-  tree contradicts; the rule reports which side is wrong and the owner decides.
-  Repair order stays as ruled, revised for the current corpus. Nothing here
-  gates on the check yet — binding it as a driftwatchdog gate check is
-  deferred to that repository.
+  `shopifireman`, `care-bridge` were repaired 2026-10-03) now carry accurate
+  claims.
+  **The fleet is NOT red — the checker was wrong, and `833ca9c` fixed it.** The
+  four `CONTRADICTED` findings recorded above were false positives, and the
+  repair is in the check rather than in any README. The `deployment` evidence
+  rule read the tree before the declaration, so a local `compose*.y(a)ml`
+  counted as deployment evidence although all four repositories declare
+  `deployable: false` (`devloom` holds a Compose *and* a `Dockerfile`, both
+  local-only). The `application-source` synonyms carried bare `source`, so
+  argoset's "live source adapters for named platforms" — provider language —
+  resolved to the application-source surface. Both rules are narrowed, and
+  neither fix blunts the check: rostera's original wording still yields its
+  `build` and `ci` contradictions, and a repository declaring
+  `deployable: true` while holding a Compose file is still a contradiction;
+  both directions are pinned by regression tests.
+  **Fleet audit is now `errors=211 warnings=18`** — the `errors=211`
+  pre-change baseline exactly, with the four false-positive ERRORs gone. The
+  added warning is the aggregate `QUALITY_README_CLAIM_UNSCOPED` naming 3
+  statements that name no resolvable surface; it is a coverage metric, not an
+  accusation, and it is meant to persist. Those four repositories need no
+  README repair, and the repair queue in `tasks.md` §5.1 is withdrawn: editing
+  an accurate document into a false one to satisfy a wrong rule is the
+  failure this check exists to catch. Re-verified at `833ca9c`: 492 tests,
+  0 failures (489 prior + 3 new regression tests), self-check 0/0, auto-gate
+  PASS, drift unchanged at 148, `openspec validate --all --strict` 18/18.
+  Nothing here gates on the check yet — binding it as a driftwatchdog gate
+  check is deferred to that repository.
 
 - `identity-and-taxonomy-axis-split` (`29dea92`) evidence. `role` and `stack`
   are now independent axes; `kind` is the derived, deprecated composite
