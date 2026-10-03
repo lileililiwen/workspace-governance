@@ -444,9 +444,17 @@ class AuditIntegrationTests(unittest.TestCase):
         (self.project / "ROADMAP.md").write_text("# r\n", encoding="utf-8")
         (self.project / "HANDOFF.md").write_text("current_spec: x\n", encoding="utf-8")
         (self.project / "AGENTS.md").write_text("# a\n", encoding="utf-8")
+        # Use the real shipped rule files rather than stubs. A stub cannot carry
+        # the baseline clauses, so every rule-drift clause reads as absent and the
+        # fixture drowns in RULES_DRIFT_NEW. Loading the templates also means this
+        # fixture cannot rot when the canonical rule text changes.
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        import init_project as _init_project
+        _templates = _init_project.load_templates()
         (self.project / ".ai-rules").mkdir()
-        (self.project / ".ai-rules" / "workflow.md").write_text("w\n", encoding="utf-8")
-        (self.project / ".ai-rules" / "completion.md").write_text("c\n", encoding="utf-8")
+        (self.project / ".ai-rules" / "workflow.md").write_text(_templates[".ai-rules/workflow.md"], encoding="utf-8")
+        (self.project / ".ai-rules" / "completion.md").write_text(_templates[".ai-rules/completion.md"], encoding="utf-8")
         (self.project / "LICENSE").write_text("MIT License\n", encoding="utf-8")
         (self.project / "openspec").mkdir()
         (self.project / "Jenkinsfile").write_text("// ci\n", encoding="utf-8")

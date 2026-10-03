@@ -71,23 +71,36 @@
 > database and role; endpoint and credentials are environment-specific
 > and no Mac hostname is a product default.
 
-## Proposed follow-up: wire the rules drift report into a gate
+## Rules drift report — now a ratchet gate
 
-> **Status (2026-10-03):** Proposed, not started. Tracked as decision `D5` in
-> `decisions.json` and as the change `rules-drift-gate-wiring`.
+> **Status (2026-10-03):** SHIPPED as
+> `openspec/changes/archive/2026-10-03-rules-drift-gate-wiring/`, tracked as
+> decision `D5` in `decisions.json`.
 >
-> `scripts/rules_drift.py` is currently a triage report that no gate calls.
-> `scripts/workspace_check.py` imports only `scaffold_handoff` from it; the
-> clause-level `drift()` report is invoked by neither `workspace_check.py`,
-> `auto_gate.py`, nor CI. The `work-on-main rule` clause added by
-> `openspec/changes/work-on-main-baseline-rule/` is therefore **reported, not
-> enforced** — under ruling D18, a verifier that no gate runs does not gate.
+> `scripts/rules_drift.py --check` remains the **detailed report**: it names
+> every clause a repository does not visibly carry and rewrites nothing. What
+> changed is that the audit now gates on the **delta**. `workspace_check.py`
+> emits ERROR `RULES_DRIFT_NEW` for any finding whose
+> `(project, file, label)` is absent from `rules-drift-baseline.json`, and
+> WARNING `RULES_DRIFT_BASELINE_STALE` when a baselined entry is no longer
+> reported and the baseline can be tightened.
 >
-> The proposed change calls `rules_drift.check()` from `workspace_check.run`
-> and blocks through the existing `auto_gate.py --fail-on-warnings` path. It is
-> deliberately not folded into `work-on-main-baseline-rule`, because it turns a
-> 148-finding triage report into a fleet-wide gate in a single step, and that
-> deserves its own change with its own baseline.
+> `rules-drift-baseline.json` records the **140** clause-level gaps present
+> today across 72 repositories. The other 8 of the 148 total findings are
+> `HANDOFF_SCAFFOLD`, which is reported by a different path and is not
+> ratcheted. The baseline is a data file so it is reviewable as a diff, and it
+> fails closed: missing, unparseable, non-object, empty or malformed is a hard
+> error, never an empty-set fallback, because an empty baseline would report
+> every existing gap as new.
+>
+> Measured on landing: the fleet audit stayed at `errors=211 warnings=17` with
+> **zero** `RULES_DRIFT_*` findings. New drift now blocks; known debt does not;
+> and the baseline can only tighten.
+>
+> A repository's legitimate escape is the per-file
+> `<!-- workspace-governance:rules-customized -->` marker that
+> `rules_drift.OPT_OUT` already honours, in that repository. There is no
+> environment variable, no skip flag, and no exemption registry.
 
 ## Explicit non-goals
 

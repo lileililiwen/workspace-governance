@@ -61,6 +61,63 @@ def _vocabulary_for(governance_root: Path | None) -> dict[str, Any]:
     return vocabulary.load_vocabulary_for_governance_root(root)
 
 
+RULES_DRIFT_BASELINE_FILE = "rules-drift-baseline.json"
+RULES_DRIFT_BASELINE_KEYS = ("project", "file", "label")
+
+
+class RulesDriftBaselineError(ValueError):
+    """The ratchet baseline is unusable. Fail closed; never fall back to empty."""
+
+
+def load_rules_drift_baseline(governance_root: Path | None = None) -> frozenset[tuple[str, str, str]]:
+    """Load the ratchet baseline as a set of `(project, file, label)` keys.
+
+    Fail-closed, for the same reason the vocabulary loader does: an empty or
+    defaulted baseline would make every existing finding "new" and fail the whole
+    fleet for the wrong reason. Every one of these conditions raises
+    `RulesDriftBaselineError` naming the file and the reason:
+
+    - the file is missing;
+    - it is not valid JSON;
+    - the root is not an object;
+    - `findings` is absent, not a list, or empty;
+    - an entry is not an object, is missing a key, carries a non-string value, or
+      carries an unknown key.
+
+    An unknown key is rejected rather than ignored, so a typo in a hand edit fails
+    loudly instead of silently dropping a baselined finding.
+    """
+    root = Path(governance_root) if governance_root is not None else _default_governance_root()
+    path = root / RULES_DRIFT_BASELINE_FILE
+    if not path.is_file():
+        raise RulesDriftBaselineError(f"missing rules drift baseline: {path}")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RulesDriftBaselineError(f"unreadable rules drift baseline {path}: {exc}") from exc
+    if not isinstance(document, dict):
+        raise RulesDriftBaselineError(f"rules drift baseline {path} is not a JSON object")
+    entries = document.get("findings")
+    if not isinstance(entries, list) or not entries:
+        raise RulesDriftBaselineError(f"rules drift baseline {path} has no non-empty 'findings' array")
+
+    keys: set[tuple[str, str, str]] = set()
+    for index, entry in enumerate(entries):
+        where = f"rules drift baseline {path} entry {index}"
+        if not isinstance(entry, dict):
+            raise RulesDriftBaselineError(f"{where} is not a JSON object")
+        unknown = sorted(set(entry) - set(RULES_DRIFT_BASELINE_KEYS))
+        if unknown:
+            raise RulesDriftBaselineError(f"{where} has unknown key(s): {', '.join(unknown)}")
+        missing = [name for name in RULES_DRIFT_BASELINE_KEYS if name not in entry]
+        if missing:
+            raise RulesDriftBaselineError(f"{where} is missing key(s): {', '.join(missing)}")
+        if not all(isinstance(entry[name], str) and entry[name] for name in RULES_DRIFT_BASELINE_KEYS):
+            raise RulesDriftBaselineError(f"{where} has a non-string or empty value")
+        keys.add(tuple(entry[name] for name in RULES_DRIFT_BASELINE_KEYS))  # type: ignore[arg-type]
+    return frozenset(keys)
+
+
 def canonical_profiles_for(governance_root: Path | None = None) -> frozenset[str]:
     return _vocabulary_for(governance_root)["profiles"]
 
@@ -2123,16 +2180,60 @@ def validate_change_names(project_path: Path, findings: list[Finding], project_i
             finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {child.name}", project_id)
 
 
-def validate_handoff_quality(project_path: Path, findings: list[Finding], project_id: str) -> None:
-    """Surface a scaffold `HANDOFF.md` so boilerplate cannot pass as a handoff.
+def validate_handoff_quality(
+    project_path: Path,
+    findings: list[Finding],
+    project_id: str,
+    *,
+    rules_drift_baseline: frozenset[tuple[str, str, str]] | None = None,
+    observed_drift_keys: set[tuple[str, str, str]] | None = None,
+    scanned_projects: set[str] | None = None,
+) -> None:
+    """Surface a scaffold `HANDOFF.md` and gate on rules drift that is not baselined.
 
-    Clause-level `.ai-rules` drift is reported by `scripts/rules_sync.py` as a
-    triage report rather than here, because repositories legitimately document
-    the shared rules in their own words and language.
+    Two distinct surfaces meet here, deliberately:
+
+    - `scripts/rules_drift.py --check` is the **detailed report**. It names every
+      clause a repository does not visibly carry, and it never rewrites a project.
+    - this function is the **blocking delta**. It reports only a finding whose
+      `(project, file, label)` key is absent from `rules-drift-baseline.json`, so a
+      repository that documents the shared rules in its own words stays silent and a
+      newly introduced gap blocks. A key that is present in the baseline is known
+      debt, not a new failure.
+
+    A repository's legitimate escape is the per-file
+    `<!-- workspace-governance:rules-customized -->` marker, which
+    `rules_drift.OPT_OUT` honours before any clause is evaluated. There is no
+    environment variable, no skip flag, and no exemption registry: a check that can
+    be switched off is not a check.
     """
     import rules_drift  # local import to keep this module standalone
+
     if rules_drift.scaffold_handoff(project_path):
         finding(findings, "WARNING", "HANDOFF_SCAFFOLD", "HANDOFF.md still carries the initializer scaffold", project_id)
+
+    if scanned_projects is not None:
+        scanned_projects.add(project_id)
+
+    if rules_drift_baseline is None:
+        return
+
+    for item in rules_drift.drift(project_path):
+        if item["code"] != "RULES_DRIFT":
+            # RULES_UNREADABLE is a read failure, not a clause key. It is reported
+            # by the detailed report and must never be ratcheted into the baseline.
+            continue
+        key = (project_id, item["file"], item["label"])
+        if observed_drift_keys is not None:
+            observed_drift_keys.add(key)
+        if key not in rules_drift_baseline:
+            finding(
+                findings,
+                "ERROR",
+                "RULES_DRIFT_NEW",
+                f"{item['file']} does not carry the {item['label']}, and this finding is not in rules-drift-baseline.json",
+                project_id,
+            )
 
 
 def validate_project(
@@ -2146,6 +2247,9 @@ def validate_project(
     capability_registry: CapabilityRegistry | None = None,
     provider_paths: dict[str, Path] | None = None,
     adoption_ledger: list[dict[str, Any]] | None = None,
+    rules_drift_baseline: frozenset[tuple[str, str, str]] | None = None,
+    observed_drift_keys: set[tuple[str, str, str]] | None = None,
+    scanned_projects: set[str] | None = None,
 ) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
@@ -2255,7 +2359,14 @@ def validate_project(
     if isinstance(declaration.get("standalone"), dict) or isinstance(declaration.get("integrations"), list):
         validate_standalone(declaration, project_path, findings, project_id, governance_root=governance_root)
     if entry.get("adoption") == "adopted":
-        validate_handoff_quality(project_path, findings, project_id)
+        validate_handoff_quality(
+            project_path,
+            findings,
+            project_id,
+            rules_drift_baseline=rules_drift_baseline,
+            observed_drift_keys=observed_drift_keys,
+            scanned_projects=scanned_projects,
+        )
 
 
 def scan_for_secrets(value: Any, findings: list[Finding], location: str = "registry", *, secret_words: "re.Pattern[str] | None" = None, governance_root: Path | None = None) -> None:
@@ -2299,6 +2410,18 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
     load_decisions_register(governance_root, registry, findings, self_check=bool(args.self_check))
     capability_registry = load_capability_registry(governance_root, findings)
     adoption_ledger = load_adoption_ledger(governance_root, findings)
+    # Ratchet baseline for rules drift. Loaded once, fail-closed. A load failure
+    # emits one ERROR and disables the per-project delta rather than guessing: an
+    # empty baseline would report every existing gap as new and fail the fleet for
+    # the wrong reason. The ERROR already blocks, so the per-project pass is not
+    # needed to make the run fail.
+    try:
+        rules_drift_baseline: frozenset[tuple[str, str, str]] | None = load_rules_drift_baseline(governance_root)
+    except RulesDriftBaselineError as exc:
+        finding(findings, "ERROR", "RULES_DRIFT_BASELINE", str(exc))
+        rules_drift_baseline = None
+    observed_drift_keys: set[tuple[str, str, str]] = set()
+    scanned_projects: set[str] = set()
     # Provider identity is read from the registry's own entries, never from a
     # directory name, so the eight ids that differ from their folder name
     # resolve exactly like the rest.
@@ -2346,6 +2469,9 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
                 capability_registry=capability_registry,
                 provider_paths=provider_paths,
                 adoption_ledger=adoption_ledger,
+                rules_drift_baseline=rules_drift_baseline,
+                observed_drift_keys=observed_drift_keys,
+                scanned_projects=scanned_projects,
             )
     else:
         selected = effective_projects
@@ -2366,9 +2492,33 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
                     capability_registry=capability_registry,
                     provider_paths=provider_paths,
                     adoption_ledger=adoption_ledger,
+                    rules_drift_baseline=rules_drift_baseline,
+                    observed_drift_keys=observed_drift_keys,
+                    scanned_projects=scanned_projects,
                 )
             else:
                 finding(findings, "WARNING", "ADOPTION_PENDING", "project is registered but not yet adopted", str(entry.get("id")))
+    # Decay signal, not a failure: repositories that have fixed their drift make
+    # baseline entries redundant, and the baseline should be tightened to match.
+    # This is a WARNING and never touches the exit code.
+    #
+    # It is evaluated ONLY on a full audit. `--self-check` scans one repository
+    # and `--project` scans one entry, so comparing either against a fleet-wide
+    # snapshot would report the unscanned remainder as "redundant" and cry wolf.
+    scanned_whole_fleet = (
+        not args.self_check
+        and not args.project
+        and {key[0] for key in rules_drift_baseline}.issubset(scanned_projects)
+    ) if rules_drift_baseline is not None else False
+    if scanned_whole_fleet:
+        redundant = rules_drift_baseline - observed_drift_keys
+        if redundant:
+            finding(
+                findings,
+                "WARNING",
+                "RULES_DRIFT_BASELINE_STALE",
+                f"{RULES_DRIFT_BASELINE_FILE} has {len(redundant)} entry(ies) no longer reported; tighten the baseline",
+            )
     summary = {"errors": sum(item.level == "ERROR" for item in findings), "warnings": sum(item.level == "WARNING" for item in findings)}
     return findings, summary
 

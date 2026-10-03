@@ -111,6 +111,12 @@ def setup_sandboxed_governance_root(governance_root: Path):
     shutil.copy2(governance_root / "capabilities.json", sandbox / "capabilities.json")
     if (governance_root / "profiles").is_dir():
         shutil.copytree(governance_root / "profiles", sandbox / "profiles")
+    # rules-drift-baseline.json is load-bearing for the same reason: the audit
+    # fails closed with RULES_DRIFT_BASELINE when it is missing, which would mask
+    # whatever these tests are actually asserting.
+    baseline = governance_root / "rules-drift-baseline.json"
+    if baseline.is_file():
+        shutil.copy2(baseline, sandbox / "rules-drift-baseline.json")
     return temp, sandbox
 
 

@@ -7,6 +7,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
 import init_project
+import workspace_check
 import rules_drift
 
 
@@ -121,3 +122,93 @@ class TemplateSourceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RulesDriftBaselineTests(unittest.TestCase):
+    """The ratchet baseline is fail-closed, and only gates what is not baselined."""
+
+    def make_governance(self, findings):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        payload = {
+            "schema_version": 1,
+            "recorded_at": "2026-10-03",
+            "findings": findings,
+        }
+        (root / workspace_check.RULES_DRIFT_BASELINE_FILE).write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+        return root
+
+    def test_shipped_baseline_loads(self):
+        keys = workspace_check.load_rules_drift_baseline(workspace_check._default_governance_root())
+        self.assertEqual(len(keys), 140)
+        self.assertIn(("actoria", ".ai-rules/completion.md", "evidence boundary"), keys)
+
+    def test_missing_baseline_fails_closed(self):
+        with tempfile.TemporaryDirectory() as name:
+            with self.assertRaises(workspace_check.RulesDriftBaselineError) as ctx:
+                workspace_check.load_rules_drift_baseline(Path(name))
+        self.assertIn("missing", str(ctx.exception))
+
+    def test_unparseable_baseline_fails_closed(self):
+        root = self.make_governance([])
+        (root / workspace_check.RULES_DRIFT_BASELINE_FILE).write_text("{not json", encoding="utf-8")
+        with self.assertRaises(workspace_check.RulesDriftBaselineError):
+            workspace_check.load_rules_drift_baseline(root)
+
+    def test_non_object_root_fails_closed(self):
+        root = self.make_governance([])
+        (root / workspace_check.RULES_DRIFT_BASELINE_FILE).write_text("[]", encoding="utf-8")
+        with self.assertRaises(workspace_check.RulesDriftBaselineError):
+            workspace_check.load_rules_drift_baseline(root)
+
+    def test_empty_findings_array_fails_closed(self):
+        root = self.make_governance([])
+        with self.assertRaises(workspace_check.RulesDriftBaselineError):
+            workspace_check.load_rules_drift_baseline(root)
+
+    def test_unknown_entry_key_fails_closed(self):
+        root = self.make_governance([{"project": "p", "file": "f", "label": "l", "extra": 1}])
+        with self.assertRaises(workspace_check.RulesDriftBaselineError) as ctx:
+            workspace_check.load_rules_drift_baseline(root)
+        self.assertIn("unknown key", str(ctx.exception))
+
+    def test_missing_entry_key_fails_closed(self):
+        root = self.make_governance([{"project": "p", "file": "f"}])
+        with self.assertRaises(workspace_check.RulesDriftBaselineError):
+            workspace_check.load_rules_drift_baseline(root)
+
+    def test_baselined_drift_does_not_gate_but_is_observed(self):
+        root = self.make_governance([{"project": "demo", "file": ".ai-rules/workflow.md", "label": "BFS workflow model"}])
+        project = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: None)
+        (project / ".ai-rules").mkdir(parents=True)
+        (project / ".ai-rules" / "workflow.md").write_text("two commits. release evidence. check-openspec-change-names. on `main`\n", encoding="utf-8")
+        (project / ".ai-rules" / "completion.md").write_text("two commits. release evidence. on `main`\n", encoding="utf-8")
+
+        baseline = workspace_check.load_rules_drift_baseline(root)
+        findings: list[workspace_check.Finding] = []
+        observed: set[tuple[str, str, str]] = set()
+        workspace_check.validate_handoff_quality(
+            project, findings, "demo", rules_drift_baseline=baseline, observed_drift_keys=observed
+        )
+        self.assertEqual([f.code for f in findings if f.code == "RULES_DRIFT_NEW"], [])
+        self.assertIn(("demo", ".ai-rules/workflow.md", "BFS workflow model"), observed)
+
+    def test_unbaselined_drift_is_an_error(self):
+        root = self.make_governance([])
+        project = Path(tempfile.mkdtemp())
+        (project / ".ai-rules").mkdir(parents=True)
+        (project / ".ai-rules" / "workflow.md").write_text("nothing here\n", encoding="utf-8")
+        (project / ".ai-rules" / "completion.md").write_text("nothing here\n", encoding="utf-8")
+
+        baseline = frozenset({("demo", ".ai-rules/workflow.md", "BFS workflow model")})
+        findings: list[workspace_check.Finding] = []
+        workspace_check.validate_handoff_quality(
+            project, findings, "demo", rules_drift_baseline=baseline, observed_drift_keys=set()
+        )
+        new = [f for f in findings if f.code == "RULES_DRIFT_NEW"]
+        self.assertTrue(new, "expected RULES_DRIFT_NEW for unbaselined drift")
+        self.assertTrue(all(f.level == "ERROR" for f in new))
