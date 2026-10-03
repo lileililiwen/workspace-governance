@@ -82,6 +82,32 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- `rules-drift-gate-wiring` (`4a9edfc`) evidence. Archived as
+  `2026-10-03-rules-drift-gate-wiring`; canonical spec
+  `openspec/specs/rules-baseline/spec.md` (+4 added, 2 modified, 0 removed).
+  The clause that `work-on-main-baseline-rule` added is now **enforced**, not
+  merely reported. `rules-drift-baseline.json` holds the 140 clause-level gaps
+  across 72 repositories; `workspace_check` emits ERROR `RULES_DRIFT_NEW` for
+  any gap whose `(project, file, label)` is absent from it, and WARNING
+  `RULES_DRIFT_BASELINE_STALE` when an entry is no longer reported. Of the
+  148 total drift findings, 140 are clause-level and 8 are
+  `HANDOFF_SCAFFOLD`, which is a different path and is not ratcheted.
+  Measured: fleet audit **unchanged** at `errors=211 warnings=17` with zero
+  `RULES_DRIFT_*` findings, and `rules_drift --check` still reports 148.
+  `python3 -m unittest discover -s tests` — 389 tests, 0 failures (380 prior +
+  9 new); `openspec validate --all --strict` 18/18 post-archive;
+  `workspace_check --self-check` 0/0; `auto_gate --self-check --no-deployment`
+  PASS; `check_skill_refs` ok; change names valid; `git diff --check` clean.
+  Two implementation bugs were caught by the tests and are recorded in the
+  commit: the stale-baseline comparison was reading a single-repository
+  `--self-check` as if it were a fleet scan, and a fixture's stub rule files
+  (`"w"` and `"c"`) read as six genuine clause gaps. Both fixed, and the
+  fixture now loads the real shipped rule files so it cannot rot.
+  The evidence boundary: this change proves the baseline is loaded fail-closed,
+  that baselined debt does not block, and that unbaselined drift does. It
+  cannot prove a repository's rule files are *read* by an agent, only that
+  they are present and machine-checkable.
+
 - `work-on-main-baseline-rule` (`bb4c406`) evidence:
   `python3 -m unittest discover -s tests` — 380 tests, 0 failures
   (376 prior + 4 new in `tests/test_rules_drift.py`: the clause reported
