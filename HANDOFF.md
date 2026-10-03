@@ -83,7 +83,57 @@ existing files unless explicitly named with `--replace`. It records configured
 template metadata without changing deployment promotion state. No product
 repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
+The `work-on-main-baseline-rule` change is implemented and archived in
+commit `bb4c406` as `2026-10-03-work-on-main-baseline-rule`, and the
+canonical spec is `openspec/specs/rules-baseline/spec.md` (+4 added, 2
+modified, 0 removed). An agent must now not create a branch or worktree to
+do work **unless the user asks for one or designates one**. The rule is one
+sentence, byte-identical in `templates/project/.ai-rules/workflow.md` (the
+canonical source `init_project.py` copies), `templates/project/AGENTS.md`,
+this repository's own `.ai-rules/workflow.md` and `AGENTS.md`, and the
+global skill. It is machine-reported as the `work-on-main rule` clause of
+`scripts/rules_drift.py`, which moves the fleet report from
+`drift_findings=80` to `148` — a delta of exactly 68, none for this
+repository.
+
+**That clause enforces nothing, and the spec says so.** `rules_drift.py` is
+wired into no gate: `workspace_check.py` imports only `scaffold_handoff`,
+and the clause report is invoked by neither `workspace_check.py`,
+`auto_gate.py`, nor CI. Under ruling D18, a verifier that no gate runs does
+not gate. Wiring it is decision `D5` and the `rules-drift-gate-wiring`
+follow-up in `ROADMAP.md`, deliberately a separate change because it turns a
+148-finding triage report into a fleet-wide gate in one step. Until it
+lands, the work-on-`main` rule is **stated and reported, not enforced**.
+
 ## Latest verification evidence
+
+- `work-on-main-baseline-rule` (`bb4c406`) evidence:
+  `python3 -m unittest discover -s tests` — 380 tests, 0 failures
+  (376 prior + 4 new in `tests/test_rules_drift.py`: the clause reported
+  when absent, absent when present, the opt-out marker suppressing it with
+  the file's bytes unchanged, and both templates carrying the rule *and* its
+  user-asks exception; plus 1 new test in `tests/test_decisions.py` keeping
+  the 2026-09-30 date guarantee for the four seeded entries);
+  `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings;
+  `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS;
+  `python3 scripts/check_skill_refs.py` — `SKILL.md + 7 references` valid;
+  `node scripts/check-openspec-change-names.mjs` — valid;
+  `openspec validate --all --strict --no-interactive` — 18 passed, 0 failed
+  post-archive (the change is archived and its delta merged into
+  `openspec/specs/rules-baseline/spec.md`);
+  `python3 scripts/rules_drift.py --root .. --check` — `drift_findings=148`,
+  68 of them `work-on-main rule`, none for `workspace-governance`;
+  `git diff --check` — clean before the handoff-only update. The canonical
+  spec diff is purely additive: the `MUST NOT modify any project file`
+  guarantee and the `<!-- workspace-governance:rules-customized -->` opt-out
+  sentence are both intact. A 240-file sha256 snapshot across the whole
+  fleet proves only this repository's own `AGENTS.md` and
+  `.ai-rules/workflow.md` changed and **zero sibling files were touched**;
+  `scripts/rules_drift.py` is a clause-only diff with no new environment
+  variable, exemption registry or skip path. The first `openspec archive`
+  run **aborted without writing**, because the delta was filed under a
+  capability that did not exist; re-filing it under `rules-baseline` is why
+  the archive reports `+4 added, ~2 modified, -0`.
 
 - `python3 -m unittest discover -s tests -v` — 253 tests, 0 failures
   (217 prior + 36 new in `tests/test_standalone_project_boundary.py`:
