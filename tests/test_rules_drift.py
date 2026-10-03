@@ -10,7 +10,10 @@ import init_project
 import rules_drift
 
 
-WORKFLOW = "BFS → DFS → BFS. Each change requires two commits. Run `node scripts/check-openspec-change-names.mjs` first."
+WORK_ON_MAIN = "Work directly on `main` by default; do not create a branch or worktree unless the user asks for one or designates one."
+WORK_ON_MAIN_EXCEPTION = "unless the user asks for one or designates one"
+
+WORKFLOW = f"BFS → DFS → BFS. Each change requires two commits. Run `node scripts/check-openspec-change-names.mjs` first. {WORK_ON_MAIN}"
 COMPLETION = "Completion requires the checks. Each change requires two commits. Build success is not release evidence."
 
 
@@ -56,6 +59,25 @@ class RulesDriftTests(unittest.TestCase):
         after = {name: (project / ".ai-rules" / name).read_bytes() for name in before}
         self.assertEqual(before, after)
 
+    def test_work_on_main_clause_reported_when_absent(self):
+        _, _, project = self.make_project(
+            workflow="BFS → DFS → BFS. Each change requires two commits. Run `node scripts/check-openspec-change-names.mjs` first."
+        )
+        labels = [item["label"] for item in rules_drift.drift(project)]
+        self.assertIn("work-on-main rule", labels)
+
+    def test_work_on_main_clause_present_is_not_reported(self):
+        _, _, project = self.make_project()
+        labels = [item["label"] for item in rules_drift.drift(project)]
+        self.assertNotIn("work-on-main rule", labels)
+
+    def test_opt_out_marker_suppresses_the_work_on_main_clause(self):
+        _, _, project = self.make_project(workflow="BFS only " + rules_drift.OPT_OUT)
+        path = project / ".ai-rules" / "workflow.md"
+        before = path.read_bytes()
+        self.assertEqual(rules_drift.drift(project), [])
+        self.assertEqual(before, path.read_bytes())
+
     def test_scaffold_handoff_detected(self):
         _, _, project = self.make_project(handoff="Replace this section with current implementation and verification evidence\n")
         self.assertTrue(rules_drift.scaffold_handoff(project))
@@ -84,6 +106,14 @@ class TemplateSourceTests(unittest.TestCase):
         self.assertIn("check-openspec-change-names", templates[".ai-rules/workflow.md"])
         for relative in ("README.md", "ROADMAP.md", "AGENTS.md", "HANDOFF.md", ".ai-rules/completion.md", ".ai-gate/gate.yaml"):
             self.assertIn(relative, templates)
+
+    def test_templates_carry_the_work_on_main_rule(self):
+        templates = init_project.load_templates()
+        for relative in (".ai-rules/workflow.md", "AGENTS.md"):
+            with self.subTest(relative=relative):
+                text = templates[relative]
+                self.assertIn(WORK_ON_MAIN, text)
+                self.assertIn(WORK_ON_MAIN_EXCEPTION, text)
 
     def test_no_embedded_template_copy(self):
         self.assertFalse(hasattr(init_project, "TEMPLATES"))

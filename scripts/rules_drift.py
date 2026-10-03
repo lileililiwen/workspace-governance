@@ -35,6 +35,11 @@ CLAUSES: dict[str, tuple[tuple[str, str], ...]] = {
         ("BFS workflow model", "BFS"),
         ("two-commit rule", "two commits"),
         ("OpenSpec name preflight", "check-openspec-change-names"),
+        # Keyed to the rule's subject rather than its full phrasing: it is the
+        # highest-carry needle that still survives re-wrapping, so a finding
+        # means the rule is genuinely absent rather than worded differently.
+        # See openspec/changes/work-on-main-baseline-rule/design.md section 5.
+        ("work-on-main rule", "on `main`"),
     ),
     ".ai-rules/completion.md": (
         ("two-commit rule", "two commits"),

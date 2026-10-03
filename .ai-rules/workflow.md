@@ -7,6 +7,10 @@
 3. DFS: implement one registry/check/deployment requirement at a time.
 4. BFS: re-check all registered projects, generated manifests, security boundaries, OpenSpec names, CI parity, and evidence status.
 
+## Git state
+
+Work directly on `main` by default; do not create a branch or worktree unless the user asks for one or designates one.
+
 ## OpenSpec lifecycle
 
 Run `openspec list`, set `current_spec` in `HANDOFF.md`, and run `node scripts/check-openspec-change-names.mjs` before status or instructions. Implement one change, run the local checker and tests, validate strictly, archive without `--skip-specs`, and inspect the staged diff.

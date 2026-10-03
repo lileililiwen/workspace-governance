@@ -28,6 +28,17 @@ beside an existing one.
 
 ## Boundaries
 
+- **Work directly on `main` by default; do not create a branch or worktree
+  unless the user asks for one or designates one.** This is canonical shared
+  baseline text, not a preference of this repository. It is carried in
+  `templates/project/.ai-rules/workflow.md` and `templates/project/AGENTS.md`,
+  copied to new projects by `scripts/init_project.py`, and reported
+  fleet-wide as the `work-on-main rule` clause of
+  `python3 scripts/rules_drift.py --root .. --check`. A repository that
+  documents it in its own words opts out per file with
+  `<!-- workspace-governance:rules-customized -->`. The report is triage, not a
+  gate — see `skills/workspace-governance/references/rules-baseline.md` for
+  that limit and the `rules-drift-gate-wiring` follow-up.
 - Read first: `python3 scripts/workspace_check.py --self-check` passes on a
   healthy checkout. The audit is authoritative; `scripts/maturity_audit.py`
   only reports its counts.

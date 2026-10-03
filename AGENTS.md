@@ -3,6 +3,7 @@
 - Read `README.md`, `HANDOFF.md`, and the selected OpenSpec change before work.
 - Use OpenSpec for non-trivial governance changes.
 - Use BFS → DFS → BFS: map portfolio impact, implement one coherent contract, then re-audit all consumers.
+- Work directly on `main` by default; do not create a branch or worktree unless the user asks for one or designates one. Preserve unrelated uncommitted work and never sweep it into a commit.
 - Run `python3 scripts/workspace_check.py --self-check` before completion.
 - Run `python3 scripts/jenkins_manifest.py --check` for deployment-related changes.
 - Existing projects keep declarations and exceptions; shared runtimes remain centralized.

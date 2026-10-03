@@ -2,11 +2,32 @@
 
 ## Read first
 
-- `templates/project/AGENTS.md` — the only source of the shared rules text.
-- `.ai-rules/workflow.md` — BFS → DFS → BFS, the OpenSpec lifecycle, and the
-  two-commit rule.
-- `.ai-rules/completion.md` — what "complete" requires.
+- `templates/project/AGENTS.md` — the shared rules text a new project receives.
+- `templates/project/.ai-rules/workflow.md` and
+  `templates/project/.ai-rules/completion.md` — the canonical rule files.
+  `templates/project/**` as a whole is the single source; `AGENTS.md` is one
+  file in it, not the only one.
 - `openspec/specs/rules-baseline/spec.md` — the canonical contract.
+
+## The work-on-`main` rule
+
+Work directly on `main` by default; do not create a branch or worktree unless
+the user asks for one or designates one.
+
+It is canonical baseline text, carried byte-identically in
+`templates/project/.ai-rules/workflow.md` and `templates/project/AGENTS.md`,
+and copied to a new project by `scripts/init_project.py`. It is reported
+fleet-wide as the `work-on-main rule` clause of
+`scripts/rules_drift.py --root .. --check`, against the needle `` on `main` ``.
+
+Two limits worth stating rather than discovering:
+
+- The drift report is **triage, not a gate**. It is wired into no check, so
+  this rule is *reported*, never *enforced*. Gate wiring is tracked
+  separately as `rules-drift-gate-wiring` in `ROADMAP.md`.
+- A repository that documents the rule in its own words and carries the
+  marker `<!-- workspace-governance:rules-customized -->` in the rule file is
+  skipped for that file.
 
 ## Run
 

@@ -71,6 +71,24 @@
 > database and role; endpoint and credentials are environment-specific
 > and no Mac hostname is a product default.
 
+## Proposed follow-up: wire the rules drift report into a gate
+
+> **Status (2026-10-03):** Proposed, not started. Tracked as decision `D5` in
+> `decisions.json` and as the change `rules-drift-gate-wiring`.
+>
+> `scripts/rules_drift.py` is currently a triage report that no gate calls.
+> `scripts/workspace_check.py` imports only `scaffold_handoff` from it; the
+> clause-level `drift()` report is invoked by neither `workspace_check.py`,
+> `auto_gate.py`, nor CI. The `work-on-main rule` clause added by
+> `openspec/changes/work-on-main-baseline-rule/` is therefore **reported, not
+> enforced** — under ruling D18, a verifier that no gate runs does not gate.
+>
+> The proposed change calls `rules_drift.check()` from `workspace_check.run`
+> and blocks through the existing `auto_gate.py --fail-on-warnings` path. It is
+> deliberately not folded into `work-on-main-baseline-rule`, because it turns a
+> 148-finding triage report into a fleet-wide gate in a single step, and that
+> deserves its own change with its own baseline.
+
 ## Explicit non-goals
 
 - No universal application framework.

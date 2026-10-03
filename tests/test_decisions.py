@@ -267,14 +267,27 @@ class RealRegisterTests(unittest.TestCase):
 
     def test_real_register_loads(self):
         loaded = load_decisions(self.path)
-        self.assertEqual({d.id for d in loaded}, {"D1", "D2", "D3", "D4"})
+        ids = [d.id for d in loaded]
+        # D1-D4 are the seeded register and must always be present. Later
+        # decisions are legitimate additions, so assert the seeded set is a
+        # subset and that ids stay unique and contiguous rather than freezing
+        # the register to exactly four entries.
+        self.assertTrue({"D1", "D2", "D3", "D4"}.issubset(set(ids)), ids)
+        self.assertEqual(len(ids), len(set(ids)), "duplicate decision id")
+        self.assertEqual(ids, [f"D{n}" for n in range(1, len(ids) + 1)], ids)
 
     def test_every_entry_is_accepted(self):
         loaded = load_decisions(self.path)
         for entry in loaded:
             self.assertEqual(entry.status, "accepted", entry.id)
-            self.assertEqual(entry.date, "2026-09-30", entry.id)
             self.assertEqual(entry.owner_project, "workspace-governance", entry.id)
+            self.assertRegex(entry.date, r"^\d{4}-\d{2}-\d{2}$", entry.id)
+
+    def test_seeded_entries_keep_their_original_date(self):
+        loaded = load_decisions(self.path)
+        for entry in loaded:
+            if entry.id in {"D1", "D2", "D3", "D4"}:
+                self.assertEqual(entry.date, "2026-09-30", entry.id)
 
     def test_d2_restates_public_catalog_exclusion(self):
         loaded = load_decisions(self.path)
@@ -320,7 +333,8 @@ class CliSummaryTests(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertIn("decisions", payload)
         ids = [item["id"] for item in payload["decisions"]]
-        self.assertEqual(set(ids), {"D1", "D2", "D3", "D4"})
+        self.assertTrue({"D1", "D2", "D3", "D4"}.issubset(set(ids)), ids)
+        self.assertEqual(len(ids), len(set(ids)), "duplicate decision id")
         for item in payload["decisions"]:
             self.assertEqual(set(item.keys()), {"id", "title", "status", "date"})
 
