@@ -142,7 +142,7 @@ rule can decide (`data-set` was dropped for exactly that reason).
 
 | Surface | Claim synonyms | Bounded, read-only evidence |
 |---|---|---|
-| `application-source` | application source, extension application, source, implementation | a language source file under a source root (`src`, `lib`, `app`, `apps`, `packages`, `tools`, `cmd`, `internal`, `server`, `client`) or the repository root, minus test/fixture/generated paths |
+| `application-source` | no application source, no extension application, application source, extension application, no source | a language source file under a source root (`src`, `lib`, `app`, `apps`, `packages`, `tools`, `cmd`, `internal`, `server`, `client`) or the repository root, minus test/fixture/generated paths |
 | `repository-content` | planning artifacts only, specifications and documentation only, documentation only, nothing is implemented | the same census, not restricted to a source root |
 | `build` | build | a `*.sln`, `*.slnx`, `*.csproj`, `Cargo.toml`, `package.json`, `pyproject.toml`, `go.mod`, `pubspec.yaml`, or `CMakeLists.txt` |
 | `test` | tests, test suite, test project | a `tests`/`test`/`__tests__`/`spec` root, a `*.Tests/*.csproj`, or a file matching a language test pattern |
@@ -152,7 +152,7 @@ rule can decide (`data-set` was dropped for exactly that reason).
 | `web-client` | web client, web UI, frontend, SPA | a `client`/`web`/`frontend`/`wwwroot`/`ui` root, or a `package.json` declaring a UI framework |
 | `mobile-client` | mobile client, mobile app, Flutter client | a Flutter `pubspec.yaml`, an Apple project/workspace, an `android`+`ios` pair, or a `*.dart` file outside `packages/` |
 | `migrations` | database migrations, migrations | a `migrations`/`Migrations`/`alembic` root, or a `*.sql` inside one |
-| `deployment` | deployment, deployment evidence | a `compose*.y(a)ml` at any depth, a `deployment/` root, or a declared `deployment.compose_file` that resolves |
+| `deployment` | deployment, deployment evidence | a repository declaring `deployment.deployable: false` has none — that declaration is consulted first. Otherwise a `compose*.y(a)ml` at any depth, a `deployment/` root, or a declared `deployment.compose_file` that resolves |
 | `provider-integration` | provider integration, provider, sibling platform integration | a `capabilities[].consumes[]` record, or a pinned `Platform.*` package in a manifest |
 | `production-evidence` | production evidence, production verification, release evidence, published, released | a `release_evidence` block, or a `promote` entry in the promotion ledger |
 
@@ -196,32 +196,44 @@ is untested rather than verified.
 ### The measured corpus
 
 Measured on the current tree. `design.md` §5 recorded 7 contradicted
-repositories and 19 contradicted surfaces on 2026-10-03; five of those
+repositories and 19 contradicted surfaces on 2026-10-03; six of those
 seven READMEs have since been corrected, so the corpus is smaller now.
 
 | Repository | README claim | Surface | Evidence | Outcome |
 |---|---|---|---|---|
-| `argoset` | `README.md:31` "live source adapters … not implemented in this checkout" | `application-source` | `apps/api/src/auth.rs` | `ERROR` ×1 |
-| `care-bridge` | `README.md:17` "No deployment is provisioned" | `deployment` | `compose.yaml` | `ERROR` ×1 |
-| `retake-kit` | `README.md:42` "no production deployment exists" | `deployment` | `compose.yaml` | `ERROR` ×1 |
-| `devloom` | `README.md:9` "nothing is deployed" | `deployment` | `compose.yaml` | `ERROR` ×1 |
+| `argoset` | `README.md:31` "live source adapters … not implemented in this checkout" | `application-source` | `apps/api/src/auth.rs` | clean — false positive, see below |
+| `care-bridge` | `README.md:17` "No deployment is provisioned" | `deployment` | `compose.yaml` | clean — false positive, see below |
+| `retake-kit` | `README.md:42` "no production deployment exists" | `deployment` | `compose.yaml` | clean — false positive, see below |
+| `devloom` | `README.md:9` "nothing is deployed" | `deployment` | `compose.yaml`, `Dockerfile` | clean — false positive, see below |
 | `kairosa` | `README.md:9` five named surfaces, all absent | — | 39 source files, `tests/`, a CI workflow, none of it claimed | clean — the claim is scoped |
 | `chronicleaf` | `README.md:21` ten named features | — | n/a | no finding; 1 coverage gap |
 | `opendockify` | `README.md:52` "not implemented in the MVP" | — | n/a | no finding; 1 coverage gap |
 | `platform-contracts` | `README.md:15` "The project is planning-only." | — | n/a | no finding; 1 coverage gap |
 | `pluggify`, `testify`, `aesthra`, `reelio`, `shopifireman`, `rostera` | claims now describe the tree accurately | — | — | clean |
 
-**Two measured precision limits**, recorded rather than smoothed over:
+**Four measured false positives, since fixed in the check.** The rule's first
+live run flagged four repositories whose READMEs were accurate. All four are
+clean now; the repair was to the evidence rules, not to any README, because
+editing an accurate document into a false one to satisfy a wrong rule is the
+failure mode this check exists to catch.
 
-1. The `deployment` evidence rule treats any `compose*.y(a)ml` as the
-   `deployment` surface, and all three deployment findings above are a
-   claim that denies a *provisioned* deployment while the repository
-   holds a *local* Compose file. The claim and the rule disagree about
-   what "deployed" means. Whether to narrow the evidence rule is an
-   owner decision; the rule is implemented as the design specifies it.
-2. The `application-source` census is whole-tree, so the `argoset`
-   finding is a claim about *live source adapters for named platforms*
-   answered by any source file under a source root.
+1. **`deployment` read the tree before the declaration.** A repository
+   declaring `deployment.deployable: false` has, by its own declaration, no
+   deployment surface, but a local `compose.yaml` — present in `care-bridge`,
+   `retake-kit` and `devloom` purely to run locally — was enough to contradict
+   an accurate claim. The rule now consults `deployment.deployable` first and
+   only falls through to the tree when the repository claims to be deployable,
+   so a real deployment is still caught and only the local case is forgiven.
+2. **`application-source` resolved through bare `source`.** The `argoset`
+   sentence is about *live source adapters for named platforms* — provider
+   language — and has nothing to do with application source. The synonyms now
+   require explicit application-source or extension-application wording, so
+   such a sentence becomes a coverage gap instead of a contradiction.
+
+Neither fix disables detection. `rostera`'s original wording still produces its
+`build` and `ci` contradictions, and a repository declaring `deployable: true`
+while holding a Compose file is still a contradiction; both directions are
+pinned by regression tests.
 
 ### What this check does not enforce
 

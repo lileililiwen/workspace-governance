@@ -73,6 +73,19 @@ class FixtureProject:
 
 
 
+# The measured fleet's deployment declarations, copied from each repository's
+# own `.project.json`. All four repositories that the rule first flagged as
+# lying declare `deployable: false`, which is why the evidence rule reads the
+# declaration before the tree. `careBridge` and `retakeKit` additionally name
+# their own local `compose_file`, and `devloom` holds a `compose.yaml` plus a
+# `Dockerfile` while declaring `compose_file: null` -- local-only files that
+# the tree-reading rule used to mistake for a provisioned deployment.
+ARGOSET_DECLARATION = {"deployment": {"deployable": False, "jenkins_job": None, "compose_file": None}}
+CARE_BRIDGE_DECLARATION = {"deployment": {"deployable": False, "jenkins_job": None, "compose_file": "compose.yaml"}}
+RETAKE_KIT_DECLARATION = {"deployment": {"deployable": False, "jenkins_job": None, "compose_file": "compose.yaml"}}
+DEVLOOM_DECLARATION = {"deployment": {"deployable": False, "jenkins_job": None, "compose_file": None}}
+
+
 # ---------------------------------------------------------------------------
 # The measured corpus, as fixtures (`design.md` §5)
 # ---------------------------------------------------------------------------
@@ -82,19 +95,37 @@ class CorpusTests(unittest.TestCase):
     """The measured corpus as fixtures.
 
     `design.md` §5 recorded 7 contradicted repositories and 19 contradicted
-    surfaces on 2026-10-03. Five of those seven READMEs have since been
-    corrected, so the corpus the rule sees today is the one asserted here: the
-    claims that still contradict the tree, the two repositories that must stay
-    clean, and the statements that fall into the aggregate coverage metric. The
-    7/19 measurement is kept in the change artifacts, not asserted as a stale
-    expectation.
+    surfaces on 2026-10-03. Six of those seven READMEs have since been
+    corrected, so the corpus the rule actually sees today carries no
+    contradiction at all.
+
+    These fixtures pin the measurement rather than the present day, because the
+    property worth protecting is not "is anything red now" but "does the rule
+    still fire in both directions". Of the five contradictions left in the
+    fixtures, four were **false positives** — checker defects, not README lies:
+
+    * `argoset` — "live source adapters for named platforms" is provider
+      language; the synonym set carried bare `source` and resolved it to the
+      application-source surface.
+    * `careBridge`, `retakeKit`, `devloom` — each denies a provisioned
+      deployment while declaring `deployable: false`, yet each holds a local
+      Compose file (`devloom` also a `Dockerfile`). The `deployment` evidence
+      rule read the tree before the declaration and called a local run a
+      deployment.
+
+    `rostera` is the one **true** positive: its README really did deny a build
+    and a CI workflow the tree held. The rule still catches that exact text, and
+    the README was corrected in commit `c032e87` afterwards. Pinning it is what
+    proves the false-positive fix did not blunt the check into silence.
     """
 
     def corpus(self) -> dict[str, pcq.ClaimReport]:
         reports: dict[str, pcq.ClaimReport] = {}
 
         # argoset: denies live source adapters while the tree holds Rust source
-        # under a source root.
+        # under a source root. `source` here is provider language ("adapters for
+        # named platforms"), not the application-source surface, so this README
+        # is accurate and must stay clean. See the synonym note in `design.md` §4.
         project = FixtureProject(
             self,
             "# argoset\n\n"
@@ -102,11 +133,12 @@ class CorpusTests(unittest.TestCase):
             "platforms, hosted monitoring/deployment, SSO and commercial features.\n",
         )
         project.file("apps/api/src/auth.rs", "pub fn auth() {}\n")
-        reports["argoset"] = project.evaluate()
+        reports["argoset"] = project.evaluate(ARGOSET_DECLARATION)
 
         # careBridge: denies a provisioned deployment while the tree holds a
-        # Compose file. This is the `deployment` evidence rule reading a local
-        # Compose as the surface; see the measured-corpus note in `docs/`.
+        # Compose file. The repository declares `deployable: false`, so the
+        # compose file is a local run and the denial is accurate; see the
+        # `deployment` evidence rule and its regression test below.
         project = FixtureProject(
             self,
             "# careBridge\n\n"
@@ -117,7 +149,7 @@ class CorpusTests(unittest.TestCase):
         project.file("src/CareBridge.Api/Program.cs", "var b = WebApplication.CreateBuilder(args);")
         project.file("compose.yaml", "services:\n  api:\n    build: .\n")
         project.file("Directory.Packages.props", '<PackageVersion Include="Platform.Domain" Version="1.2.3" />')
-        reports["careBridge"] = project.evaluate()
+        reports["careBridge"] = project.evaluate(CARE_BRIDGE_DECLARATION)
 
         # retakeKit: denies production deployment, holds a local Compose.
         project = FixtureProject(
@@ -127,9 +159,11 @@ class CorpusTests(unittest.TestCase):
             "claim is made.\n",
         )
         project.file("compose.yaml", "services:\n  api:\n    build: .\n")
-        reports["retakeKit"] = project.evaluate()
+        reports["retakeKit"] = project.evaluate(RETAKE_KIT_DECLARATION)
 
-        # devloom: denies a deployed runtime, holds a portable Compose.
+        # devloom: denies a deployed runtime while holding a compose file AND a
+        # Dockerfile. Both are local-only: the repository declares
+        # `deployable: false` and `compose_file: null`.
         project = FixtureProject(
             self,
             "# devloom\n\n"
@@ -137,7 +171,8 @@ class CorpusTests(unittest.TestCase):
             "production promotion is BLOCKED fail-closed because no authorized target exists.\n",
         )
         project.file("compose.yaml", "services:\n  web:\n    build: .\n")
-        reports["devloom"] = project.evaluate()
+        project.file("Dockerfile", "FROM scratch\n")
+        reports["devloom"] = project.evaluate(DEVLOOM_DECLARATION)
 
         # rostera: the build marker is the `.slnx` form only, so a rule that
         # recognised just `*.sln` would miss it. The rest of its measured status
@@ -216,14 +251,16 @@ class CorpusTests(unittest.TestCase):
             name: contradicted_surfaces(report) for name, report in reports.items() if report.findings
         }
         gaps = {name for name, report in reports.items() if report.gaps}
-        self.assertEqual(contradicted.get("argoset"), ["application-source"])
-        self.assertEqual(contradicted.get("careBridge"), ["deployment"])
-        self.assertEqual(contradicted.get("retakeKit"), ["deployment"])
-        self.assertEqual(contradicted.get("devloom"), ["deployment"])
+        for name in ("argoset", "careBridge", "retakeKit", "devloom"):
+            self.assertEqual(
+                contradicted.get(name),
+                None,
+                f"{name} is an accurate README; the checker, not the README, was wrong",
+            )
         self.assertEqual(
             sorted(contradicted.get("rostera", [])),
             ["build", "ci"],
-            "a `*.slnx`-only build is a build surface",
+            "a `*.slnx`-only build is a build surface, and the one true positive survives",
         )
         self.assertEqual(
             gaps,
@@ -240,17 +277,18 @@ class CorpusTests(unittest.TestCase):
         contradicted = [name for name, report in reports.items() if report.findings]
         self.assertEqual(
             sorted(contradicted),
-            ["argoset", "careBridge", "devloom", "retakeKit", "rostera"],
+            ["rostera"],
+            "after the false-positive fix only the genuine contradiction remains",
         )
         self.assertEqual(
             sum(len(report.contradicted) for report in reports.values()),
-            6,
+            2,
             "one finding per contradicted surface",
         )
         self.assertEqual(sum(len(report.gaps) for report in reports.values()), 3)
         self.assertEqual(
             sorted(name for name, report in reports.items() if not report.findings and not report.gaps),
-            ["driftwatchdog", "kairosa"],
+            ["argoset", "careBridge", "devloom", "driftwatchdog", "kairosa", "retakeKit"],
             "kairosa is clean despite 39 source files, a test root and a CI workflow",
         )
 
@@ -277,6 +315,53 @@ class ClaimScopeTests(unittest.TestCase):
         report = project.evaluate()
         self.assertEqual(report.findings, [])
         self.assertEqual(report.gaps, [])
+
+    def test_a_local_compose_file_is_not_deployment_evidence(self) -> None:
+        """A root compose file describes a LOCAL run, not a provisioned deployment.
+
+        Regression. The deployment evidence rule read the tree before the
+        declaration, so every repository with a local `compose.yaml` looked like
+        it had a deployment surface. On the rule's first live run that produced
+        3 false positives out of 4, on repositories whose READMEs correctly said
+        deployment was not provisioned.
+        """
+        project = FixtureProject(self, "# x\n\nNo production deployment exists.\n")
+        project.file("compose.yaml", "services:\n  api:\n    image: x\n")
+        report = project.evaluate({"deployment": {"deployable": False, "compose_file": "compose.yaml"}})
+        self.assertEqual(report.findings, [], "deployable: false means no deployment surface")
+        self.assertEqual(report.gaps, [])
+
+    def test_a_provisioned_compose_file_is_still_deployment_evidence(self) -> None:
+        """The narrowing must not blind the check to a real deployment."""
+        project = FixtureProject(self, "# x\n\nNo production deployment exists.\n")
+        project.file("compose.yaml", "services:\n  api:\n    image: x\n")
+        report = project.evaluate({"deployment": {"deployable": True, "compose_file": "compose.yaml"}})
+        self.assertEqual(contradicted_surfaces(report), ["deployment"])
+
+    def test_integration_wording_does_not_resolve_to_application_source(self) -> None:
+        """Regression. "source adapters" is provider language, not application source.
+
+        The synonym set carried bare `source` and bare `implementation`, so a
+        sentence about deferring a live source integration resolved to the
+        application-source surface and fired against the tree it was describing
+        accurately.
+
+        The outcome is a coverage gap rather than silence: once `source` no
+        longer resolves, this sentence names no verifiable surface at all, so it
+        is honestly reported as unscoped. That is the correct destination — the
+        aggregate coverage metric, never a contradiction the owner cannot fix.
+        """
+        project = FixtureProject(
+            self,
+            "# x\n\nDeferred and not implemented in this checkout: live source adapters for "
+            "named platforms, and source-first provenance.\n",
+        )
+        project.file("src/app/main.rs", "fn main() {}")
+        report = project.evaluate()
+        self.assertEqual(report.findings, [], "integration wording is not an application-source claim")
+        self.assertEqual(len(report.gaps), 1, "unverifiable, so counted in the coverage metric")
+        self.assertEqual(report.gaps[0].reason, "negative status statement names no surface the checker can resolve")
+        self.assertEqual(report.contradicted, [])
 
     def test_a_positive_claim_is_not_verified(self) -> None:
         project = FixtureProject(

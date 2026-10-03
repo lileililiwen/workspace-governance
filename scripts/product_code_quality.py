@@ -653,7 +653,25 @@ README_CONDITIONAL_MARKERS = ("when no", "when a", "when the", "if no", "if a", 
 # here, beside the other checker-level tables, because they describe how the
 # tree is read rather than which words a repository may declare.
 CLAIM_SURFACE_SYNONYMS: dict[str, tuple[str, ...]] = {
-    "application-source": ("application source", "extension application", "source", "implementation"),
+    # Bare "source" and bare "implementation" were here and had to go. They are
+    # the words an integration uses — "live source adapters", "source
+    # provenance", "source-first" — so any sentence about deferring a provider
+    # integration resolved to the application-source surface and fired. A surface
+    # name has to be specific enough that a sentence about something else cannot
+    # land on it.
+    #
+    # The denial forms are kept, because there the phrase names the surface
+    # rather than merely containing a common word: "no source" is a claim about
+    # application source, while "source adapters" is a claim about a provider
+    # integration. Matching the denial keeps that detection without reintroducing
+    # the false positive.
+    "application-source": (
+        "no application source",
+        "no extension application",
+        "application source",
+        "extension application",
+        "no source",
+    ),
     "repository-content": (
         "planning artifacts only",
         "specifications and documentation only",
@@ -1269,6 +1287,23 @@ def surface_evidence(
         )
         return (evidence is not None, evidence or "")
     if surface == "deployment":
+        # The declaration is the authority, and it comes FIRST. A repository
+        # whose `deployment.deployable` is false has no deployment surface no
+        # matter what files it carries: a root `compose.yaml` describes a LOCAL
+        # run, and `compose_file` records the local runtime, not a provisioned
+        # environment. Reading the tree first made every local compose file look
+        # like deployment evidence, which produced a false positive on 3 of the
+        # 4 repositories the rule first saw.
+        if isinstance(declaration, dict):
+            deployment = declaration.get("deployment")
+            if isinstance(deployment, dict):
+                deployable = deployment.get("deployable")
+                if deployable is False:
+                    return (False, "declaration deployment.deployable is false")
+                if deployable is True:
+                    compose = deployment.get("compose_file")
+                    if isinstance(compose, str) and compose and _resolves_inside(project_path, compose):
+                        return (True, f"declaration deployable with {compose}")
         evidence = _first(census, lambda rel: re.match(r"^compose.*\.ya?ml$", Path(rel).name, re.IGNORECASE) is not None)
         if evidence is None:
             root = census.dirs.intersection({"deployment", "deploy"})

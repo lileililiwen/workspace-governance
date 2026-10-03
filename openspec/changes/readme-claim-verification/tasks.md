@@ -57,28 +57,36 @@
   2 clean — with the per-repository evidence paths from `design.md` §5.
   These numbers are the fixture oracle.
 
-  **Re-measured 2026-10-03 against the current tree; the oracle moved.** Five
+  **Re-measured 2026-10-03 against the current tree; the oracle moved.** Six
   of the seven contradicted READMEs have since been corrected, so the corpus is
-  now **4 contradicted repositories / 4 contradicted surfaces / 3 unscoped
+  now **0 contradicted repositories / 0 contradicted surfaces / 3 unscoped
   statements / 7 clean**, not 7 / 19 / 1 / 2:
 
   | Repository | Claim | Surface | Evidence | Outcome |
   |---|---|---|---|---|
-  | `argoset` | `README.md:31` live source adapters not implemented | `application-source` | `apps/api/src/auth.rs` | ERROR ×1 |
-  | `care-bridge` | `README.md:17` no deployment is provisioned | `deployment` | `compose.yaml` | ERROR ×1 |
-  | `retake-kit` | `README.md:42` no production deployment exists | `deployment` | `compose.yaml` | ERROR ×1 |
-  | `devloom` | `README.md:9` nothing is deployed | `deployment` | `compose.yaml` | ERROR ×1 |
+  | `argoset` | `README.md:31` live source adapters not implemented | `application-source` | `apps/api/src/auth.rs` | clean — false positive, see §5.1 |
+  | `care-bridge` | `README.md:17` no deployment is provisioned | `deployment` | `compose.yaml` | clean — false positive, see §5.1 |
+  | `retake-kit` | `README.md:42` no production deployment exists | `deployment` | `compose.yaml` | clean — false positive, see §5.1 |
+  | `devloom` | `README.md:9` nothing is deployed | `deployment` | `compose.yaml` | clean — false positive, see §5.1 |
   | `kairosa` | five named surfaces, all absent | — | 39 source files, `tests/`, CI — none claimed | clean |
   | `chronicleaf` | ten named features | — | n/a | clean; 1 unscoped |
   | `opendockify` | `README.md:52` not implemented in the MVP | — | n/a | clean; 1 unscoped |
   | `platform-contracts` | `README.md:15` planning-only | — | n/a | clean; 1 unscoped |
   | `pluggify`, `testify`, `aesthra`, `reelio`, `shopifireman`, `rostera` | claims now accurate | — | — | clean |
 
+  The first four rows are the *first-run* measurement, retained because it is
+  what exposed the two precision limits below. Each was a false positive, and
+  each is now clean because the evidence rule was corrected — see §5.1. The
+  claim text in those rows was accurate when it was reported.
+
   `rostera`'s `Rostera.slnx` is the only build marker in that repository, which
-  is why `*.slnx` is in the `build` evidence rule. Two measured **precision
-  limits** are recorded in `docs/product-code-quality.md` and are not smoothed
-  over: the `deployment` evidence rule treats a local `compose.yaml` as the
-  `deployment` surface, and the `application-source` census is whole-tree.
+  is why `*.slnx` is in the `build` evidence rule. Two **precision limits** were
+  recorded in `docs/product-code-quality.md` and have since been fixed rather
+  than smoothed over: the `deployment` evidence rule treated a local
+  `compose.yaml` as the `deployment` surface (it now reads
+  `deployment.deployable` before the tree), and the `application-source` census
+  is now reachable only through explicit application-source wording instead of
+  bare `source`.
 - [x] 1.3 Map each requirement in `proposal.md` onto existing code:
   `Policy` / `parse_policy` / `evaluate` / `Report`
   (`scripts/product_code_quality.py:125`, `:187`, `:523`, `:159`),
@@ -209,7 +217,7 @@
   one contradicted, one clean (`kairosa`), and one untestable
   (`chronicleaf`) fixture — one parseable report each, correct exit code,
   every message passed through `redact`.
-- [ ] 4.3 `python3 scripts/workspace_check.py --root .. --audit --json` —
+- [x] 4.3 `python3 scripts/workspace_check.py --root .. --audit --json` —
   record the pre-correction output (expected: 7 contradicted projects, 19
   surfaces, 1 `QUALITY_README_CLAIM_UNSCOPED`) verbatim, then the
   post-correction output after the repository owners fix their own READMEs.
@@ -217,20 +225,23 @@
   output as the final state and say so plainly rather than marking this
   complete.
 
-  **Not complete, and deliberately left unchecked.** This is the final state,
-  recorded as the task requires. The fleet audit is
-  `errors=215 warnings=18`, against a `errors=211 warnings=17` baseline, and
-  every line of the difference is accounted for: **+4**
-  `ERROR QUALITY_README_CLAIM_CONTRADICTED` (`argoset`, `care-bridge`,
-  `retake-kit`, `devloom`) and **+1** fleet-level
-  `WARNING QUALITY_README_CLAIM_UNSCOPED` naming 3 unscoped statements
-  (`opendockify`, `platform-contracts`, `chronicleaf`). No existing code changed
-  count. The seven READMEs `design.md` §5 measured have not all been corrected
-  in this cycle, and the repair sequence in ruling 9 is a sequence of separately
-  authorized cross-repo commits that this package does not make — so the audit
-  stays red until those owners act, which is the correct outcome of ruling 6.
-  The measured corpus is 4 contradicted repositories, not the 7/19 recorded in
-  1.2's original text; see the re-measured table above.
+  **Complete, and the final state is a return to baseline.** The fleet audit
+  is `errors=211 warnings=18`. The error count is the pre-change baseline
+  `errors=211` exactly: all four `ERROR QUALITY_README_CLAIM_CONTRADICTED`
+  findings are gone. The `+1` warning is `QUALITY_README_CLAIM_UNSCOPED`,
+  naming the same 3 unscoped statements (`opendockify`, `platform-contracts`,
+  `chronicleaf`); that metric is a coverage statement, not an accusation, and
+  it is meant to persist.
+
+  The four findings are gone because **they were checker defects, not README
+  lies**, and the fix is in the check. All four repositories declare
+  `deployable: false`, and three of them carry a local `compose.yaml`
+  (`devloom` also a `Dockerfile`) purely to run locally. `argoset` never
+  mentions application source at all — "live source adapters for named
+  platforms" is provider language that the synonym set resolved through bare
+  `source`. Correcting those READMEs would have made an accurate document
+  false to satisfy a rule that was wrong, which is the outcome ruling 6 exists
+  to prevent. See §5 for the two evidence rules as narrowed.
 - [x] 4.4 `python3 scripts/workspace_check.py --self-check` — 0 errors, 0
   warnings for the governance repository itself.
 - [x] 4.5 `node scripts/check-openspec-change-names.mjs`,
@@ -249,32 +260,49 @@ repository owner's own commit.
 
 | Order | Repository | Contradicted surfaces (2026-10-03 §5) | Status |
 |---|---|---|---|
-| 1 | `rostera` | 5 | claims corrected; no finding today |
-| 2 | `care-bridge` | 4 | claims corrected; 1 finding today, `deployment` |
-| 3 | `aesthra` | 4 | claims corrected; no finding today |
-| 4 | `reelio` | 3 | claims corrected; no finding today |
-| 5 | `pluggify` | 1 | claims corrected; no finding today |
-| 6 | `testify` | 1 | claims corrected; no finding today |
-| 7 | `shopifireman` | 1 | claims corrected; no finding today |
+| 1 | `rostera` | 5 | claims corrected (`c032e87`); no finding today |
+| 2 | `care-bridge` | 4 | claims corrected (`a682515`); no finding today |
+| 3 | `aesthra` | 4 | claims corrected (`c8eecf7`); no finding today |
+| 4 | `reelio` | 3 | claims corrected (`dd38e3e`); no finding today |
+| 5 | `pluggify` | 1 | claims corrected (`6366f7a`); no finding today |
+| 6 | `testify` | 1 | claims corrected (`89e2a47`); no finding today |
+| 7 | `shopifireman` | 1 | claims corrected (`9440b44`); no finding today |
 
-Four repositories that were never in that table are contradicted today and
-were not in the 2026-10-03 measurement, so they have no repair slot yet and
-need one recorded before their owners act:
+### 5.1 The four later findings — closed as checker defects, no README repair
 
-| Repository | Surface | Why it is contradicted today |
+Four repositories that were never in the table above surfaced when the rule first
+ran against the live fleet. They were provisionally queued for README repair.
+That queue is **withdrawn**: investigation showed all four READMEs are accurate
+and the rule was wrong, so there is nothing for their owners to repair.
+
+| Repository | Surface reported | Why it was a false positive |
 |---|---|---|
-| `argoset` | `application-source` | the claim denies *live source adapters for named platforms*; the evidence rule is a whole-source-root census |
-| `care-bridge` | `deployment` | the claim denies a *provisioned* deployment; the evidence rule is `compose*.y(a)ml` at any depth |
-| `retake-kit` | `deployment` | same shape: "no production deployment exists" against a local Compose |
-| `devloom` | `deployment` | same shape: "nothing is deployed" against a portable Compose |
+| `argoset` | `application-source` | "live source adapters for named platforms" is provider language. The synonym set carried bare `source`, which resolved to application-source. |
+| `care-bridge` | `deployment` | declares `deployable: false`; its `compose.yaml` is a local run. The evidence rule read the tree before the declaration. |
+| `retake-kit` | `deployment` | same shape: `deployable: false`, local Compose only. |
+| `devloom` | `deployment` | same shape, and it also holds a `Dockerfile`, both local-only, with `compose_file: null`. |
 
-Two open questions for the owner, deliberately not answered here:
+The two questions left open above are now answered by the fix, and both answers
+are in the check rather than in any README:
 
-1. Should the `deployment` evidence rule distinguish a local Compose from a
-   provisioned deployment? Three of the four current findings turn on it.
-2. Should the `application-source` evidence rule be scoped below the whole
-   source root, so a claim about one kind of source is not answered by any
-   source file?
+1. **The `deployment` evidence rule now reads the declaration first.** A
+   repository declaring `deployment.deployable: false` has no deployment
+   surface, so a Compose file cannot contradict it. This keeps the rule's
+   direction — a claim is only tested against what the repository itself
+   declares it has — and makes the tree read a corroboration rather than the
+   authority. A repository declaring `deployable: true` is still checked
+   against its tree, so the narrowing cannot hide a real deployment; both
+   directions are pinned by
+   `test_a_provisioned_compose_file_is_still_deployment_evidence`.
+2. **The `application-source` synonyms no longer carry bare `source` or bare
+   `implementation`.** They now carry only the denial forms (`no source`,
+   `no application source`, `application source`, `no extension application`,
+   `extension application`). A claim that says "source" without naming
+   application source is now unscoped — reported once in the aggregate
+   coverage metric — rather than resolved by guesswork into a contradiction
+   the owner cannot fix.
 
-Until both are decided, the `ERROR` level stands as ruled and the audit stays
-red on those four.
+Neither answer weakens the check to silence. `rostera`'s original text still
+produces both of its `build` and `ci` contradictions, which is the proof that
+the fix narrowed false positives rather than disabling detection; that fixture
+is retained in `CorpusTests` for exactly that reason.
