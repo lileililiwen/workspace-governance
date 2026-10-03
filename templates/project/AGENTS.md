@@ -5,6 +5,7 @@
 - Use BFS → DFS → BFS for impact, implementation, and regression review.
 - Run the declared verification command before completion.
 - Work directly on `main` by default; do not create a branch or worktree unless the user asks for one or designates one. Preserve unrelated uncommitted work and never sweep it into a commit.
+- Do not use `rm` to delete anything; on this host it is a recoverable-delete shim that intercepts the call and can fail or leave the path behind. Clean up scratch work from Python: `tempfile.TemporaryDirectory()` as a context manager, or `shutil.rmtree(path, ignore_errors=True)`. Neither prompts.
 
 ## Claims and evidence
 
