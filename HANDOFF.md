@@ -93,6 +93,75 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- `spec-purpose-backfill-gate` (`6de0dd7`) evidence. Archiving a change writes
+  `TBD - created by archiving change <name>.` into the `## Purpose` of every spec
+  it produced, so a spec whose purpose is the string TBD reads as a finished
+  spec. Measured 2026-10-03: 79 repositories carry an `openspec/specs` tree
+  holding **1,958** spec files, of which **1,234** across **71** repositories
+  still hold the marker — 1,229 in the current form with the trailing
+  `Update Purpose after archive.` sentence, 5 in the earlier short form, and 7
+  of them with a blank line between the heading and the marker. The archiver is
+  third-party (`@fission-ai/openspec`), so the defect is held here.
+
+  `SPEC_PURPOSE_PLACEHOLDER` is **ERROR** and names the spec file relative to
+  its repository plus the change the marker records, so the remediation is
+  "resolve this spec from this change". It is its own finding-code family, is
+  skipped for a repository with no specs tree, and is deliberately not gated on
+  `profile_requirements`: a descriptive rule must not become a requirements
+  driver.
+
+  The rule is **fenced off the fleet** by `SPEC_PURPOSE_AUDIT_ENABLED = False`,
+  a committed repo-relative constant in `scripts/workspace_check.py` following
+  the `TAXONOMY_AUDIT_ENABLED` pattern exactly, and it is the only hold — no
+  environment variable, no skip flag, no exemption registry. The severity was
+  not softened to WARNING to achieve it. Both states are measured on the real
+  fleet, not only on a fixture: the audit reports **205 errors** with the fence
+  closed and **1,439** with it open, which is 205 plus exactly the 1,234
+  markers. The constant is committed back at `False`.
+
+  `scripts/spec_purpose_backfill.py` is the shared owner of the remediation: a
+  dry run is its only default, `--apply` is its only write path and is
+  all-or-nothing, and every plan row records the source that resolved it. It
+  prefers the archived change's own `## Why` prose — the marker holds the **bare**
+  change name while the archive directory is **date-prefixed**, so the two are
+  joined by stripping `YYYY-MM-DD-`, never by concatenation, which resolves zero
+  files — and falls back to a requirement-derived sentence preserved
+  byte-for-byte from the `openlearning` prior art. A change name matching two
+  archive directories is refused **row-level**, so the other 1,232 rows stay
+  reviewable; 1,089 clear the recorded 120-character `## Why` floor.
+
+  Two defects in the recovered `ff33661` checkpoint were fixed. `--check`
+  applied the drift refusal, so on a fully applied fleet — where every planned
+  marker is legitimately absent — it exited 1 in all three states and could never
+  report "applied"; `build_plan` now takes `verify_committed` and `--check`
+  passes `False`, so not-applied is 3, applied is 0, and re-applied is
+  idempotent at 0. And the marker pattern matched any line *starting* with the
+  marker, so a real sentence appended after it was a finding, contradicting its
+  own comment and the spec delta; the marker must now be the whole `## Purpose`
+  section, with the change name bound to `[\w.-]+` — which a change name
+  satisfies and prose cannot. Measured, this matches the same 1,234 fleet files
+  and no others.
+
+  **D18 is not satisfied, and this is recorded as a blocker rather than claimed
+  as wiring.** The `governance-quality` concern in `driftwatchdog` filters its
+  verdict to the closed allow-list `GOVERNANCE_QUALITY_DECLARED_CODES`, which
+  holds four codes and excludes this one, and it treats the checker's exit 1 as
+  an *expected* exit. With the new-code findings filtered out the concern yields
+  `PASS`, so enabling this rule today would turn this repository's CI red while
+  the fleet gate reported green. Adding `"SPEC_PURPOSE_PLACEHOLDER"` to that set
+  is a separately authorized cross-repo step in a repository this change does not
+  own, and `SPEC_PURPOSE_AUDIT_ENABLED` must stay `False` until it lands. The
+  change is committed **unarchived** for the same reason: archiving would claim a
+  finished gate that does not exist.
+
+  52 new tests. The suite is **553 passing** from 501, with no existing
+  assertion weakened; `--self-check` is 0 errors / 0 warnings; the fleet audit
+  is unchanged at **205 errors / 18 warnings** with the fence closed;
+  `openspec validate spec-purpose-backfill-gate --strict` passes. The 1,234-file
+  fleet write is **not applied** — it is a cross-repo source edit requiring
+  explicit authorization, exactly like the axis migration — and the 2 ambiguous
+  rows are left for an owner to decide by hand.
+
 - `derived-kind-canonical-form` (`97f6c68`) evidence. This is a **checker**
   defect, not 17 portfolio defects: every one of the 17 `KIND_UNKNOWN`
   warnings the fleet audit reported was a *correct* value.
@@ -686,14 +755,24 @@ sibling repository.
    what finally lands the `identity-and-taxonomy` capability spec. Archiving
    them in that order keeps the derived-kind requirement on `main` from being
    split across two histories.
-2. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
+2. `spec-purpose-backfill-gate` (`6de0dd7`) is implemented, tested, and
+   validated, and is deliberately **not archived**: the fence is shut and the
+   gate-wiring dependency is unmet. Two things gate its archive, in order.
+   First, `driftwatchdog`'s `GOVERNANCE_QUALITY_DECLARED_CODES` must gain
+   `"SPEC_PURPOSE_PLACEHOLDER"`, or the concern reports `PASS` while this
+   checker exits 1 — a cross-repo step this change does not own. Second, the
+   1,234-file fleet write is a cross-repo source edit needing explicit
+   authorization: review the dry run, then `--apply`, then set
+   `SPEC_PURPOSE_AUDIT_ENABLED = True` in the same commit. Until both are done,
+   do not enable the rule and do not archive the change.
+3. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
    each is a separate conversation and a separate repository.
-3. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
+4. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
    recorded (product-owned work).
-4. Re-promote each pilot project at its current `HEAD` once its release pipeline
+5. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-5. Commit the sibling declaration/rules edits in their own repositories when
+6. Commit the sibling declaration/rules edits in their own repositories when
    those repositories' pending work is ready.
 
 ## Evidence boundary
