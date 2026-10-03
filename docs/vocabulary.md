@@ -75,8 +75,10 @@ A `kind` is canonical when it is either
    both axes present and canonical.
 
 That second clause exists because the derivation is a **product of two
-enumerated axis sets**: 6 roles × 6 stacks is 36 values, of which **27 are not
-in `kinds`**. A `kind` that is correct by the current rule is therefore often
+enumerated axis sets**: 6 roles × 6 stacks is 36 values, of which **26 are not
+in `kinds`** (the 12 listed values overlap the derivation on only 10 — `shared-library`
+and `typescript-monorepo` are pre-axis shapes, not role/stack pairs). A `kind`
+that is correct by the current rule is therefore often
 absent from the list, and holding a derived value to the list reports a defect
 that no owner can act on. The 17 findings that motivated this
 (`rust-platform` on `forge`, `rust-tooling` on `driftwatchdog`,
