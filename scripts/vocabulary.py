@@ -4,7 +4,9 @@
 `vocabulary.json` at the governance root is the only machine-readable source
 for the canonical `roles` and `stacks` (the two independent project
 classification axes), the canonical `profiles`, canonical `kinds`,
-`placeholder_markers` and `secret_field_substrings`. Consumers
+`placeholder_markers` and `secret_field_substrings`, and the closed
+`readme_claim_surfaces` / `readme_absence_phrases` pair used by the
+`readme-claim-verification` rule. Consumers
 (`workspace_check.py`, `product_code_quality.py`, `maturity_audit.py`) load it
 through this module.
 
@@ -36,6 +38,13 @@ AXIS_ENUM_KEYS = ("roles", "stacks")
 # Each must be a non-empty list of distinct strings; the loader raises
 # `VocabularyError` if any value is missing, empty, duplicated, or non-string.
 OPTIONAL_ENUM_KEYS = ("standalone_statuses", "integration_required_states")
+# The closed README-claim surface set and the absence-phrase vocabulary for the
+# `readme-claim-verification` capability. Optional keys for the same reason as
+# the enums above, and fail-closed when present but unusable: an empty
+# `readme_claim_surfaces` would make every README claim vacuously true, which is
+# a silent pass on the one thing the check exists to catch. The vocabulary is
+# never widened per repository — see `design.md` §10 ruling 3.
+README_CLAIM_KEYS = ("readme_claim_surfaces", "readme_absence_phrases")
 
 
 class VocabularyError(ValueError):
@@ -54,7 +63,9 @@ def load_vocabulary(path: Path) -> dict[str, Any]:
 
     Returns `{"schema_version": int, "roles": frozenset, "stacks":
     frozenset, "profiles": frozenset, "kinds": frozenset,
-    "placeholder_markers": tuple, "secret_field_substrings": tuple}`.
+    "placeholder_markers": tuple, "secret_field_substrings": tuple}`, plus
+    the optional `readme_claim_surfaces` / `readme_absence_phrases` tuples when
+    the file carries them.
     Raises `VocabularyError` naming the file on any problem.
     """
     path = Path(path)
@@ -93,6 +104,20 @@ def load_vocabulary(path: Path) -> dict[str, Any]:
         if len(set(value)) != len(value):
             raise VocabularyError(f"vocabulary {key!r} contains a duplicate entry: {path}")
         vocabulary[key] = frozenset(value)
+    for key in README_CLAIM_KEYS:
+        if key not in raw:
+            continue
+        value = raw[key]
+        if not isinstance(value, list) or not value:
+            raise VocabularyError(f"vocabulary {key!r} must be a non-empty list: {path}")
+        for entry in value:
+            if not isinstance(entry, str) or not entry:
+                raise VocabularyError(f"vocabulary {key!r} entries must be non-empty strings: {path}")
+        if len(set(value)) != len(value):
+            raise VocabularyError(f"vocabulary {key!r} contains a duplicate entry: {path}")
+        # A tuple, not a frozenset: the surface set is reported in a stable
+        # order so a finding stream and a coverage metric are reproducible.
+        vocabulary[key] = tuple(value)
     return vocabulary
 
 

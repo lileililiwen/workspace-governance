@@ -73,6 +73,36 @@ disagrees with its own axes is still visible as `TAXONOMY_LEGACY_VALUE`.
 `KIND_UNKNOWN` keeps its shipped meaning (a `kind` outside the 12 canonical
 kinds) and is not repurposed.
 
+### README-claim vocabulary
+
+`vocabulary.json` also carries two additive arrays for the
+`readme-claim-verification` capability. Both are non-empty and duplicate-free,
+and neither narrows an existing array.
+
+| Key | Contents | Question it answers |
+|---|---|---|
+| `readme_claim_surfaces` | the 13 canonical surface keys: `api`, `application-source`, `build`, `ci`, `deployment`, `migrations`, `mobile-client`, `production-evidence`, `provider-integration`, `repository-content`, `runtime`, `test`, `web-client` | Which surfaces can this check decide from a file tree? A surface with no evidence rule is not a check: `data-set` was dropped by owner ruling for exactly that reason, so `kairosa`'s `data set` phrase is knowingly **unchecked** rather than verified. |
+| `readme_absence_phrases` | the present-tense absence triggers, including the bounded wildcard form `no ... exists` that lets one sentence name a list of surfaces | Which sentences are claims about the repository's current state? |
+
+The loader is fail-closed for both: a missing, empty, or duplicate-bearing list
+raises `VocabularyError` naming the file, and a surface key with no evidence rule
+in `product_code_quality.py` is rejected too. An empty surface list would make
+every claim vacuously true, which is a silent pass on the one thing the rule
+exists to catch.
+
+### README-claim finding codes
+
+| Code | Level | Fires when |
+|---|---|---|
+| `QUALITY_README_CLAIM_CONTRADICTED` | ERROR | A surface named by a qualifying README claim is present in the file tree. One finding per contradicted surface, naming the README line(s), the surface, and the evidence path. |
+| `QUALITY_README_CLAIM_UNSCOPED` | WARNING, emitted once per run | A negative status statement names no surface this check can resolve. A fleet-level CHECKER-COVERAGE metric, `REVIEW_REQUIRED` in the checker's vocabulary, naming every unscoped statement and its repository. Never a per-repository finding and never a pass: it fires on repositories whose claims are accurate. |
+
+Both are separate from the `QUALITY_*` codes above and from the `TAXONOMY_*`
+family; no existing code is renamed, narrowed, or reused. There is no
+`readme_claims` declaration field — a declaration carrying one is reported as
+`WARNING QUALITY_REVIEW_REQUIRED` naming the unsupported field, and the check
+runs anyway. See `docs/product-code-quality.md`.
+
 ### Migration state — the check is not enabled yet
 
 `TAXONOMY_MISMATCH` is ERROR by owner ruling, and the whole taxonomy audit is

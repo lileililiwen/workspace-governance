@@ -84,5 +84,33 @@
   "integration_required_states": [
     "required",
     "optional"
+  ],
+  "readme_claim_surfaces": [
+    "api",
+    "application-source",
+    "build",
+    "ci",
+    "deployment",
+    "migrations",
+    "mobile-client",
+    "production-evidence",
+    "provider-integration",
+    "repository-content",
+    "runtime",
+    "test",
+    "web-client"
+  ],
+  "readme_absence_phrases": [
+    "does not exist yet",
+    "documentation only",
+    "no ... exists",
+    "no application source",
+    "no source",
+    "nothing is implemented",
+    "not implemented",
+    "planning artifacts only",
+    "planning-only",
+    "remains to be built",
+    "specifications and documentation only"
   ]
 }

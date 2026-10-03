@@ -268,6 +268,27 @@ TAXONOMY_LEGACY_VALUE = "TAXONOMY_LEGACY_VALUE"
 TAXONOMY_MISMATCH_LEVEL = "ERROR"
 TAXONOMY_AUDIT_ENABLED = False
 
+# README status-claim finding codes (see
+# `openspec/changes/readme-claim-verification/` and
+# `docs/product-code-quality.md`). A separate family from `QUALITY_*`'s existing
+# members and from the `TAXONOMY_*` codes, and additive: no existing code is
+# renamed, narrowed, or reused.
+#
+# `QUALITY_README_CLAIM_CONTRADICTED` is ERROR, one finding per contradicted
+# surface. Ruling 6 (`design.md` §10): a warning nobody must clear is the
+# mechanism by which the seven stale claims accumulated in the first place, so
+# the level is not negotiable while they stand.
+#
+# `QUALITY_README_CLAIM_UNSCOPED` is NOT a per-repository finding. It is emitted
+# exactly once per run as a fleet-level CHECKER-COVERAGE metric. Ruling 7: it
+# fires on `chronicleaf`, whose claim is accurate, and a per-repository finding
+# on an honest repository is a false positive that trains people to ignore the
+# checker. It carries `severity: REVIEW_REQUIRED` in the checker's own
+# vocabulary and is never a pass.
+QUALITY_README_CLAIM_CONTRADICTED = "QUALITY_README_CLAIM_CONTRADICTED"
+QUALITY_README_CLAIM_UNSCOPED = "QUALITY_README_CLAIM_UNSCOPED"
+README_CLAIMS_UNSUPPORTED_FIELD = "readme_claims"
+
 
 def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:
     """Resolve the ruling-2 sequencing gate.
@@ -1900,8 +1921,107 @@ def validate_product_quality(declaration: dict[str, Any], project_path: Path, fi
         finding(findings, level, code, message, project_id)
 
 
+def promoted_project_ids(governance_root: Path | None = None) -> set[str]:
+    """Project ids that hold a `promote` entry in the promotion ledger.
+
+    A finding-free read on purpose: `load_promotion_ledger` owns the ledger's
+    integrity findings and `validate_deployment_promotion` owns the staleness
+    warning, so this reader exists only to answer the `production-evidence`
+    surface question without adding a second stream of the same codes. An
+    unreadable ledger yields an empty set, which reads as "no promotion
+    evidence" rather than as a verified claim.
+    """
+    root = Path(governance_root) if governance_root is not None else _default_governance_root()
+    path = root / "deployment" / "promotions.json"
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return set()
+    entries = document.get("entries") if isinstance(document, dict) else None
+    if not isinstance(entries, list):
+        return set()
+    return {
+        str(entry.get("project_id"))
+        for entry in entries
+        if isinstance(entry, dict)
+        and entry.get("kind") == "promote"
+        and isinstance(entry.get("project_id"), str)
+    }
+
+
+def validate_readme_claims(
+    declaration: dict[str, Any],
+    project_path: Path,
+    findings: list[Finding],
+    project_id: str,
+    *,
+    governance_root: Path | None = None,
+    coverage_gaps: list[tuple[str, str, int, str, str]] | None = None,
+    promoted_projects: set[str] | None = None,
+) -> None:
+    """Verify this repository's README status claims against its file tree.
+
+    Invoked for every registered project, triggered by claim presence and by
+    nothing else. There is no `readme_claims` block, no `mode`, no opt-out and
+    no per-repository exemption: a check that can be switched off is not a
+    check (`design.md` §10, ruling 10). Only 2 of 81 declarations carry a
+    `quality` block, so gating on that block would leave 79 repositories
+    unexamined — which is why this is a sibling of `validate_product_quality`
+    and not a branch inside it.
+
+    Two output streams, by design:
+
+    * a contradicted surface is a per-repository ERROR, one finding per
+      surface, naming the README line, the surface, and the evidence path;
+    * an unscoped statement is NOT a per-repository finding. It is appended to
+      `coverage_gaps`, which the caller emits once for the whole run as the
+      aggregate `QUALITY_README_CLAIM_UNSCOPED` CHECKER-COVERAGE metric.
+    """
+    import product_code_quality  # local import: keeps workspace_check importable without the checker
+
+    if README_CLAIMS_UNSUPPORTED_FIELD in declaration:
+        # Ruling 10: canonical behaviour applies anyway, and the unsupported
+        # field is reported as a WARNING naming it. This is the whole refusal:
+        # there is no branch here that reads the value.
+        finding(
+            findings,
+            "WARNING",
+            "QUALITY_REVIEW_REQUIRED",
+            f"declaration carries an unsupported {README_CLAIMS_UNSUPPORTED_FIELD!r} field; "
+            "README claims are verified for every project, honour no mode and cannot be switched off",
+            project_id,
+        )
+    try:
+        report = product_code_quality.evaluate_claims(
+            project_path,
+            declaration,
+            governance_root=governance_root,
+            manifest_read=read_manifest_dependencies,
+            promoted_projects=promoted_projects,
+        )
+    except (product_code_quality.ConfigError, product_code_quality.VocabularyError) as exc:
+        finding(
+            findings,
+            "WARNING",
+            "QUALITY_REVIEW_REQUIRED",
+            f"README claim check cannot run for {project_id!r}: {exc}",
+            project_id,
+        )
+        return
+    for item in report.contradicted:
+        finding(
+            findings,
+            "ERROR",
+            QUALITY_README_CLAIM_CONTRADICTED,
+            item.remediation,
+            project_id,
+        )
+    if coverage_gaps is not None:
+        for gap in report.gaps:
+            coverage_gaps.append((gap.project, gap.file, gap.line, gap.reason, gap.statement))
+
+
 # Patterns used by the bounded static scan in `validate_standalone`.
-# Each entry is (relative file path, scanner(path) -> list[sibling-id]).
 # The scan only inspects the listed files, never globs, and never
 # executes the project. Detected siblings are recorded as a
 # STANDALONE_DETECTED_SIBLING warning but never override the declared
@@ -2437,6 +2557,8 @@ def validate_project(
     observed_drift_keys: set[tuple[str, str, str]] | None = None,
     scanned_projects: set[str] | None = None,
     taxonomy_enabled: bool | None = None,
+    readme_claim_coverage: list[tuple[str, str, int, str, str]] | None = None,
+    promoted_projects: set[str] | None = None,
 ) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
@@ -2545,6 +2667,17 @@ def validate_project(
         validate_deployment_promotion(deployment, project_path, project_id, governance_root, findings)
     if isinstance(declaration.get("quality"), dict):
         validate_product_quality(declaration, project_path, findings, project_id)
+    # Claim-triggered, not gated: runs for every registered project, and only
+    # a present-tense absence claim in the README makes it produce anything.
+    validate_readme_claims(
+        declaration,
+        project_path,
+        findings,
+        project_id,
+        governance_root=governance_root,
+        coverage_gaps=readme_claim_coverage,
+        promoted_projects=promoted_projects,
+    )
     if isinstance(declaration.get("standalone"), dict) or isinstance(declaration.get("integrations"), list):
         validate_standalone(declaration, project_path, findings, project_id, governance_root=governance_root)
     if entry.get("adoption") == "adopted":
@@ -2611,6 +2744,11 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
         rules_drift_baseline = None
     observed_drift_keys: set[tuple[str, str, str]] = set()
     scanned_projects: set[str] = set()
+    # CHECKER-COVERAGE accumulator for the README claim rule. The unscoped
+    # metric is emitted ONCE for the whole run, not per repository, because the
+    # information it carries is about this checker's coverage and not about a
+    # repository's defect (ruling 7).
+    readme_claim_coverage: list[tuple[str, str, int, str, str]] = []
     # Provider identity is read from the registry's own entries, never from a
     # directory name, so the eight ids that differ from their folder name
     # resolve exactly like the rest.
@@ -2661,6 +2799,8 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
                 rules_drift_baseline=rules_drift_baseline,
                 observed_drift_keys=observed_drift_keys,
                 scanned_projects=scanned_projects,
+                readme_claim_coverage=readme_claim_coverage,
+                promoted_projects=promoted_project_ids(governance_root),
             )
     else:
         selected = effective_projects
@@ -2684,9 +2824,27 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
                     rules_drift_baseline=rules_drift_baseline,
                     observed_drift_keys=observed_drift_keys,
                     scanned_projects=scanned_projects,
+                    readme_claim_coverage=readme_claim_coverage,
+                    promoted_projects=promoted_project_ids(governance_root),
                 )
             else:
                 finding(findings, "WARNING", "ADOPTION_PENDING", "project is registered but not yet adopted", str(entry.get("id")))
+    # One aggregate CHECKER-COVERAGE metric for the whole run, naming every
+    # unscoped statement and the repository it came from. Level WARNING and
+    # `REVIEW_REQUIRED` in the checker's own vocabulary: never a pass, and
+    # never attributed to a repository.
+    if readme_claim_coverage:
+        names = "; ".join(
+            f"{project} {file}:{line} ({reason}) {statement}"
+            for project, file, line, reason, statement in readme_claim_coverage
+        )
+        finding(
+            findings,
+            "WARNING",
+            QUALITY_README_CLAIM_UNSCOPED,
+            f"checker coverage: {len(readme_claim_coverage)} README status statement(s) name no surface this "
+            f"check can resolve, so they are untested rather than verified: {names}",
+        )
     # Decay signal, not a failure: repositories that have fixed their drift make
     # baseline entries redundant, and the baseline should be tightened to match.
     # This is a WARNING and never touches the exit code.

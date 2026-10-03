@@ -82,6 +82,18 @@ traversal in exclusions, or an unreadable product file is REVIEW_REQUIRED,
 never a guessed pass. See `docs/product-code-quality.md` for the full
 contract, JSON schema, and per-language rules.
 
+One rule in that checker is not opt-in. A README status line that denies
+implementation in the present tense is verified against the file tree, on
+the closed set of surfaces that line names and on nothing else — so a
+repository with a test suite and an accurate status line stays clean. A
+contradicted surface is ERROR `QUALITY_README_CLAIM_CONTRADICTED`; a
+status statement that names no decidable surface is counted once per run
+as the fleet-level `QUALITY_README_CLAIM_UNSCOPED` coverage metric, never
+as a finding against the repository that wrote it. There is no
+`readme_claims` block, no `mode`, and no exemption, because a check that
+can be switched off is not a check. See the "README status claims" section
+of `docs/product-code-quality.md`.
+
 ## Registry and declaration integrity
 
 `projects.json` is the single source of project identity, and the audit fails
