@@ -103,18 +103,18 @@ family; no existing code is renamed, narrowed, or reused. There is no
 `WARNING QUALITY_REVIEW_REQUIRED` naming the unsupported field, and the check
 runs anyway. See `docs/product-code-quality.md`.
 
-### Migration state — the check is not enabled yet
+### Migration state — applied, and the check is enabled
 
-`TAXONOMY_MISMATCH` is ERROR by owner ruling, and the whole taxonomy audit is
-held off the fleet until the migration is applied: the flag
-`TAXONOMY_AUDIT_ENABLED` in `scripts/workspace_check.py` is **False**, and the
-severity is *not* softened to WARNING to achieve that. Enabling it before the
-migration cannot pass quietly — every unresolved row then reports ERROR and
-turns the gate red. The sequencing is therefore enforced by the checker
-itself, not by a comment and not by an environment variable.
+`TAXONOMY_MISMATCH` is ERROR by owner ruling, and the whole taxonomy audit was
+held off the fleet until the migration was applied. That ordering is now
+spent: the flag `TAXONOMY_AUDIT_ENABLED` in `scripts/workspace_check.py` is
+**True**, and the severity was never softened to WARNING to get there. The
+sequencing was enforced by the checker itself, not by a comment and not by an
+environment variable — with the flag on, the same unmigrated fixture that is
+silent with the flag off reports ERROR `TAXONOMY_MISMATCH`.
 
-Applying the migration is a fleet-wide cross-repo source edit and is a
-separately authorized step:
+The migration is a fleet-wide cross-repo source edit and was applied under
+explicit authorization. It is repeatable and reviewable:
 
 ```bash
 # 1. review the plan (dry run; writes nothing)
@@ -126,6 +126,10 @@ python3 scripts/axis_migration.py --check
 # 3. apply it, then set TAXONOMY_AUDIT_ENABLED = True in the same commit
 python3 scripts/axis_migration.py --apply
 ```
+
+As landed, step 2 exits 0 and step 3 is a no-op re-run: every declaration and
+registry entry already carries the planned axes, and all 81 declarations
+satisfy `kind == derive_kind(role, stack)`.
 
 The committed plan is `migration/identity-and-taxonomy-axis-split.json`: one row
 per declaration with the resolved `role`/`stack`, the rule that resolved it, and

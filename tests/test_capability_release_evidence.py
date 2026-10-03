@@ -34,6 +34,12 @@ BASE_DECLARATION = {
     "id": "demo-project",
     "kind": "product",
     "profile": "inventory",
+    # The two taxonomy axes are carried on both authority surfaces now that the
+    # audit is enabled. The declared composite is the bare role `product`, so
+    # `role`/`stack` are the pair that derives it: derive_kind("product",
+    # "none") == "product", which is why no TAXONOMY_LEGACY_VALUE follows.
+    "role": "product",
+    "stack": "none",
     "lifecycle": "inventory",
     "verification": {"command": "true", "gate_runtime": "driftwatchdog", "evidence_status": "planned"},
     "deployment": {"deployable": False, "jenkins_job": None, "compose_file": None},
@@ -71,6 +77,8 @@ class CapabilityAndReleaseEvidenceTests(unittest.TestCase):
                 "id": declaration["id"],
                 "path": "demo-project",
                 "profile": declaration["profile"],
+                "role": declaration["role"],
+                "stack": declaration["stack"],
                 "lifecycle": declaration["lifecycle"],
                 "adoption": "adopted",
             }],

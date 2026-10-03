@@ -458,17 +458,24 @@ class AuditIntegrationTests(unittest.TestCase):
         (self.project / "LICENSE").write_text("MIT License\n", encoding="utf-8")
         (self.project / "openspec").mkdir()
         (self.project / "Jenkinsfile").write_text("// ci\n", encoding="utf-8")
+        entry = {
+            "id": declaration["id"],
+            "path": "demo-project",
+            "profile": declaration["profile"],
+            "lifecycle": declaration["lifecycle"],
+            "adoption": "adopted",
+        }
+        # The registry entry is the second authority surface for the two axes,
+        # so a declaration that declares them gets the same pair mirrored here;
+        # a disagreement between the surfaces is an ERROR, not a warning.
+        for axis in ("role", "stack"):
+            if axis in declaration:
+                entry[axis] = declaration[axis]
         registry = {
             "schema_version": 1,
             "workspace_root": None,
             "discovery": {"mode": "explicit", "unregistered_policy": "fail"},
-            "projects": [{
-                "id": declaration["id"],
-                "path": "demo-project",
-                "profile": declaration["profile"],
-                "lifecycle": declaration["lifecycle"],
-                "adoption": "adopted",
-            }],
+            "projects": [entry],
         }
         self.registry_path.write_text(json.dumps(registry), encoding="utf-8")
         args = type("Args", (), {
@@ -527,8 +534,14 @@ class AuditIntegrationTests(unittest.TestCase):
         declaration = {
             "schema_version": 1,
             "id": "demo-project",
-            "kind": "product",
+            # The project ships `src/lib.rs` and declares `languages: ["rust"]`,
+            # so `rust` is the real stack, and `kind` carries the composite that
+            # pair derives (derive_kind("product", "rust") == "rust-product")
+            # rather than the pre-axes bare role.
+            "kind": "rust-product",
             "profile": "product",
+            "role": "product",
+            "stack": "rust",
             "lifecycle": "active",
             "verification": {"command": "true", "gate_runtime": "driftwatchdog", "evidence_status": "planned"},
             "deployment": {"deployable": False, "jenkins_job": None, "compose_file": None},

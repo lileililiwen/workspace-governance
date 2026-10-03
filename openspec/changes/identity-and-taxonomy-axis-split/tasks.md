@@ -100,18 +100,35 @@
   and both keys. An axis present in only one of the two surfaces is
   `TAXONOMY_AXIS_UNKNOWN`, not a mismatch — an absent value is not a
   contradiction.
-- [ ] 2.5 R5: write the resolved `role` and `stack` into the 81
+- [x] 2.5 R5: write the resolved `role` and `stack` into the 81
   declarations and the 78 registry entries per `design.md` §5.2, recording
   the resolution rule used per row. Resolve the four unregistered entries
   (`argoscope`, `chronicleaf`, `devloom`, `kairovia`) as
   `product`/`dotnet` and add their registry entries so
   `DISCOVERED_UNREGISTERED` clears; remove or archive the `jenkins-bootstrap`
   entry so `PROJECT_MISSING` clears. Add no new code for either.
-- [ ] 2.6 R3: assert id immutability before and after 2.5 — the registry id
+  **Applied** with `python3 scripts/axis_migration.py --apply`;
+  `--check` now exits 0 (`migration applied: every declaration and registry
+  entry carries the planned axes`). Recorded: 81/81 declarations and 81/81
+  `projects.json` entries carry both axes; the live registry is 81 = 77
+  re-axed + 4 registrations with `jenkins-bootstrap` removed; all 34 decided
+  rows resolve; `DISCOVERED_UNREGISTERED`, `PROJECT_MISSING`,
+  `TAXONOMY_MISMATCH`, `TAXONOMY_AXIS_UNKNOWN` and `TAXONOMY_LEGACY_VALUE` are
+  all 0. No new finding code was introduced for the five repositories.
+- [x] 2.6 R3: assert id immutability before and after 2.5 — the registry id
   set must compare equal, every declaration `id` must still equal its
   registry `id`, and the 8 `campusMesh`-style entries must differ only by the
   two added axis fields. If any id moved, revert; do not "fix" the reference
-  sites to match.
+  sites to match. **Verified against the §1.2 fixture, not by eye**: 78
+  baseline ids → 81 live ids, of which 77 survive, 4 are added
+  (`argoscope`, `chronicleaf`, `devloom`, `kairovia`) and exactly 1 is removed
+  (`jenkins-bootstrap`); every one of those five is a plan row carrying
+  `action: add` / `action: remove`, and the live set equals the plan's
+  non-remove rows exactly. `profile_requirements` returns the identical tuple
+  for all 77 survivors, every declaration `id` still equals its registry `id`
+  (81/81), and no surviving entry changed its `path`. The id set did move, by
+  design; what is asserted is that it moved *only* by the plan's own recorded
+  actions, so a rename would surface as a removal with no declared addition.
 - [ ] 2.7 Update `docs/vocabulary.md` with the two axis tables, the
   derivation rule, the id-immutability rule, and the three new finding
   codes. Update `README.md` with one short paragraph and link rather than
@@ -144,25 +161,57 @@
 - [x] 3.6 Confirm `init_project.py` still derives the same ids: init a
   fixture directory named `hestiaLab` and confirm the written declaration
   still uses `hestia-lab` with the real `path` recorded.
-- [ ] 3.7 Confirm the fleet scan is clean: a direct scan returns zero
+- [x] 3.7 Confirm the fleet scan is clean: a direct scan returns zero
   declarations or registry entries with a non-canonical or absent axis, zero
   unresolved rows in `design.md` §5.2, and zero remaining stack-qualified
-  composites outside the deprecated `kind`.
+  composites outside the deprecated `kind`. **Confirmed** by
+  `axis_migration.py --check` (exit 0), by the fleet audit's zero
+  `TAXONOMY_AXIS_UNKNOWN` / `TAXONOMY_MISMATCH` / `TAXONOMY_LEGACY_VALUE`, and
+  by a direct read of all 81 declarations: 81/81 carry a canonical `role` and
+  `stack`, all 34 decided §5.2 rows resolve, and 81/81 satisfy
+  `kind == derive_kind(role, stack)`, which is what holds the legacy warning at
+  0.
 
 ## 4. Verification
 
 - [x] 4.1 `python3 -m unittest discover -s tests -v` — all pass, including
   the new `tests/test_identity_and_taxonomy.py`, with no existing test
   changing expectation.
-- [ ] 4.2 `python3 scripts/workspace_check.py --root .. --audit --json` —
+- [x] 4.2 `python3 scripts/workspace_check.py --root .. --audit --json` —
   record the pre-migration output (expected: 30 `TAXONOMY_MISMATCH` errors,
   1 `PROJECT_MISSING`, 4 `DISCOVERED_UNREGISTERED`) and the post-migration
   output (expected: 0 errors, no `TAXONOMY_*`). Record both verbatim.
+  **Pre-migration, recorded at the checkpoint before the write**:
+  `errors=211 warnings=18`, carrying 30 `TAXONOMY_MISMATCH`, 1
+  `PROJECT_MISSING` and 4 `DISCOVERED_UNREGISTERED`. **Post-migration,
+  measured**: `Summary: errors=206 warnings=35` — a net move of **211 → 206**
+  errors, and **zero** findings in any `TAXONOMY_*` family, with
+  `RULES_DRIFT_NEW` 0. By code: `PUBLICATION_UNVERIFIED` 76,
+  `DISCOVERABILITY_MISSING` 74, `LICENSE_MISSING` 51, `CI_MISSING` 2,
+  `DISCOVERABILITY_INVALID` 2, `LIFECYCLE` 1; warnings `KIND_UNKNOWN` 17,
+  `HANDOFF_SCAFFOLD` 8, `DEPLOYMENT_PROMOTION_STALE` 7, `CAPABILITY_BLOCKED`
+  2, `QUALITY_README_CLAIM_UNSCOPED` 1. The 13 `RULES_DRIFT_NEW` errors that
+  appeared when the four repositories became visible for the first time are
+  resolved — see §5: they were cleared by adding the missing canonical
+  `.ai-rules` paragraphs, **not** by re-cutting the rules-drift baseline. The
+  residual 206/35 is pre-existing debt on other axes and is not this change's
+  to absorb.
 - [x] 4.3 `python3 scripts/workspace_check.py --self-check` and
   `python3 scripts/maturity_audit.py --root .. --json` — 0 errors; counts
   agree with the audit.
-- [ ] 4.4 Id-immutability diff: run the §1.2 comparison and show an empty
+- [x] 4.4 Id-immutability diff: run the §1.2 comparison and show an empty
   difference for both the id set and the `profile_requirements` tuples.
+  **Run against `tests/fixtures/identity-and-taxonomy-baseline.json`:** 78
+  baseline ids vs 81 live; **77 survivors**; added
+  `['argoscope', 'chronicleaf', 'devloom', 'kairovia']`; removed
+  `['jenkins-bootstrap']`; `profile_requirements` drift over the 77
+  survivors: **0**; declaration `id` != registry `id`: **0** (81/81 agree).
+  The id *set* difference is therefore not empty and is not expected to be —
+  it is exactly the 4 additions and 1 removal the plan records, and both sets
+  are asserted against the plan's `add`/`remove` rows. What the diff shows
+  empty is the outcome: no surviving repository's required-file, CI, OpenSpec
+  or verification tuple moved, which is the claim 2.6 and §4.4 exist to
+  protect.
 - [x] 4.5 `node scripts/check-openspec-change-names.mjs`,
   `openspec validate identity-and-taxonomy-axis-split --strict`, and
   `git diff --check`.
@@ -171,10 +220,10 @@
 
 ## 5. Implementation record — the change as landed
 
-The fleet write in 2.5 is **not** applied by this change, so 2.5, 2.6, 3.7,
-4.2 and 4.4 stay open: they can only be completed in the separately
-authorized step that applies `scripts/axis_migration.py`. Everything else is
-implemented, tested, and reported.
+The fleet write of 2.5 **has now been applied and committed**: 2.5, 2.6, 3.7,
+4.2 and 4.4 are complete and carry their recorded evidence above. Everything
+else was implemented, tested, and reported in the earlier commit; this section
+records the state the fleet is actually in.
 
 **What landed in this repository**
 
@@ -201,22 +250,29 @@ implemented, tested, and reported.
   81 declaration rows, each with the resolved `role`/`stack`, the rule, the
   source, and the census evidence; plus 77 registry axis rows, 4 additions and
   1 ghost removal.
-- `tests/test_identity_and_taxonomy.py` (65 tests) and
+- `tests/test_identity_and_taxonomy.py` (67 tests) and
   `tests/fixtures/identity-and-taxonomy-baseline.json` (the id-set and
-  `profile_requirements` oracle for 1.2/3.1/4.4).
+  `profile_requirements` oracle for 1.2/3.1/4.4). The suite is
+  `python3 -m unittest discover -s tests` → **492 tests, OK**; the seven
+  pre-migration expectations were repinned to the applied state rather than
+  deleted, and the eight fixtures that predate the axes gained the pair their
+  own declared composite derives.
 - `docs/vocabulary.md`, `README.md`, the skill reference, `decisions.json` (D6)
   and `docs/toolchain-decisions.md` record the two axes, the derived `kind`,
-  the three codes, and the not-yet-enabled state.
+  the three codes, and the enabled state.
 
-**The ruling-2 sequencing gate.** `TAXONOMY_MISMATCH_LEVEL` is fixed at
-`"ERROR"` and the severity is never softened. The whole taxonomy audit is held
-off the fleet by the committed constant `TAXONOMY_AUDIT_ENABLED = False` in
-`scripts/workspace_check.py` — a repo-relative input, never an environment
-variable. The ordering is enforced by the checker itself, not by a comment:
-with the flag on, the same unmigrated fleet that is silent with the flag off
-reports ERROR `TAXONOMY_MISMATCH` and turns the gate red
-(`SequencingGateTests.test_gate_open_reports_error_on_the_same_unmigrated_fleet`).
-`--apply` prints the reminder to flip the flag in the same commit.
+**The ruling-2 sequencing gate, now open.** `TAXONOMY_MISMATCH_LEVEL` is fixed
+at `"ERROR"` and the severity was never softened. The audit is no longer held
+off the fleet: the committed constant in `scripts/workspace_check.py` is
+`TAXONOMY_AUDIT_ENABLED = True` — a repo-relative input, never an environment
+variable. The ordering was enforced by the checker itself, not by a comment,
+and both sides of the flag stay under test: with the flag held off the same
+unmigrated fixture is silent
+(`test_gate_closed_reports_no_taxonomy_finding_on_a_mismatched_fleet`), and
+with it on that fixture reports ERROR `TAXONOMY_MISMATCH`
+(`test_gate_open_reports_error_on_the_same_unmigrated_fleet`). So enabling it
+early still could not have passed quietly. `--apply` prints the reminder to
+flip the flag in the same commit, and that is what was done.
 
 **Deviations and open items, recorded rather than resolved silently**
 
@@ -236,16 +292,63 @@ reports ERROR `TAXONOMY_MISMATCH` and turns the gate red
    (66 `product`) pins the value that remains legal. With ruling 4 applied the
    role census is 65 `product` / 2 `deployment`; §4's pre-ruling table reads
    66/1.
-4. **`design.md` §8 expects "no `TAXONOMY_*` finding" once the migration
-   lands.** The migration does not rewrite `kind` (design §1), and ruling 5
-   makes the derived form the authority a hand-authored `kind` is measured
-   against, so a declaration whose `kind` is a bare role while its resolved
-   stack is not `none` will report WARNING `TAXONOMY_LEGACY_VALUE`. The ERROR
-   count does reach 0; the warning count does not. Whether `kind` is rewritten
-   during the migration is an owner decision this change does not take.
+4. **Superseded by the recorded run: the migration *did* normalize `kind`.**
+   This note previously predicted the opposite — that the migration would
+   leave `kind` alone (`design.md` §1) and so leave WARNING
+   `TAXONOMY_LEGACY_VALUE` on every declaration whose resolved stack is not
+   `none`, with the warning count failing to reach 0. That prediction did not
+   hold, and the discrepancy is recorded here rather than quietly edited away.
+   `axis_migration.py --apply` writes the derived composite wherever the
+   hand-authored one disagreed with it, exactly as
+   `MigrationToolTests.test_apply_writes_the_axes_and_derives_kind` specifies
+   (and as the pre-migration `HANDOFF.md` already recorded: "the migration also
+   writes the derived `kind`"). Measured over the 77 repositories in
+   `rollback-manifest.json`, comparing each `before` SHA to its `after` SHA:
+   **37 needed rewriting** (`forge` `platform` → `rust-platform`,
+   `lileililiwen.github.io` `product` → `python-deployment`, `campusMesh`
+   `product` → `dotnet-product`, `alltools-platform` `application-platform` →
+   `python-platform`) and **35 already agreed** and were left byte-identical;
+   across all 80 migrated siblings the split is 39 rewritten / 36 unchanged.
+   All four §5.3 registrations were rewritten `product` → `dotnet-product`.
+   The resulting invariant, checked directly over all 81 declarations, is
+   **81/81 satisfy `kind == derive_kind(role, stack)`** — and that, not an
+   absence of writes, is why `TAXONOMY_LEGACY_VALUE` is 0. So `design.md` §8's
+   "no `TAXONOMY_*` finding" expectation is met on both counts.
 5. **The derivation order is stated two ways in the spec.**
    `proposal.md` ruling 5, `design.md` §4 and §10, and the spec's own worked
    example use `<stack>-<role>`; one scenario in the spec (`role: platform`,
    `stack: rust`, "naming the derived value `platform-rust`") uses
    `<role>-<stack>`. The implementation follows `<stack>-<role>`, the form
    three other statements and the round-trip example agree on.
+6. **The 13 `RULES_DRIFT_NEW` errors were cleared at the repositories, not in
+   the baseline.** Registering `argoscope`, `chronicleaf`, `devloom` and
+   `kairovia` made four repositories visible to the rules-drift ratchet for
+   the first time, and each arrived without the canonical `.ai-rules`
+   paragraphs, so 13 clauses read as new. They were resolved by adding the
+   missing canonical text to those four repositories' `.ai-rules/workflow.md`
+   and `.ai-rules/completion.md` (each in its own `migrate(taxonomy)` commit).
+   `rules-drift-baseline.json` was **not** re-cut: its last commit is still
+   `4a9edfc` ("Gate rules drift on a ratchet, so the clause finally blocks"),
+   so the ratchet kept its meaning instead of being taught to accept the gap.
+   `RULES_DRIFT_NEW` is 0 in the recorded 206/35 fleet audit.
+7. **`--self-check` is 1 error / 1 warning, not the 0/0 that 4.3 recorded when
+   it was ticked.** Both findings are consequences of the migration landing,
+   neither is introduced by this change's tests, and both are counted inside
+   the pinned 206/35: `ERROR LIFECYCLE: [devloom] invalid lifecycle:
+   'scaffold'` — `devloom`'s own declaration carries `lifecycle: scaffold`,
+   which is not canonical, and it is now reachable because the repository is
+   registered; fixing it means editing a sibling repository, which this change
+   does not do. And `WARNING KIND_UNKNOWN: [workspace-governance] unknown kind:
+   'python-governance'` — this repository's own `.project.json` was written by
+   `--apply` to the derived `python-governance`, which is not a member of
+   `vocabulary.json`'s legacy `kinds` array (that array was deliberately left
+   byte-identical by 2.1). Clearing either one moves the pinned fleet numbers
+   and touches a file outside this change's staging list, so both are left
+   standing and reported rather than fixed in passing. 4.3's tick is therefore
+   stale on this one point.
+8. **`rollback-manifest.json` covers 77 of the 80 migrated siblings.**
+   `aegify`, `argoscope` and `argoset` have a `migrate(taxonomy)` commit but no
+   before/after SHA pair in the manifest, so a rollback driven from the
+   manifest would silently skip them. Recorded as a gap in the rollback safety
+   net, not repaired here: the manifest is untracked, and reconstructing the
+   three pairs is the parent's call, not a side effect of a test-fix commit.

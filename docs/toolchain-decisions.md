@@ -98,14 +98,15 @@ not a seventh role: `platform-contracts`, `rust-platform-libs` and
 `lileililiwen-site` takes `role: deployment` and keeps its id, because it
 resolves through the registry `path` `lileililiwen.github.io`.
 
-`TAXONOMY_MISMATCH` is ERROR and is not enabled until the migration is applied.
-The audit is held off the fleet by the committed constant
-`TAXONOMY_AUDIT_ENABLED`; the severity is not softened to WARNING, and enabling
-it early turns the gate red on every unresolved row. The migration itself is a
-fleet-wide cross-repo source edit, applied separately by
-`scripts/axis_migration.py`. The full text, the measured 30-of-77 disagreement
-it resolves, and the immutability rule are in `decisions.json`; the mechanism is
-in `docs/vocabulary.md`.
+`TAXONOMY_MISMATCH` is ERROR and was not enabled until the migration was
+applied; the migration has now landed and the committed constant
+`TAXONOMY_AUDIT_ENABLED` is `True`. The severity was never softened to
+WARNING, and enabling it early would have turned the gate red on every
+unresolved row — which is what the checker itself proved, in both directions of
+the flag, before the flip. The migration itself is a fleet-wide cross-repo
+source edit, applied by `scripts/axis_migration.py`. The full text, the
+measured 30-of-77 disagreement it resolves, and the immutability rule are in
+`decisions.json`; the mechanism is in `docs/vocabulary.md`.
 
 ## Register rules
 

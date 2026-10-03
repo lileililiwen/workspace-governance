@@ -7,6 +7,8 @@ checked against the owner's decided table in `design.md` and against
 `vocabulary.json`; the fleet scan itself is `scripts/axis_migration.py --check`.
 """
 
+import contextlib
+import io
 import json
 import shutil
 import sys
@@ -321,14 +323,25 @@ class TaxonomyFindingTests(unittest.TestCase):
 
 
 class SequencingGateTests(unittest.TestCase):
-    """Ruling 2: the level is ERROR, and the audit is held off the fleet until
-    the §5 migration has been applied. Enabling it early cannot pass quietly."""
+    """Ruling 2: the level is ERROR, and the audit was held off the fleet until
+    the §5 migration had been applied. The migration has now landed, so the
+    committed gate is open — but it still gates in both directions, and both
+    sides stay under test: the flag off, and the flag on over a corpus that
+    does not agree with itself."""
 
     def test_mismatch_level_is_error_not_warning(self):
         self.assertEqual(TAXONOMY_MISMATCH_LEVEL, "ERROR")
 
-    def test_the_gate_is_closed_on_the_fleet(self):
-        self.assertFalse(TAXONOMY_AUDIT_ENABLED)
+    def test_the_gate_is_open_and_the_fleet_corpus_is_clean(self):
+        # The §5 migration is applied, so the gate is committed open and the
+        # corpus it now audits is clean. Enabling it early could not have passed
+        # quietly: the same check is the one that reported the 30 pre-migration
+        # disagreements.
+        self.assertTrue(TAXONOMY_AUDIT_ENABLED)
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = axis_migration.main(["--root", str(REPO_ROOT.parent),
+                                        "--governance-root", str(REPO_ROOT), "--check"])
+        self.assertEqual(code, 0)
 
     def make_workspace(self, declaration=None, entry=None, **axes):
         temp = tempfile.TemporaryDirectory()
@@ -363,8 +376,13 @@ class SequencingGateTests(unittest.TestCase):
 
     def test_gate_closed_reports_no_taxonomy_finding_on_a_mismatched_fleet(self):
         # The unmigrated fleet: the declaration disagrees with the registry.
+        # The gate is committed open, so this side is pinned by holding the flag
+        # off explicitly — the flag still silences the audit it is there to gate.
         root = self.make_workspace(kind="tooling", role="tooling", stack="rust",
                                    entry=dict(ENTRY, role="product", stack="rust"))
+        original = workspace_check.TAXONOMY_AUDIT_ENABLED
+        workspace_check.TAXONOMY_AUDIT_ENABLED = False
+        self.addCleanup(setattr, workspace_check, "TAXONOMY_AUDIT_ENABLED", original)
         findings, _ = self.audit(root, REPO_ROOT)
         self.assertEqual([item for item in findings if item.code.startswith("TAXONOMY_")], [])
 
@@ -498,13 +516,22 @@ class MigrationPlanTests(unittest.TestCase):
         # 30 decided rows in §5.2 plus 4 registrations in §5.3.
         self.assertEqual(matched, 34)
 
-    def test_the_disagreement_baseline_is_thirty(self):
-        disagreements = [
-            entry for entry in self.live_registry
-            if (REPO_ROOT.parent / entry["path"] / ".project.json").is_file()
-            and json.loads((REPO_ROOT.parent / entry["path"] / ".project.json").read_text(encoding="utf-8"))["kind"] != entry["profile"]
-        ]
-        self.assertEqual(len(disagreements), 30)
+    def test_the_axis_disagreement_set_is_empty_after_the_migration(self):
+        # This was the 30-repository disagreement baseline; the rows it counted
+        # are pinned by the plan tests against `design.md`, so the baseline
+        # itself stays reviewable. Applied, the live disagreement set is empty:
+        # every registered entry agrees with its own declaration on both axes.
+        disagreements = []
+        for entry in self.live_registry:
+            path = REPO_ROOT.parent / entry["path"] / ".project.json"
+            if not path.is_file():
+                continue
+            declaration = json.loads(path.read_text(encoding="utf-8"))
+            for axis in ("role", "stack"):
+                if entry.get(axis) != declaration.get(axis):
+                    disagreements.append(
+                        f"{entry['id']}: {axis} {entry.get(axis)!r} against {declaration.get(axis)!r}")
+        self.assertEqual(disagreements, [])
 
     def test_ruling_one_folds_shared_library_into_platform(self):
         for project_id in ("platform-contracts", "rust-platform-libs", "dotnet-platform-libs"):
@@ -523,19 +550,41 @@ class MigrationPlanTests(unittest.TestCase):
         self.assertIn("lileililiwen-site", {item["id"] for item in self.live_registry})
 
     def test_id_immutability_holds_across_the_plan(self):
-        before = {(item["id"], item["path"]) for item in self.live_registry}
-        removed = {(row["id"], row["path"]) for row in self.plan["registry"] if row["action"] == "remove"}
-        added = {(row["id"], row["path"]) for row in self.plan["registry"] if row["action"] == "add"}
-        after = {(row["id"], row["path"]) for row in self.plan["registry"] if row["action"] != "remove"}
+        # The live registry is the applied "after" state, so immutability is
+        # measured against the committed pre-migration baseline. The only ids
+        # that moved are the plan's own recorded removal and additions: a rename
+        # would surface here as a removal with no matching declared addition.
+        baseline = json.loads(
+            (REPO_ROOT / "tests" / "fixtures" / "identity-and-taxonomy-baseline.json").read_text(encoding="utf-8"))
+        before = set(baseline["registry_ids"])
+        after = {item["id"] for item in self.live_registry}
+        removed = {row["id"] for row in self.plan["registry"] if row["action"] == "remove"}
+        added = {row["id"] for row in self.plan["registry"] if row["action"] == "add"}
         self.assertEqual(before - after, removed)
         self.assertEqual(after - before, added)
+        self.assertEqual(after, {row["id"] for row in self.plan["registry"] if row["action"] != "remove"})
+        # No surviving id moved its path either; `path` is a resolution detail
+        # the write had no licence to touch.
+        paths = {item["id"]: item["path"] for item in self.live_registry}
+        for row in self.plan["registry"]:
+            if row["action"] != "remove":
+                self.assertEqual(paths[row["id"]], row["path"], row["id"])
 
-    def test_the_four_unregistered_repositories_are_registered(self):
+    def test_the_four_unregistered_repositories_are_now_registered(self):
+        live = {item["id"]: item for item in self.live_registry}
         for project_id in ("argoscope", "chronicleaf", "devloom", "kairovia"):
-            self.assertEqual(self.registry[project_id]["action"], "add")
-            self.assertEqual(self.registry[project_id]["role"], "product")
-            self.assertEqual(self.registry[project_id]["stack"], "dotnet")
-        self.assertNotIn("argoscope", {item["id"] for item in self.live_registry})
+            row = self.registry[project_id]
+            self.assertEqual(row["action"], "add")
+            self.assertEqual(row["role"], "product")
+            self.assertEqual(row["stack"], "dotnet")
+            # The §5.3 registration landed: the live registry carries the row,
+            # and both the registry and the declaration carry the planned pair.
+            self.assertIn(project_id, live)
+            self.assertEqual((live[project_id]["role"], live[project_id]["stack"]),
+                             (row["role"], row["stack"]))
+            declaration = json.loads(
+                (REPO_ROOT.parent / live[project_id]["path"] / ".project.json").read_text(encoding="utf-8"))
+            self.assertEqual((declaration["role"], declaration["stack"]), (row["role"], row["stack"]))
 
     def test_the_ghost_entry_is_removed_with_the_existing_code(self):
         ghost = [row for row in self.plan["registry"] if row["action"] == "remove"]
@@ -550,9 +599,17 @@ class MigrationPlanTests(unittest.TestCase):
     def test_plan_totals_match_the_table(self):
         totals = self.plan["totals"]
         self.assertEqual(totals["declarations"], len(self.plan["declarations"]))
+        self.assertEqual(totals["declarations"], 81)
         self.assertEqual(totals["registry_added"], 4)
         self.assertEqual(totals["registry_removed"], 1)
-        self.assertEqual(totals["existing_ids_unchanged"], len(self.live_registry) - 1)
+        self.assertEqual(totals["registry_axes"], 77)
+        # Applied: the live registry is the 77 re-axed entries plus the 4
+        # registrations, and every one of them carries both canonical axes.
+        self.assertEqual(len(self.live_registry), totals["registry_axes"] + totals["registry_added"])
+        self.assertEqual(len(self.live_registry), 81)
+        for entry in self.live_registry:
+            self.assertIn(entry["role"], CANONICAL_ROLES, entry)
+            self.assertIn(entry["stack"], CANONICAL_STACKS, entry)
 
     def test_role_and_stack_census_matches_the_design_count_table(self):
         # design.md §4 counts, adjusted only by ruling 4, which moves exactly one
@@ -712,9 +769,19 @@ class NoOutcomeChangeTests(unittest.TestCase):
             (REPO_ROOT / "tests" / "fixtures" / "identity-and-taxonomy-baseline.json").read_text(encoding="utf-8"))
         self.entries = json.loads(REGISTRY.read_text(encoding="utf-8"))["projects"]
 
-    def test_the_registry_id_set_is_unchanged(self):
-        self.assertEqual(sorted(entry["id"] for entry in self.entries), self.baseline["registry_ids"])
-        self.assertEqual(len(self.baseline["registry_ids"]), 78)
+    def test_the_registry_id_set_moved_only_by_the_planned_adds_and_one_removal(self):
+        """`id` is the identity key; the axis split may not rename or drop one.
+
+        The set did change — that was the plan — but only by the actions the
+        plan records: the §5.3 registrations and the §5.5 ghost removal. Every
+        other baseline id is still here, spelled the same way.
+        """
+        before = set(self.baseline["registry_ids"])
+        after = {entry["id"] for entry in self.entries}
+        self.assertEqual(len(before), 78)
+        self.assertEqual(before - after, {"jenkins-bootstrap"})
+        self.assertEqual(after - before, {"argoscope", "chronicleaf", "devloom", "kairovia"})
+        self.assertEqual(len(after), 81)
 
     def test_every_registry_entry_keeps_its_requirements(self):
         baseline = self.baseline

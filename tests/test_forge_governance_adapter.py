@@ -78,6 +78,12 @@ def _make_workspace(project_id: str = "demo-project", *, adopted: bool = True) -
         "id": project_id,
         "kind": "product",
         "profile": "inventory",
+        # Both authority surfaces carry the axes now that the audit is enabled.
+        # The declared composite is the bare role `product`, so this pair is
+        # the one that derives it (derive_kind("product", "none") ==
+        # "product") and leaves the fixture free of taxonomy findings.
+        "role": "product",
+        "stack": "none",
         "lifecycle": "inventory",
         "verification": {"command": "true", "gate_runtime": "driftwatchdog", "evidence_status": "planned"},
         "deployment": {"deployable": False, "jenkins_job": None, "compose_file": None},
@@ -92,6 +98,8 @@ def _make_workspace(project_id: str = "demo-project", *, adopted: bool = True) -
                 "id": project_id,
                 "path": project_id,
                 "profile": "inventory",
+                "role": "product",
+                "stack": "none",
                 "lifecycle": "inventory",
                 **({"adoption": "adopted"} if adopted else {"adoption": "pending"}),
             },
