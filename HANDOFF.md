@@ -126,32 +126,41 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
   Nothing here gates on the check yet — binding it as a driftwatchdog gate
   check is deferred to that repository.
 
-- `identity-and-taxonomy-axis-split` (`29dea92`) evidence. `role` and `stack`
+- `identity-and-taxonomy-axis-split` evidence. `role` and `stack`
   are now independent axes; `kind` is the derived, deprecated composite
   `<stack>-<role>`, or the bare `<role>` when stack is `none`. Three new codes:
   `TAXONOMY_MISMATCH` (ERROR), `TAXONOMY_LEGACY_VALUE`, `TAXONOMY_AXIS_UNKNOWN`
-  (WARNING). `python3 -m unittest discover -s tests` — 456 tests, 0 failures
-  (389 prior + 67 new); `workspace_check --self-check` 0/0; `auto_gate
-  --self-check` PASS; `check_skill_refs` ok; `openspec validate --all --strict`
-  18/18; `rules_drift` unchanged at 148; `git diff --check` clean. From
-  `/home/paul/code` the fleet audit is **unchanged** at `errors=211 warnings=17`
-  with zero `TAXONOMY_*` findings, and **0 of the 80** sibling `.project.json`
-  files carry a `role` — the migration was not applied.
-  **The check enforces nothing yet.** `TAXONOMY_AUDIT_ENABLED = False` holds it
-  off the fleet because the migration has not run; a test proves the env var
-  cannot turn it on. The migration is a reviewable artifact:
-  `python3 scripts/axis_migration.py` is a dry run, `--check` reports
-  outstanding rows, `--apply` is the authorized write. It would touch **81
-  declarations and 77 registry entries**, add `argoscope`/`chronicleaf`/
-  `devloom`/`kairovia`, and remove `jenkins-bootstrap`.
-  Three rulings were added during implementation, all in `design.md` §10: the
-  migration also writes the derived `kind` (47 of 81 differ), the drift guard
-  consequently accepts the derived form so the tool stays idempotent, and
+  (WARNING). **The migration has now been applied and the fleet committed**:
+  81/81 declarations and 81/81 `projects.json` entries carry both axes;
+  `argoscope`/`chronicleaf`/`devloom`/`kairovia` are registered as
+  `product`/`dotnet` and `jenkins-bootstrap` is gone. From `/home/paul/code`
+  the fleet audit moved **211 → 206 errors** (`errors=206 warnings=35`), with
+  **zero** findings in any `TAXONOMY_*` family and `RULES_DRIFT_NEW` 0.
+  **The check now enforces.** `TAXONOMY_AUDIT_ENABLED = True`; the flag is a
+  committed constant, not an environment variable, and both of its states stay
+  tested — held off, the same mismatched fixture is silent; on, it reports ERROR
+  `TAXONOMY_MISMATCH`. `python3 scripts/axis_migration.py --check` exits 0.
+  All 81 declarations satisfy `kind == derive_kind(role, stack)`, which is why
+  `TAXONOMY_LEGACY_VALUE` is 0; the 13 `RULES_DRIFT_NEW` errors the four new
+  registrations surfaced were cleared by adding the missing canonical
+  `.ai-rules` paragraphs to those repositories, **not** by re-cutting the
+  rules-drift baseline.
+  `python3 -m unittest discover -s tests` — **492 tests, OK**;
+  `openspec validate identity-and-taxonomy-axis-split --strict` passes;
+  `git diff --check` clean. Three rulings were added during implementation, all
+  in `design.md` §10: the migration also writes the derived `kind`, the drift
+  guard consequently accepts the derived form so the tool stays idempotent, and
   `platform-rust` was a spec typo corrected to `rust-platform`. Two of those
   were owner rulings against the implementation as first written.
-  Evidence boundary: this change can prove the axes resolve, the codes fire at
-  the right severity, and the migration is staged. It cannot prove any
-  repository has been migrated, because none has.
+  Two things are **not** clean, both recorded in `tasks.md` §5 notes 7 and 8
+  rather than fixed in passing: `workspace_check --self-check` is 1 error /
+  1 warning (`devloom`'s non-canonical `lifecycle: scaffold`, now visible
+  because the repository is registered; and this repository's own derived
+  `python-governance` `kind`, which is absent from the deliberately
+  byte-identical `vocabulary.json` `kinds` array), and
+  `rollback-manifest.json` maps 77 of the 80 migrated siblings —
+  `aegify`, `argoscope` and `argoset` have no before/after SHA pair, so a
+  manifest-driven rollback would skip them.
 
 - `rules-drift-gate-wiring` (`4a9edfc`) evidence. Archived as
   `2026-10-03-rules-drift-gate-wiring`; canonical spec
