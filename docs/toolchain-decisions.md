@@ -13,6 +13,8 @@ text and the D3 ownership split.
 | D2 | Self-hosted identity provider               | accepted   | 2026-09-30 | workspace-governance   |
 | D3 | Capability registry home                    | accepted   | 2026-09-30 | workspace-governance   |
 | D4 | Crate publication mode                      | accepted   | 2026-09-30 | workspace-governance   |
+| D5 | The rules drift report stays unwired        | accepted   | 2026-10-03 | workspace-governance   |
+| D6 | Project identity is immutable; two axes     | accepted   | 2026-10-03 | workspace-governance   |
 
 Inspect or script the register with:
 
@@ -80,6 +82,30 @@ adoption migrates off path dependencies only after the new
 **Downstream references.** `rust-platform-libs: registry-publication` is
 the prerequisite change that records the version policy, CI publishing
 secret, `publish = false` flip, and name-squat check.
+
+## D6 — Project identity is immutable; classification is two axes
+
+A project is identified by an immutable registry `id` plus two independent
+classification axes: `role` (what the repository is for) and `stack` (what it
+is written in). Both are carried by the registry entry and by the declaration,
+and a disagreement between the two surfaces is `TAXONOMY_MISMATCH`.
+
+`kind` is retired as an authored value and retained permanently as a derived,
+deprecated composite — `<stack>-<role>`, or the bare `<role>` when the stack is
+`none` — so every consumer of the old string keeps parsing. `shared-library` is
+not a seventh role: `platform-contracts`, `rust-platform-libs` and
+`dotnet-platform-libs` take `role: platform`. `stack` stays single-valued.
+`lileililiwen-site` takes `role: deployment` and keeps its id, because it
+resolves through the registry `path` `lileililiwen.github.io`.
+
+`TAXONOMY_MISMATCH` is ERROR and is not enabled until the migration is applied.
+The audit is held off the fleet by the committed constant
+`TAXONOMY_AUDIT_ENABLED`; the severity is not softened to WARNING, and enabling
+it early turns the gate red on every unresolved row. The migration itself is a
+fleet-wide cross-repo source edit, applied separately by
+`scripts/axis_migration.py`. The full text, the measured 30-of-77 disagreement
+it resolves, and the immutability rule are in `decisions.json`; the mechanism is
+in `docs/vocabulary.md`.
 
 ## Register rules
 

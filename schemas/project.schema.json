@@ -7,7 +7,9 @@
   "properties": {
     "schema_version": {"const": 1},
     "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
-    "kind": {"type": "string", "minLength": 1, "description": "Descriptive project kind. Must use a canonical value from vocabulary.json kinds; other values are reported as KIND_UNKNOWN. Kind never drives profile requirements."},
+    "kind": {"type": "string", "minLength": 1, "description": "Deprecated, derived composite: the value is stack + '-' + role, or the bare role when stack is 'none'. Never authored by hand and never newly required. It stays in `required` only so an undocumented consumer of the composite keeps parsing. A stack-qualified value present alongside two declared axes, or a kind that disagrees with the value derived from its own axes, is WARNING TAXONOMY_LEGACY_VALUE. A kind outside the canonical set is KIND_UNKNOWN. Kind never drives profile requirements."},
+    "role": {"$ref": "#/$defs/taxonomy_role", "description": "What the project is for. Independent of `stack`; every role/stack combination is legal. Must use a canonical value from vocabulary.json roles; absent or non-canonical is WARNING TAXONOMY_AXIS_UNKNOWN. Descriptive: never drives required files, CI, verification, or any evidence state."},
+    "stack": {"$ref": "#/$defs/taxonomy_stack", "description": "What the project is written in. Single-valued by owner ruling; there is no `stacks` array. Must use a canonical value from vocabulary.json stacks; absent or non-canonical is WARNING TAXONOMY_AXIS_UNKNOWN. Descriptive: never drives required files, CI, verification, or any evidence state."},
     "profile": {"type": "string", "minLength": 1, "description": "Governance profile driving required files, CI, OpenSpec and verification requirements. Must use a canonical value from vocabulary.json profiles."},
     "lifecycle": {"enum": ["active", "planning", "reference", "inventory", "archived"]},
     "verification": {
@@ -231,6 +233,16 @@
     }
   },
   "$defs": {
+    "taxonomy_role": {
+      "type": "string",
+      "enum": ["product", "platform", "tooling", "governance", "deployment", "inventory"],
+      "description": "Canonical role axis. The vocabulary.json.roles list is the source of truth; this enum mirrors it so editors that consult the schema see the same values. `shared-library` is NOT a role: by owner ruling the repositories that wrote it take role 'platform'."
+    },
+    "taxonomy_stack": {
+      "type": "string",
+      "enum": ["dotnet", "rust", "typescript", "python", "flutter", "none"],
+      "description": "Canonical stack axis. The vocabulary.json.stacks list is the source of truth; this enum mirrors it so editors that consult the schema see the same values. Single-valued by owner ruling; `none` means contracts/documents/schemas with no implementation language."
+    },
     "standalone_status": {
       "type": "string",
       "enum": [

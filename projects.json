@@ -4,7 +4,13 @@
   "discovery": {
     "mode": "explicit-plus-immediate-directories",
     "unregistered_policy": "fail",
-    "exclude": ["build", "dist", "node_modules", "target", "vendor"]
+    "exclude": [
+      "build",
+      "dist",
+      "node_modules",
+      "target",
+      "vendor"
+    ]
   },
   "projects": [
     {
@@ -137,6 +143,8 @@
       "id": "aesthra",
       "path": "aesthra",
       "profile": "product",
+      "role": "product",
+      "stack": "dotnet",
       "lifecycle": "active",
       "adoption": "adopted"
     },
@@ -254,6 +262,8 @@
       "id": "forge",
       "path": "forge",
       "profile": "rust-product",
+      "role": "platform",
+      "stack": "rust",
       "lifecycle": "active",
       "adoption": "adopted"
     },
@@ -372,6 +382,8 @@
       "id": "rostera",
       "path": "rostera",
       "profile": "product",
+      "role": "product",
+      "stack": "dotnet",
       "lifecycle": "active",
       "adoption": "adopted"
     },

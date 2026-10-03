@@ -1,5 +1,21 @@
 {
   "schema_version": 1,
+  "roles": [
+    "product",
+    "platform",
+    "tooling",
+    "governance",
+    "deployment",
+    "inventory"
+  ],
+  "stacks": [
+    "dotnet",
+    "rust",
+    "typescript",
+    "python",
+    "flutter",
+    "none"
+  ],
   "profiles": [
     "governance",
     "product",

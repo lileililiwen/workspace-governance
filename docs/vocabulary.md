@@ -25,7 +25,81 @@ project to deployable on metadata alone.
 | Promotion ledger | Tamper-evident record of promotion decisions in `deployment/promotions.json` (with `deployment/promotions.sha256` sidecar). | `docs/deployment-promotion.md` |
 | Finding code | A stable audit result name with a level (`ERROR`/`WARNING`), e.g. `DECLARATION_ID`, `KIND_UNKNOWN`, `HANDOFF_SCAFFOLD`, `DEPLOYMENT_PROMOTION_STALE`. | `openspec/specs/registry-integrity/spec.md` |
 | `kind` / `profile` | Descriptive project classification drawn from the canonical sets (12 kinds, 15 profiles). | `vocabulary.json`, `openspec/specs/portfolio-vocabulary/spec.md` |
+| `role` / `stack` | The two independent classification axes: what a project is **for**, and what it is written **in**. `stack` is single-valued; there is no `stacks` array. | `vocabulary.json` `roles`/`stacks`, `openspec/changes/identity-and-taxonomy-axis-split/specs/identity-and-taxonomy/spec.md` |
+| Identity (`id` / `path` / `alias`) | `id` is the immutable join key and is never derived from or renamed to match `path`. `path` is a registry-only resolution detail. A directory whose name is not a valid identifier records an explicit `alias`; the eight `campusMesh`-style entries are already correct and must not be churned. | `openspec/specs/registry-integrity/spec.md`, `scripts/init_project.py` |
 | Quality gate (`quality` block) | Opt-in product-code rule (test code in product scope, placeholder debt); fail-closed, never a guessed pass. | `docs/product-code-quality.md`, `openspec/specs/product-code-quality-boundary/spec.md` |
 | Governance front door | The single auto-triggering skill entry routing each governance situation to its per-concern reference. | `skills/workspace-governance/SKILL.md`, `openspec/specs/governance-front-door/spec.md` |
 | Forge adapter observation | Read-only translation of this repository's audit findings for Forge's governance-provider contract; not runtime or release evidence. The v0.1.0 contract now also carries additive `standalone_status`, `standalone_observed_revision`, `standalone_integrations`, and `standalone_findings` fields. | `openspec/specs/forge-governance-adapter/spec.md`, `openspec/specs/standalone-project-boundary/spec.md` |
 | Standalone classification (`standalone` / `integrations`) | Optional `standalone` block and `integrations` array in `.project.json` record how a project operates without sibling checkouts or private services. The audit classifies the project as one of six canonical statuses (`standalone`, `standalone-with-optional-integrations`, `library-dependent`, `workspace-dependent`, `service-dependent`, `blocked`) without executing project commands. Declarations are intent, not evidence; an absent block reports `blocked` + `STANDALONE_BLOCKED` warning, never a pass. | `openspec/specs/standalone-project-boundary/spec.md` |
+
+## The two classification axes
+
+`kind` answered two questions in one string, which is why a repository written
+in an interesting language could not state its role. The two questions are now
+separate fields, and every combination is legal — including
+`role: platform, stack: rust`.
+
+| Axis | Canonical values (`vocabulary.json`) | Question it answers |
+|---|---|---|
+| `role` | `product`, `platform`, `tooling`, `governance`, `deployment`, `inventory` | What is this repository for? `shared-library` is **not** a role: by owner ruling the three repositories that wrote it take `role: platform`, because the library-versus-service distinction that carries weight already lives in the frozen `profile` values and no consumer branches on the role. |
+| `stack` | `dotnet`, `rust`, `typescript`, `python`, `flutter`, `none` | What is it written in? Single-valued by owner ruling; `lexora`, `opendockify` and `trippify` all resolve to `stack: dotnet` even though they also ship a Flutter client. |
+
+Both sets are declared once in `vocabulary.json` and mirrored as
+`$defs/taxonomy_role` / `$defs/taxonomy_stack` in
+`schemas/project.schema.json`. Neither axis is in the schema's `required` list:
+a declaration that omits them stays schema-valid and reports
+`TAXONOMY_AXIS_UNKNOWN`. The axes are **descriptive** — they never drive a
+required file, a CI requirement, a verification command, or any evidence,
+deployment, or promotion state. `profile_requirements` reads the registry
+`profile` only and is unchanged.
+
+### `kind` is derived, never authored
+
+`kind` stays in the schema's `required` list and stays in all declarations, as
+the derived composite `<stack>-<role>`, or the bare `<role>` when the stack is
+`none`. Keeping it costs one function and stops every undocumented consumer of
+the old string from breaking. It is never written by hand and never newly
+required; the migration does not rewrite it, so a hand-authored value that
+disagrees with its own axes is still visible as `TAXONOMY_LEGACY_VALUE`.
+
+### Finding codes
+
+| Code | Level | Fires when |
+|---|---|---|
+| `TAXONOMY_AXIS_UNKNOWN` | WARNING | `role` or `stack` is absent or outside its canonical set; the message names the offending value and both sets. An axis present on only one of the two surfaces lands here too, because an absent value is not a contradiction. |
+| `TAXONOMY_MISMATCH` | ERROR | The registry entry and the declaration disagree on `role` or `stack`; the message names both values and the project id. |
+| `TAXONOMY_LEGACY_VALUE` | WARNING | A `kind` disagrees with the value derived from its own axes, including a stack-qualified composite still present while both axes are declared. |
+
+`KIND_UNKNOWN` keeps its shipped meaning (a `kind` outside the 12 canonical
+kinds) and is not repurposed.
+
+### Migration state — the check is not enabled yet
+
+`TAXONOMY_MISMATCH` is ERROR by owner ruling, and the whole taxonomy audit is
+held off the fleet until the migration is applied: the flag
+`TAXONOMY_AUDIT_ENABLED` in `scripts/workspace_check.py` is **False**, and the
+severity is *not* softened to WARNING to achieve that. Enabling it before the
+migration cannot pass quietly — every unresolved row then reports ERROR and
+turns the gate red. The sequencing is therefore enforced by the checker
+itself, not by a comment and not by an environment variable.
+
+Applying the migration is a fleet-wide cross-repo source edit and is a
+separately authorized step:
+
+```bash
+# 1. review the plan (dry run; writes nothing)
+python3 scripts/axis_migration.py
+
+# 2. has it been applied? exit 3 while any row is outstanding
+python3 scripts/axis_migration.py --check
+
+# 3. apply it, then set TAXONOMY_AUDIT_ENABLED = True in the same commit
+python3 scripts/axis_migration.py --apply
+```
+
+The committed plan is `migration/identity-and-taxonomy-axis-split.json`: one row
+per declaration with the resolved `role`/`stack`, the rule that resolved it, and
+the evidence behind it. The tool reads the decided rows out of the change's
+`design.md` rather than keeping a second copy, and refuses to plan if the fleet
+has drifted from that table or if any existing registry `id`/`path` pair would
+move.

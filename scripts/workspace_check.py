@@ -126,6 +126,48 @@ def canonical_kinds_for(governance_root: Path | None = None) -> frozenset[str]:
     return _vocabulary_for(governance_root)["kinds"]
 
 
+def canonical_roles_for(governance_root: Path | None = None) -> frozenset[str]:
+    """The canonical `role` axis. Six values; `shared-library` is not a role."""
+    return _vocabulary_for(governance_root)["roles"]
+
+
+def canonical_stacks_for(governance_root: Path | None = None) -> frozenset[str]:
+    """The canonical `stack` axis. Single-valued; there is no `stacks` array."""
+    return _vocabulary_for(governance_root)["stacks"]
+
+
+def derive_kind(role: str, stack: str) -> str:
+    """The derived, deprecated `kind` composite for one axis pair.
+
+    `f"{stack}-{role}"`, or the bare `role` when the stack is `none` (ruling 5,
+    `design.md` §4/§10). The derivation is permanent and is the authority a
+    hand-authored `kind` is measured against.
+    """
+    if stack == "none":
+        return role
+    return f"{stack}-{role}"
+
+
+def split_kind(kind: Any, stacks: frozenset[str] | set[str]) -> tuple[str | None, str | None]:
+    """Decompose a stack-qualified composite back into `(stack, role)`.
+
+    A stack-qualified value round-trips exactly: `product` + `dotnet` ->
+    `dotnet-product` -> `("dotnet", "product")`. A *bare* value decomposes to
+    `(None, word)`, which is the one case the composite cannot carry: when the
+    stack is `none` the derived value is the bare role, so it cannot say
+    whether the stack was `none` or simply unstated. Returns `(None, None)` for
+    a value that is not a string.
+    """
+    if not isinstance(kind, str) or not kind:
+        return (None, None)
+    for stack in sorted(stacks):
+        if kind == stack:
+            return (stack, kind)
+        if kind.startswith(f"{stack}-"):
+            return (stack, kind[len(stack) + 1:])
+    return (None, kind)
+
+
 def secret_words_for(governance_root: Path | None = None) -> "re.Pattern[str]":
     import vocabulary
 
@@ -204,6 +246,36 @@ _PROSE_DECLINE_TRIGGERS: tuple[tuple[str, tuple[str, ...]], ...] = (
 # `openspec/changes/cross-repo-adoption-grant/` and `docs/adoption-grant.md`).
 # A separate family from `CAPABILITY_ADOPTION_*` on purpose: the two changes
 # are independent and must not be coupled by naming.
+
+# Identity and taxonomy finding codes (see
+# `openspec/changes/identity-and-taxonomy-axis-split/` and
+# `docs/vocabulary.md`). `role` and `stack` are two independent axes, `id` is
+# the immutable join key, and `kind` survives only as a derived, deprecated
+# composite so an undocumented consumer of the old string keeps parsing.
+TAXONOMY_AXIS_UNKNOWN = "TAXONOMY_AXIS_UNKNOWN"
+TAXONOMY_MISMATCH = "TAXONOMY_MISMATCH"
+TAXONOMY_LEGACY_VALUE = "TAXONOMY_LEGACY_VALUE"
+
+# Ruling 2 (`design.md` §10), binding: TAXONOMY_MISMATCH is ERROR, and the
+# taxonomy audit MUST NOT be enabled until the §5 migration table has been
+# applied. The level is therefore fixed at ERROR below and is never softened
+# to WARNING — the migration and the enabled check ship in the same commit.
+# The flag below is the sequencing hold, not an opt-out: it is a committed,
+# repo-relative constant, never an environment variable, and flipping it to
+# True before the migration cannot pass quietly, because every unresolved row
+# then reports ERROR and turns the gate red. `scripts/axis_migration.py` is
+# what applies the migration that releases the flag.
+TAXONOMY_MISMATCH_LEVEL = "ERROR"
+TAXONOMY_AUDIT_ENABLED = False
+
+
+def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:
+    """Resolve the ruling-2 sequencing gate.
+
+    `None` (every production call path) reads the committed constant; tests
+    pass an explicit value to exercise both states of the gate.
+    """
+    return TAXONOMY_AUDIT_ENABLED if explicit is None else explicit
 
 
 @dataclass
@@ -329,7 +401,7 @@ def load_decisions_register(
     return loaded
 
 
-def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding], check_paths: bool = True, *, canonical_profiles: set[str] | frozenset[str] | None = None, governance_root: Path | None = None) -> list[dict[str, Any]]:
+def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: list[Finding], check_paths: bool = True, *, canonical_profiles: set[str] | frozenset[str] | None = None, governance_root: Path | None = None, taxonomy_enabled: bool | None = None) -> list[dict[str, Any]]:
     if registry.get("schema_version") != 1:
         finding(findings, "ERROR", "REGISTRY_SCHEMA", "registry schema_version must be 1")
     projects = registry.get("projects")
@@ -370,6 +442,10 @@ def validate_registry(registry: dict[str, Any], workspace_root: Path, findings: 
         lifecycle = entry.get("lifecycle")
         if lifecycle not in LIFECYCLES:
             finding(findings, "ERROR", "LIFECYCLE", f"invalid lifecycle: {lifecycle!r}", project_id)
+        if taxonomy_audit_enabled(taxonomy_enabled):
+            # Loaded here rather than up front: while the gate is closed the
+            # audit must not depend on the axis sets at all.
+            validate_registry_taxonomy(entry, findings, project_id, governance_root=governance_root)
     return projects
 
 
@@ -435,6 +511,116 @@ def validate_kind(declaration: dict[str, Any], findings: list[Finding], project_
     kind = declaration.get("kind")
     if not isinstance(kind, str) or kind not in kinds:
         finding(findings, "WARNING", "KIND_UNKNOWN", f"unknown kind: {kind!r}; canonical kinds: {sorted(kinds)}", project_id)
+
+
+def _resolve_axes(
+    surface: dict[str, Any],
+    findings: list[Finding],
+    project_id: str,
+    *,
+    canonical_roles: set[str] | frozenset[str],
+    canonical_stacks: set[str] | frozenset[str],
+    label: str,
+) -> tuple[str | None, str | None, bool]:
+    """Read one authority surface's two axes.
+
+    Returns `(role, stack, both_canonical)`. An absent or non-canonical value
+    is WARNING `TAXONOMY_AXIS_UNKNOWN` naming the offending value and both
+    canonical sets; the two axes are independent, so one bad value does not
+    suppress the report on the other.
+    """
+    axes: dict[str, str | None] = {}
+    canonical = True
+    for axis, values in (("role", canonical_roles), ("stack", canonical_stacks)):
+        value = surface.get(axis)
+        if value is None:
+            finding(findings, "WARNING", TAXONOMY_AXIS_UNKNOWN,
+                    f"{label} does not declare a canonical {axis}; canonical {axis} values: {sorted(values)}", project_id)
+            axes[axis] = None
+            canonical = False
+            continue
+        if not isinstance(value, str) or value not in values:
+            finding(findings, "WARNING", TAXONOMY_AXIS_UNKNOWN,
+                    f"{label} {axis} is not canonical: {value!r}; canonical roles: {sorted(canonical_roles)}; "
+                    f"canonical stacks: {sorted(canonical_stacks)}", project_id)
+            axes[axis] = None
+            canonical = False
+            continue
+        axes[axis] = value
+    return axes["role"], axes["stack"], canonical
+
+
+def validate_registry_taxonomy(
+    entry: dict[str, Any],
+    findings: list[Finding],
+    project_id: str,
+    *,
+    canonical_roles: set[str] | frozenset[str] | None = None,
+    canonical_stacks: set[str] | frozenset[str] | None = None,
+    governance_root: Path | None = None,
+) -> None:
+    """A registry entry's `role`/`stack` must be canonical when present.
+
+    A registry entry may legitimately omit the axes while the fleet migration
+    is in flight, so an absent value is still reported as WARNING
+    `TAXONOMY_AXIS_UNKNOWN` on the surface that omits it. Registry
+    `id`/`path` handling is untouched: an `id` that differs in spelling from
+    its `path` is resolved through `path` and is never a finding.
+    """
+    roles = canonical_roles if canonical_roles is not None else canonical_roles_for(governance_root)
+    stacks = canonical_stacks if canonical_stacks is not None else canonical_stacks_for(governance_root)
+    _resolve_axes(entry, findings, project_id, canonical_roles=roles, canonical_stacks=stacks, label="registry entry")
+
+
+def validate_taxonomy(
+    entry: dict[str, Any],
+    declaration: dict[str, Any],
+    findings: list[Finding],
+    project_id: str,
+    *,
+    canonical_roles: set[str] | frozenset[str] | None = None,
+    canonical_stacks: set[str] | frozenset[str] | None = None,
+    governance_root: Path | None = None,
+) -> None:
+    """Audit the two classification axes across both authority surfaces.
+
+    - an absent or non-canonical value on either surface is WARNING
+      `TAXONOMY_AXIS_UNKNOWN` naming the value and both canonical sets;
+    - a disagreement between the two surfaces is ERROR `TAXONOMY_MISMATCH`
+      (level fixed by ruling 2) naming both values and both keys;
+    - an axis present on only one surface is an absent value, not a
+      contradiction, so it reports `TAXONOMY_AXIS_UNKNOWN` and no mismatch;
+    - a `kind` that disagrees with the value derived from its own axes, and a
+      stack-qualified composite still present while both axes are declared, are
+      WARNING `TAXONOMY_LEGACY_VALUE`.
+
+    The axes are descriptive: nothing here reads a required file, a CI or
+    verification requirement, or an evidence, deployment, or promotion state.
+    """
+    roles = canonical_roles if canonical_roles is not None else canonical_roles_for(governance_root)
+    stacks = canonical_stacks if canonical_stacks is not None else canonical_stacks_for(governance_root)
+    declaration_role, declaration_stack, declaration_canonical = _resolve_axes(
+        declaration, findings, project_id, canonical_roles=roles, canonical_stacks=stacks, label="declaration")
+    registry_role, registry_stack, _ = _resolve_axes(
+        entry, findings, project_id, canonical_roles=roles, canonical_stacks=stacks, label="registry entry")
+
+    if declaration_canonical and registry_role is not None and declaration_role != registry_role:
+        finding(findings, TAXONOMY_MISMATCH_LEVEL, TAXONOMY_MISMATCH,
+                f"role disagreement: registry entry {registry_role!r} against declaration {declaration_role!r}", project_id)
+    if declaration_canonical and registry_stack is not None and declaration_stack != registry_stack:
+        finding(findings, TAXONOMY_MISMATCH_LEVEL, TAXONOMY_MISMATCH,
+                f"stack disagreement: registry entry {registry_stack!r} against declaration {declaration_stack!r}", project_id)
+
+    if not declaration_canonical:
+        # Nothing has been derived yet, so the legacy composite is not yet
+        # measurable: an absent axis must not also report TAXONOMY_LEGACY_VALUE.
+        return
+    derived = derive_kind(declaration_role or "", declaration_stack or "")
+    kind = declaration.get("kind")
+    if isinstance(kind, str) and kind and kind != derived:
+        finding(findings, "WARNING", TAXONOMY_LEGACY_VALUE,
+                f"kind {kind!r} is a hand-authored composite that disagrees with the derived value {derived!r} "
+                f"(derived as stack-role, or the bare role when stack is 'none')", project_id)
 
 
 def validate_capabilities(capabilities: Any, project_path: Path, findings: list[Finding], project_id: str, supported: set[str] | None = None) -> None:
@@ -2250,6 +2436,7 @@ def validate_project(
     rules_drift_baseline: frozenset[tuple[str, str, str]] | None = None,
     observed_drift_keys: set[tuple[str, str, str]] | None = None,
     scanned_projects: set[str] | None = None,
+    taxonomy_enabled: bool | None = None,
 ) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
@@ -2266,6 +2453,8 @@ def validate_project(
     if declaration.get("id") != project_id:
         finding(findings, "ERROR", "DECLARATION_ID", f"declaration id must be {project_id!r}", project_id)
     validate_kind(declaration, findings, project_id, governance_root=governance_root)
+    if taxonomy_audit_enabled(taxonomy_enabled):
+        validate_taxonomy(entry, declaration, findings, project_id, governance_root=governance_root)
     profile = str(entry.get("profile"))
     required, requires_ci, requires_openspec, requires_verification = profile_requirements(profile)
     for relative in required:

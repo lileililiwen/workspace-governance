@@ -115,7 +115,8 @@ canonical prose view is `docs/toolchain-decisions.md`.
 ## Portfolio vocabulary
 
 `vocabulary.json` is the single machine-readable source for the canonical
-`profiles` (15), canonical `kinds` (12), `placeholder_markers`, and
+`profiles` (15), canonical `kinds` (12), the two classification axes
+`roles` (6) and `stacks` (6), `placeholder_markers`, and
 `secret_field_substrings`. `workspace_check.py` enforces the canonical sets
 (a non-canonical registry `profile` is ERROR `PROFILE_UNKNOWN`; a
 non-canonical declaration `kind` is WARNING `KIND_UNKNOWN`; a
@@ -126,6 +127,14 @@ A missing, unparseable, duplicate-bearing, or empty-list vocabulary makes each
 consumer exit non-zero; there is no empty-list fallback. Kind is descriptive
 and never drives profile requirements. The canonical spec is
 `openspec/specs/portfolio-vocabulary/spec.md`.
+
+A project is also classified by two independent axes, `role` (what it is for)
+and `stack` (what it is written in); `kind` survives only as the derived,
+deprecated composite `<stack>-<role>`. The axes are descriptive and never drive
+requirements. The taxonomy audit — including ERROR `TAXONOMY_MISMATCH` — is
+**not enabled** until the fleet migration is applied, and
+`scripts/axis_migration.py` is the reviewable tool that applies it. See
+`docs/vocabulary.md`.
 
 ## Vocabulary
 

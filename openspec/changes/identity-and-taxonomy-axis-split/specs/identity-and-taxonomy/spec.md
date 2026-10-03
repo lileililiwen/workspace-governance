@@ -74,7 +74,7 @@ lossless: `role: product` with `stack: dotnet` SHALL derive
 - **WHEN** a declaration carries `role: platform`, `stack: rust`, and
   `kind: rust-product`
 - **THEN** the audit reports WARNING `TAXONOMY_LEGACY_VALUE` naming the
-  derived value `platform-rust`
+  derived value `rust-platform`
 
 #### Scenario: Stack none derives the bare role
 

@@ -67,6 +67,21 @@
           "change": "rules-drift-gate-wiring"
         }
       ]
+    },
+    {
+      "id": "D6",
+      "title": "Project identity is immutable; classification is two axes",
+      "status": "accepted",
+      "date": "2026-10-03",
+      "owner_project": "workspace-governance",
+      "decision": "A project is identified by an immutable registry `id` plus two independent classification axes, `role` (what the repository is for) and `stack` (what it is written in), both carried by the registry entry and by the declaration. `kind` is retired as an authored value and retained permanently as a derived, deprecated composite: `<stack>-<role>`, or the bare `<role>` when the stack is `none`. `shared-library` is not a seventh role: platform-contracts, rust-platform-libs and dotnet-platform-libs take `role: platform`, because the library-versus-service distinction that carries weight already lives in the frozen `profile` values and no consumer branches on the role. `stack` stays single-valued (lexora, opendockify and trippify resolve to `stack: dotnet`). lileililiwen-site takes `role: deployment`; it is a Hugo static site and keeps its id, because it is one of the eight entries whose registry `path` resolves the directory. `TAXONOMY_MISMATCH` is ERROR and is not enabled until the migration is applied: the audit is held off the fleet by the committed constant TAXONOMY_AUDIT_ENABLED, the severity is never softened to WARNING, and the migration is applied by `scripts/axis_migration.py` as a separately authorized fleet write. The measured disagreement the migration resolves is 30 of 77 comparable repositories where the registry `profile` differs from the declaration `kind`, plus 4 unregistered active repositories and 1 ghost entry that resolves to no directory.",
+      "policy_boundary": "The registry `id` is the identity key and is never derived from, renamed to, or normalized to match the registry `path`; the eight `campusMesh`-style entries are correct and MUST NOT be churned. A rename breaks DECLARATION_ID, the capability-adoption provider bindings, the decisions register reference check and the promotion ledger simultaneously, so it is rejected rather than repaired by updating the reference sites. The two axes are descriptive: they never drive a required file, a CI requirement, a verification command, or any evidence, deployment, or promotion state, and `profile_requirements` continues to read the registry `profile` only. `TAXONOMY_AXIS_UNKNOWN` and `TAXONOMY_LEGACY_VALUE` stay WARNING so a new repository can precede a vocabulary addition, and no new finding code is introduced for the unregistered repositories or the ghost: DISCOVERED_UNREGISTERED and PROJECT_MISSING already fire.",
+      "downstream": [
+        {
+          "repo": "workspace-governance",
+          "change": "identity-and-taxonomy-axis-split"
+        }
+      ]
     }
   ]
 }
