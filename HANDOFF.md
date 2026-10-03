@@ -82,6 +82,28 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- `readme-claim-verification` (`f8df5ea`) evidence. A README status block is
+  now checked against the tree. `QUALITY_README_CLAIM_CONTRADICTED` is ERROR
+  and `QUALITY_README_CLAIM_UNSCOPED` is one aggregate coverage finding per
+  run. `python3 -m unittest discover -s tests` — 489 tests, 0 failures (456
+  prior + 33 new); `workspace_check --self-check` 0/0; `auto_gate --self-check`
+  PASS; `check_skill_refs` ok; `openspec validate --all --strict` 18/18;
+  `rules_drift` unchanged at 148; `jenkins_manifest --check` projects=0
+  errors=0; `git diff --check` clean. From `/home/paul/code` the fleet audit
+  moved `errors=211 warnings=17` → **`errors=215 warnings=18`**: exactly +4
+  `CONTRADICTED` (argoset:31, care-bridge:17, retake-kit:42, devloom:9) and
+  +1 aggregate `UNSCOPED` naming 3 statements. No other code changed count.
+  Read-only proved by hashing 17 real trees before and after a claim run.
+  **The design's 7-repository corpus is stale and the change says so**: 5 of
+  the 7 (`rostera`, `aesthra`, `reelio`, `pluggify`, `testify`,
+  `shopifireman` were repaired 2026-10-03) now carry accurate claims, and 2 of
+  the 4 live findings are in repositories the design never measured.
+  **The fleet is now red on purpose.** Four repositories make a claim their
+  tree contradicts; the rule reports which side is wrong and the owner decides.
+  Repair order stays as ruled, revised for the current corpus. Nothing here
+  gates on the check yet — binding it as a driftwatchdog gate check is
+  deferred to that repository.
+
 - `identity-and-taxonomy-axis-split` (`29dea92`) evidence. `role` and `stack`
   are now independent axes; `kind` is the derived, deprecated composite
   `<stack>-<role>`, or the bare `<role>` when stack is `none`. Three new codes:
