@@ -57,31 +57,6 @@ existing files unless explicitly named with `--replace`. It records configured
 template metadata without changing deployment promotion state. No product
 repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
-The `toolchain-decision-register` change is implemented and archived in
-commit `27282ee`. Workspace Governance now ships `decisions.json` at the
-governance root, a fail-closed `scripts/decisions.py` loader, and a
-`workspace_check.py --decisions` summary path. The four toolchain
-decisions resolved on 2026-09-30 are seeded with their owner projects,
-downstream references, and policy-boundary notes; the D2 public-catalog
-exclusion and the D3 capability-registry split are machine-checked by
-`tests/test_decisions.py`.
-
-The `repository-discoverability-governance` change is implemented and archived
-in commit `1c434b5`. Workspace Governance now audits standard adopted projects
-for `LICENSE`, source-backed `.project.json.discoverability`, and separate
-GitHub publication evidence. `scripts/init_project.py` performs additive local
-repair, while `scripts/github_metadata.py` requires authenticated `gh`,
-preserves existing remotes/topics, and supports explicit check/apply/publish
-modes without token handling or force-pushes.
-
-The `runtime-template-library-and-renderer` change is implemented and archived
-in commit `138844d`. It adds the reusable runtime source library under
-`templates/runtime`, six typed Dockerfile/Compose families, and
-`scripts/runtime_templates.py` with list/inspect/render/check operations.
-Rendering is repository-relative, secret-free, atomic per output, and refuses
-existing files unless explicitly named with `--replace`. It records configured
-template metadata without changing deployment promotion state. No product
-repository, Jenkins consumer, or DriftWatchdog implementation was changed.
 
 The `work-on-main-baseline-rule` change is implemented and archived in
 commit `bb4c406` as `2026-10-03-work-on-main-baseline-rule`, and the
