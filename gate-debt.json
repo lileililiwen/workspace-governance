@@ -1,0 +1,759 @@
+{
+  "generator": "scripts/bind_gate_commands.py",
+  "note": "Every check listed here is selected by a repository's own .ai-gate/gate.yaml under checks: and has no command bound under commands:. The gate reports UNBOUND for these and fails the project. A wrong command is worse than a listed gap: resolve these by hand, then re-run the generator.",
+  "totals": {
+    "repositories_with_debt": 25,
+    "unresolved_checks": 48
+  },
+  "by_reason": [
+    {
+      "reason": "2 .csproj files and no solution",
+      "checks": 4,
+      "repositories": [
+        "aegify",
+        "hestiaLab"
+      ],
+      "entries": [
+        "aegify:build",
+        "aegify:security",
+        "hestiaLab:build",
+        "hestiaLab:security"
+      ]
+    },
+    {
+      "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation",
+      "checks": 4,
+      "repositories": [
+        "alethefy",
+        "ariadex",
+        "jenkins-local",
+        "metiscope"
+      ],
+      "entries": [
+        "alethefy:build",
+        "ariadex:build",
+        "jenkins-local:build",
+        "metiscope:build"
+      ]
+    },
+    {
+      "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library",
+      "checks": 4,
+      "repositories": [
+        "jenkins-local",
+        "metiscope",
+        "platform-contracts",
+        "workspace-governance"
+      ],
+      "entries": [
+        "jenkins-local:security",
+        "metiscope:security",
+        "platform-contracts:security",
+        "workspace-governance:security"
+      ]
+    },
+    {
+      "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run",
+      "checks": 4,
+      "repositories": [
+        "actoria",
+        "citylens",
+        "mewo",
+        "trailCrew"
+      ],
+      "entries": [
+        "actoria:accessibility",
+        "citylens:accessibility",
+        "mewo:accessibility",
+        "trailCrew:accessibility"
+      ]
+    },
+    {
+      "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run",
+      "checks": 3,
+      "repositories": [
+        "actoria",
+        "mewo",
+        "trailCrew"
+      ],
+      "entries": [
+        "actoria:privacy",
+        "mewo:privacy",
+        "trailCrew:privacy"
+      ]
+    },
+    {
+      "reason": "4 .csproj files and no solution",
+      "checks": 2,
+      "repositories": [
+        "smotoox"
+      ],
+      "entries": [
+        "smotoox:build",
+        "smotoox:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: cargo audit (Cargo.toml (cargo-audit is the Rust dependency audit)); npm audit --audit-level=high (package.json has no security script, so this is the npm dependency audit)",
+      "checks": 1,
+      "repositories": [
+        "rust-ecommerce"
+      ],
+      "entries": [
+        "rust-ecommerce:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: cd .opencode && npm audit --audit-level=high (.opencode/package.json has no security script, so this is the npm dependency audit); cd npm && npm audit --audit-level=high (npm/package.json has no security script, so this is the npm dependency audit)",
+      "checks": 1,
+      "repositories": [
+        "sisyphusfy"
+      ],
+      "entries": [
+        "sisyphusfy:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet build RetakeKit.sln (root solution RetakeKit.sln); npm run build (package.json declares scripts.build)",
+      "checks": 1,
+      "repositories": [
+        "retakeKit"
+      ],
+      "entries": [
+        "retakeKit:build"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet build backend/CourseBridge.slnx (the only solution, backend/CourseBridge.slnx); cd frontend && npm run build (frontend/package.json declares scripts.build)",
+      "checks": 1,
+      "repositories": [
+        "crossify"
+      ],
+      "entries": [
+        "crossify:build"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet build backend/Linglitch.slnx (the only solution, backend/Linglitch.slnx); cd frontend && npm run build (frontend/package.json declares scripts.build)",
+      "checks": 1,
+      "repositories": [
+        "linglitch"
+      ],
+      "entries": [
+        "linglitch:build"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet build src/Orphevia.slnx (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm run build (src/Orphevia.Web/package.json declares scripts.build)",
+      "checks": 1,
+      "repositories": [
+        "orphevia"
+      ],
+      "entries": [
+        "orphevia:build"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet list RetakeKit.sln package --vulnerable --include-transitive --no-restore (root solution RetakeKit.sln); npm audit --audit-level=high (package.json has no security script, so this is the npm dependency audit)",
+      "checks": 1,
+      "repositories": [
+        "retakeKit"
+      ],
+      "entries": [
+        "retakeKit:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet list backend/CourseBridge.slnx package --vulnerable --include-transitive --no-restore (the only solution, backend/CourseBridge.slnx); cd frontend && npm audit --audit-level=high (frontend/package.json has no security script, so this is the npm dependency audit)",
+      "checks": 1,
+      "repositories": [
+        "crossify"
+      ],
+      "entries": [
+        "crossify:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet list backend/Linglitch.slnx package --vulnerable --include-transitive --no-restore (the only solution, backend/Linglitch.slnx); cd frontend && npm audit --audit-level=high (frontend/package.json has no security script, so this is the npm dependency audit)",
+      "checks": 1,
+      "repositories": [
+        "linglitch"
+      ],
+      "entries": [
+        "linglitch:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet list src/Orphevia.slnx package --vulnerable --include-transitive --no-restore (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm audit --audit-level=high (src/Orphevia.Web/package.json has no security script, so this is the npm dependency audit)",
+      "checks": 1,
+      "repositories": [
+        "orphevia"
+      ],
+      "entries": [
+        "orphevia:security"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test OpenDockify.sln (root solution OpenDockify.sln); python3 -m unittest discover -s tests -v (1 test file(s) in tests/ are unittest.TestCase only)",
+      "checks": 1,
+      "repositories": [
+        "opendockify"
+      ],
+      "entries": [
+        "opendockify:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test OpenLearning.sln (root solution OpenLearning.sln); python3 -m unittest discover -s tests -v (2 test file(s) in tests/ are unittest.TestCase only)",
+      "checks": 1,
+      "repositories": [
+        "openlearning"
+      ],
+      "entries": [
+        "openlearning:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test RetakeKit.sln (root solution RetakeKit.sln); npm test (package.json declares scripts.test)",
+      "checks": 1,
+      "repositories": [
+        "retakeKit"
+      ],
+      "entries": [
+        "retakeKit:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test api/HestiaLab.Api.Tests/HestiaLab.Api.Tests.csproj (the only test project, api/HestiaLab.Api.Tests/HestiaLab.Api.Tests.csproj); cd web && npm test (web/package.json declares scripts.test)",
+      "checks": 1,
+      "repositories": [
+        "hestiaLab"
+      ],
+      "entries": [
+        "hestiaLab:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test backend/CourseBridge.slnx (the only solution, backend/CourseBridge.slnx); cd frontend && npm test (frontend/package.json declares scripts.test)",
+      "checks": 1,
+      "repositories": [
+        "crossify"
+      ],
+      "entries": [
+        "crossify:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test backend/Linglitch.slnx (the only solution, backend/Linglitch.slnx); cd frontend && npm test (frontend/package.json declares scripts.test)",
+      "checks": 1,
+      "repositories": [
+        "linglitch"
+      ],
+      "entries": [
+        "linglitch:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test src/Orphevia.slnx (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm test (src/Orphevia.Web/package.json declares scripts.test)",
+      "checks": 1,
+      "repositories": [
+        "orphevia"
+      ],
+      "entries": [
+        "orphevia:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: dotnet test src/api/Reelio.Api.sln (the only solution, src/api/Reelio.Api.sln); cd src/client/client && flutter test (src/client/client/pubspec.yaml is a Flutter package)",
+      "checks": 1,
+      "repositories": [
+        "reelio"
+      ],
+      "entries": [
+        "reelio:tests"
+      ]
+    },
+    {
+      "reason": "2 equally plausible entry points: npm audit --audit-level=high (package.json has no security script, so this is the npm dependency audit); pip-audit (the repository declares the pip-audit dependency)",
+      "checks": 1,
+      "repositories": [
+        "alltools-platform"
+      ],
+      "entries": [
+        "alltools-platform:security"
+      ]
+    },
+    {
+      "reason": "2 test projects and no solution (tests/BuDing.Api.Tests/BuDing.Api.Tests.csproj, tests/BuDing.Landing.Tests/BuDing.Landing.Tests.csproj)",
+      "checks": 1,
+      "repositories": [
+        "smotoox"
+      ],
+      "entries": [
+        "smotoox:tests"
+      ]
+    },
+    {
+      "reason": "3 equally plausible entry points: cd rust && cargo build --workspace (rust/Cargo.toml (declares [workspace])); cd django_archived && npm run build (django_archived/package.json declares scripts.build); cd rust && npm run build (rust/package.json declares scripts.build)",
+      "checks": 1,
+      "repositories": [
+        "alltools-platform"
+      ],
+      "entries": [
+        "alltools-platform:build"
+      ]
+    },
+    {
+      "reason": "4 equally plausible entry points: dotnet test backend/Catchen.sln (the only solution, backend/Catchen.sln); cd clients/api_client && flutter test (clients/api_client/pubspec.yaml is a Flutter package); cd clients/consumer && flutter test (clients/consumer/pubspec.yaml is a Flutter package); cd clients/ops && flutter test (clients/ops/pubspec.yaml is a Flutter package)",
+      "checks": 1,
+      "repositories": [
+        "catchen"
+      ],
+      "entries": [
+        "catchen:tests"
+      ]
+    },
+    {
+      "reason": "no package.json in this repository declares a 'build' script, so there is no build command to derive",
+      "checks": 1,
+      "repositories": [
+        "sisyphusfy"
+      ],
+      "entries": [
+        "sisyphusfy:build"
+      ]
+    },
+    {
+      "reason": "no rule derives a fixtures command and this repository has no scripts/check-fixtures.* to run",
+      "checks": 1,
+      "repositories": [
+        "platform-contracts"
+      ],
+      "entries": [
+        "platform-contracts:fixtures"
+      ]
+    },
+    {
+      "reason": "no rule derives a governance-quality command and this repository has no scripts/check-governance-quality.* to run",
+      "checks": 1,
+      "repositories": [
+        "driftwatchdog"
+      ],
+      "entries": [
+        "driftwatchdog:governance-quality"
+      ]
+    },
+    {
+      "reason": "no rule derives a provenance command and this repository has no scripts/check-provenance.* to run",
+      "checks": 1,
+      "repositories": [
+        "citylens"
+      ],
+      "entries": [
+        "citylens:provenance"
+      ]
+    },
+    {
+      "reason": "no rule derives a schemas command and this repository has no scripts/check-schemas.* to run",
+      "checks": 1,
+      "repositories": [
+        "platform-contracts"
+      ],
+      "entries": [
+        "platform-contracts:schemas"
+      ]
+    }
+  ],
+  "repositories": [
+    {
+      "repo": "actoria",
+      "shape": "node",
+      "unresolved": [
+        {
+          "concern": "accessibility",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
+        },
+        {
+          "concern": "privacy",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run"
+        }
+      ]
+    },
+    {
+      "repo": "aegify",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "2 .csproj files and no solution"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 .csproj files and no solution"
+        }
+      ]
+    },
+    {
+      "repo": "alethefy",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
+        }
+      ]
+    },
+    {
+      "repo": "alltools-platform",
+      "shape": "rust",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "3 equally plausible entry points: cd rust && cargo build --workspace (rust/Cargo.toml (declares [workspace])); cd django_archived && npm run build (django_archived/package.json declares scripts.build); cd rust && npm run build (rust/package.json declares scripts.build)"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: npm audit --audit-level=high (package.json has no security script, so this is the npm dependency audit); pip-audit (the repository declares the pip-audit dependency)"
+        }
+      ]
+    },
+    {
+      "repo": "ariadex",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
+        }
+      ]
+    },
+    {
+      "repo": "catchen",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "4 equally plausible entry points: dotnet test backend/Catchen.sln (the only solution, backend/Catchen.sln); cd clients/api_client && flutter test (clients/api_client/pubspec.yaml is a Flutter package); cd clients/consumer && flutter test (clients/consumer/pubspec.yaml is a Flutter package); cd clients/ops && flutter test (clients/ops/pubspec.yaml is a Flutter package)"
+        }
+      ]
+    },
+    {
+      "repo": "citylens",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "accessibility",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
+        },
+        {
+          "concern": "provenance",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a provenance command and this repository has no scripts/check-provenance.* to run"
+        }
+      ]
+    },
+    {
+      "repo": "crossify",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet build backend/CourseBridge.slnx (the only solution, backend/CourseBridge.slnx); cd frontend && npm run build (frontend/package.json declares scripts.build)"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet list backend/CourseBridge.slnx package --vulnerable --include-transitive --no-restore (the only solution, backend/CourseBridge.slnx); cd frontend && npm audit --audit-level=high (frontend/package.json has no security script, so this is the npm dependency audit)"
+        },
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test backend/CourseBridge.slnx (the only solution, backend/CourseBridge.slnx); cd frontend && npm test (frontend/package.json declares scripts.test)"
+        }
+      ]
+    },
+    {
+      "repo": "driftwatchdog",
+      "shape": "rust",
+      "unresolved": [
+        {
+          "concern": "governance-quality",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a governance-quality command and this repository has no scripts/check-governance-quality.* to run"
+        }
+      ]
+    },
+    {
+      "repo": "hestiaLab",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "2 .csproj files and no solution"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 .csproj files and no solution"
+        },
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test api/HestiaLab.Api.Tests/HestiaLab.Api.Tests.csproj (the only test project, api/HestiaLab.Api.Tests/HestiaLab.Api.Tests.csproj); cd web && npm test (web/package.json declares scripts.test)"
+        }
+      ]
+    },
+    {
+      "repo": "jenkins-local",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
+        }
+      ]
+    },
+    {
+      "repo": "linglitch",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet build backend/Linglitch.slnx (the only solution, backend/Linglitch.slnx); cd frontend && npm run build (frontend/package.json declares scripts.build)"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet list backend/Linglitch.slnx package --vulnerable --include-transitive --no-restore (the only solution, backend/Linglitch.slnx); cd frontend && npm audit --audit-level=high (frontend/package.json has no security script, so this is the npm dependency audit)"
+        },
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test backend/Linglitch.slnx (the only solution, backend/Linglitch.slnx); cd frontend && npm test (frontend/package.json declares scripts.test)"
+        }
+      ]
+    },
+    {
+      "repo": "metiscope",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
+        }
+      ]
+    },
+    {
+      "repo": "mewo",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "accessibility",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
+        },
+        {
+          "concern": "privacy",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run"
+        }
+      ]
+    },
+    {
+      "repo": "opendockify",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test OpenDockify.sln (root solution OpenDockify.sln); python3 -m unittest discover -s tests -v (1 test file(s) in tests/ are unittest.TestCase only)"
+        }
+      ]
+    },
+    {
+      "repo": "openlearning",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test OpenLearning.sln (root solution OpenLearning.sln); python3 -m unittest discover -s tests -v (2 test file(s) in tests/ are unittest.TestCase only)"
+        }
+      ]
+    },
+    {
+      "repo": "orphevia",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet build src/Orphevia.slnx (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm run build (src/Orphevia.Web/package.json declares scripts.build)"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet list src/Orphevia.slnx package --vulnerable --include-transitive --no-restore (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm audit --audit-level=high (src/Orphevia.Web/package.json has no security script, so this is the npm dependency audit)"
+        },
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test src/Orphevia.slnx (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm test (src/Orphevia.Web/package.json declares scripts.test)"
+        }
+      ]
+    },
+    {
+      "repo": "platform-contracts",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "fixtures",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a fixtures command and this repository has no scripts/check-fixtures.* to run"
+        },
+        {
+          "concern": "schemas",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a schemas command and this repository has no scripts/check-schemas.* to run"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
+        }
+      ]
+    },
+    {
+      "repo": "reelio",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test src/api/Reelio.Api.sln (the only solution, src/api/Reelio.Api.sln); cd src/client/client && flutter test (src/client/client/pubspec.yaml is a Flutter package)"
+        }
+      ]
+    },
+    {
+      "repo": "retakeKit",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet build RetakeKit.sln (root solution RetakeKit.sln); npm run build (package.json declares scripts.build)"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet list RetakeKit.sln package --vulnerable --include-transitive --no-restore (root solution RetakeKit.sln); npm audit --audit-level=high (package.json has no security script, so this is the npm dependency audit)"
+        },
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: dotnet test RetakeKit.sln (root solution RetakeKit.sln); npm test (package.json declares scripts.test)"
+        }
+      ]
+    },
+    {
+      "repo": "rust-ecommerce",
+      "shape": "rust",
+      "unresolved": [
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: cargo audit (Cargo.toml (cargo-audit is the Rust dependency audit)); npm audit --audit-level=high (package.json has no security script, so this is the npm dependency audit)"
+        }
+      ]
+    },
+    {
+      "repo": "sisyphusfy",
+      "shape": "node",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "no package.json in this repository declares a 'build' script, so there is no build command to derive"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "2 equally plausible entry points: cd .opencode && npm audit --audit-level=high (.opencode/package.json has no security script, so this is the npm dependency audit); cd npm && npm audit --audit-level=high (npm/package.json has no security script, so this is the npm dependency audit)"
+        }
+      ]
+    },
+    {
+      "repo": "smotoox",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "build",
+          "status": "UNRESOLVED",
+          "reason": "4 .csproj files and no solution"
+        },
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "4 .csproj files and no solution"
+        },
+        {
+          "concern": "tests",
+          "status": "UNRESOLVED",
+          "reason": "2 test projects and no solution (tests/BuDing.Api.Tests/BuDing.Api.Tests.csproj, tests/BuDing.Landing.Tests/BuDing.Landing.Tests.csproj)"
+        }
+      ]
+    },
+    {
+      "repo": "trailCrew",
+      "shape": "rust",
+      "unresolved": [
+        {
+          "concern": "accessibility",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
+        },
+        {
+          "concern": "privacy",
+          "status": "UNRESOLVED",
+          "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run"
+        }
+      ]
+    },
+    {
+      "repo": "workspace-governance",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "security",
+          "status": "UNRESOLVED",
+          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
+        }
+      ]
+    }
+  ]
+}
