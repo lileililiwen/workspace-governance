@@ -15,3 +15,9 @@ build/
 auto-gate-report.json
 maturity-snapshot.json
 *-snapshot.json
+
+# Driftwatch local runtime state. This directory holds per-machine state
+# (state.db and local caches), never project configuration, so it must
+# never be committed. A root-level driftwatch.toml is different: that is
+# real project config and IS tracked.
+.driftwatch/
