@@ -28,11 +28,11 @@ runtime split, and capability-registry split, live in `decisions.json` and
 release evidence use the other routes in the front-door skill.
 
 Load the owner's installed skill for the next step: forge-project-workflow for
-project lifecycle and coordination, platform-contract-consumption for wire
-schemas, dotnet-platform-adoption for .NET consumers, driftwatchdog-gate for
-verification evidence, and openpanel-forge-delivery for publish operations.
-Hypora and Hermora remain the owners of their respective export and enrollment
-contracts even when a Forge or OpenPanel skill routes to them.
+project lifecycle and coordination, hypora-idea-graduation for approved idea
+export, platform-contract-consumption for wire schemas,
+dotnet-platform-adoption or rust-platform-adoption for language consumers,
+driftwatchdog-gate for verification evidence, openpanel-forge-delivery for
+publish operations, and hermora-site-onboarding for post-publish enrollment.
 
 ## Follow the handoff
 
