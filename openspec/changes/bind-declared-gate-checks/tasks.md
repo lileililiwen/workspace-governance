@@ -305,3 +305,25 @@ records the state the tests were added to.
   and belongs to whoever owns that file's fleet assumptions.
 - [ ] **The change is not archived.** Archiving needs separate
   authorization.
+
+## Follow-up: three fleet assertions were vacuous after the fleet was applied
+
+The three `FleetTest` assertions filtered concerns on `status == BOUND`, which
+means "this run would have wired it". Once `--apply` had been run across the
+fleet, every concern became `ALREADY_BOUND` and the assertions had almost
+nothing left to check. They read the same invariant against the committed
+commands instead, which is more of the fleet and holds whether or not anyone
+has applied the bindings yet.
+
+The `dotnet` assertion also encoded a wrong premise. It required a `dotnet`
+command to name a build file, but `dotnet test tests/Foo.UnitTests` names a
+project *directory* (no file extension), and a bare `dotnet test` is valid
+when the repository root holds exactly one solution or project for it to
+resolve. The assertion now accepts a named target, a named project directory,
+or exactly one build entry point at the root -- and still fails for a bare
+`dotnet build` in a repository that has none.
+
+Verified by negative control: forcing every derived `dotnet build` to name a
+non-existent file turns 5 tests red, and forcing a bare `dotnet build` turns
+this one red with `aegify/build: dotnet build names no build file, no project
+directory, and the root holds 0 build entry points rather than exactly one`.

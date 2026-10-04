@@ -1092,7 +1092,19 @@ class FleetTest(unittest.TestCase):
     `*.slnx` and a repository labelled `typescript` that is a .NET solution —
     and no fixture proves a count. Every assertion is an invariant that must
     hold however the fleet changes; no test names a repository or a number.
+
+    These assertions read the *commanded* concerns, which is `BOUND` for a
+    repository this run would have wired and `ALREADY_BOUND` for one a
+    previous run already wired. Filtering on `BOUND` alone made every
+    assertion vacuous the moment the fleet was applied: the walk then found
+    nothing to check and passed only because `checked > 0` happened to hold
+    for the untouched repositories. Reading both is the same invariant
+    against more of the fleet, and it stays true whether or not anyone has
+    run `--apply` yet.
     """
+
+    #: A concern the gate will actually execute a command for.
+    COMMANDED = frozenset({BOUND, ALREADY_BOUND})
 
     @classmethod
     def setUpClass(cls):
@@ -1118,7 +1130,7 @@ class FleetTest(unittest.TestCase):
         checked = 0
         for outcome in self.report.outcomes:
             for concern in outcome.concerns:
-                if concern.status != BOUND:
+                if concern.status not in self.COMMANDED:
                     continue
                 for path in paths_in(concern.command) | paths_in(concern.evidence):
                     self.assertTrue(
@@ -1139,7 +1151,7 @@ class FleetTest(unittest.TestCase):
             (outcome.repo, concern.concern, concern.command)
             for outcome in self.report.outcomes
             for concern in outcome.concerns
-            if concern.status == BOUND and ".slnx" in concern.command
+            if concern.status in self.COMMANDED and ".slnx" in concern.command
         ]
         self.assertTrue(
             from_slnx,
@@ -1160,14 +1172,32 @@ class FleetTest(unittest.TestCase):
         checked = 0
         for outcome in self.report.outcomes:
             for concern in outcome.concerns:
-                if concern.status != BOUND:
+                if concern.status not in self.COMMANDED:
                     continue
                 if not concern.command.startswith("dotnet "):
                     continue
                 checked += 1
+                # A `dotnet` command may name its target (`dotnet build Foo.slnx`,
+                # `dotnet test tests/Foo.UnitTests`) or omit it, which is legal
+                # when the repository root holds exactly one solution or project
+                # for the bare invocation to resolve. What must never happen is a
+                # bare `dotnet build` in a repository with no build entry point at
+                # all -- that command cannot run.
+                named_dirs = any(
+                    (self.root / outcome.repo / token).is_dir()
+                    for token in concern.command.split()
+                    if not token.startswith("-")
+                )
+                root = self.root / outcome.repo
+                root_entries = [
+                    p for p in root.iterdir()
+                    if p.suffix in (".sln", ".slnx") or p.suffix.endswith("proj")
+                ] if root.is_dir() else []
                 self.assertTrue(
-                    paths_in(concern.command),
-                    f"{outcome.repo}/{concern.concern}: {concern.command} names no file",
+                    paths_in(concern.command) or named_dirs or len(root_entries) == 1,
+                    f"{outcome.repo}/{concern.concern}: {concern.command} names no "
+                    f"build file, no project directory, and the root holds "
+                    f"{len(root_entries)} build entry points rather than exactly one",
                 )
         self.assertGreater(checked, 0, "no .NET command was bound across the fleet")
 
