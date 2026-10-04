@@ -93,6 +93,70 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- `bind-declared-gate-checks` (`8e3aecd`) evidence. **This change was resumed,
+  not started**: the generator and the spec directory existed uncommitted from an
+  aborted session, and the gap was that a 47KB tool with no tests is exactly the
+  thing that quietly rots. `tests/test_bind_gate_commands.py` now holds **92
+  tests** over `tmp_path`-sized fixture repositories, with one tolerant walk of
+  the real 81.
+
+  The tool binds each gate check a repository *already declares* under
+  `.ai-gate/gate.yaml` `checks:` to a command derived from what is on disk, and
+  refuses to invent one. Measured fleet dry run, unchanged before and after the
+  tests:
+
+  | | |
+  |---|---|
+  | repositories | 81 |
+  | RESOLVED | 51 |
+  | PARTIAL | 25 |
+  | UNRESOLVED | 0 |
+  | refused | 0 |
+  | NO_MANIFEST | 5 — `chronicleaf` `devloom` `kairovia` `lileililiwen.github.io` `ziban` |
+  | unresolved checks | 48 |
+  | left in place | 18 |
+  | debt record | `<root>/gate-debt.json`, written only under `--apply` |
+
+  The refusals are pinned harder than the successes, because a binder that
+  fabricates a command is worse than no binder. **The negative control was run,
+  not asserted.** Making `derive` return `python3 -m build` for a pure-Python
+  package turned three tests red —
+  `AssertionError: 'BOUND' != 'UNRESOLVED'` and
+  `AssertionError: ' -m build' unexpectedly found in 'python3 -m build'` — and
+  the binder was restored byte-identical before committing.
+
+  Two field errors are locked in by name. **19 repositories use `*.slnx`, not
+  `*.sln`**; `SOLUTION_SUFFIXES` is asserted to be `(".sln", ".slnx")` and a
+  `.slnx`-only fixture must still produce `dotnet build Foo.slnx`. And
+  **`loreMix` is `LoreMix.slnx` while labelled `typescript`** — a label-driven
+  binder emits `npm run build` for it. The declared `stack` is therefore not an
+  argument of any function in the tool. `FleetTest` walks the real workspace once
+  and asserts invariants only, never a count, so it survives fleet churn; one of
+  its assertions is that every path a bound command names actually exists in
+  that repository.
+
+  Suite: **615 → 707 passed, 155 → 158 subtests passed.** No test was weakened,
+  skipped or filtered.
+
+  Two reporting quirks the tests found, reported and **not** fixed, because
+  fixing them means editing the generator rather than adding tests. A Python
+  repository with only a `pyproject.toml` and no `tests/` directory is labelled
+  `unknown` in the debt record's `shape` field, because `Shape.label()` reads
+  `python_dirs`, which detection populates only from a test directory. And a
+  second `--apply` immediately after the first sees its own writes as `DIRTY`,
+  skips those repositories, and so writes a debt record that under-reports —
+  two *dry* runs are byte-identical, which is what the tests assert.
+
+  `scripts/bind_verification_command.py` changed only by the two-helper rename
+  the generator needs to reuse its YAML editor. The sibling's own tests pass and
+  its dry run still reports `BOUND: 0, ALREADY_BOUND: 76, CONFLICT: 0,
+  REFUSED: 0`, so no behaviour moved.
+
+  `openspec validate --changes --strict` reports this change valid. The tree's
+  one failure is `bind-declared-verification`, an untracked directory from an
+  earlier session that holds no `specs/` delta at all. It is not part of this
+  change, is not staged by it, and was deliberately left alone.
+
 - `spec-purpose-backfill-gate` (`6de0dd7`) evidence. Archiving a change writes
   `TBD - created by archiving change <name>.` into the `## Purpose` of every spec
   it produced, so a spec whose purpose is the string TBD reads as a finished
@@ -747,7 +811,17 @@ sibling repository.
 
 ## Next action
 
-1. Archive `derived-kind-canonical-form` and `identity-and-taxonomy-axis-split`
+1. **`bind-declared-gate-checks` (`8e3aecd`) is implemented, tested and
+   validated, and deliberately not archived.** It gates on one thing the owner
+   must decide, not on code: 48 declared checks across the fleet are still
+   unbound because no command could be derived for them. Applying the other 50
+   repositories' bindings is a cross-repo source edit needing explicit
+   authorization under the boundary in `AGENTS.md` — review the dry run, then
+   `--apply`, then commit `gate-debt.json`. Until that is done the tool exits 3
+   by design, and that is the honest state: a check with no command is not a
+   check. Two items are knowingly open in `tasks.md`: `README.md` is not yet
+   updated (3.7), and the two reporting quirks above are reported, not fixed.
+2. Archive `derived-kind-canonical-form` and `identity-and-taxonomy-axis-split`
    when the owner is ready. Both are implemented, committed, and validated
    strictly; neither is archived. Archiving the first folds the MODIFIED
    `Canonical kinds are enforced` requirement into
@@ -755,7 +829,7 @@ sibling repository.
    what finally lands the `identity-and-taxonomy` capability spec. Archiving
    them in that order keeps the derived-kind requirement on `main` from being
    split across two histories.
-2. `spec-purpose-backfill-gate` (`6de0dd7`) is implemented, tested, and
+3. `spec-purpose-backfill-gate` (`6de0dd7`) is implemented, tested, and
    validated, and is deliberately **not archived**: the fence is shut and the
    gate-wiring dependency is unmet. Two things gate its archive, in order.
    First, `driftwatchdog`'s `GOVERNANCE_QUALITY_DECLARED_CODES` must gain
@@ -765,14 +839,14 @@ sibling repository.
    authorization: review the dry run, then `--apply`, then set
    `SPEC_PURPOSE_AUDIT_ENABLED = True` in the same commit. Until both are done,
    do not enable the rule and do not archive the change.
-3. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
+4. Take packages 4–7 to their owning repositories via `docs/package-backlog.md`;
    each is a separate conversation and a separate repository.
-4. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
+5. Replace the 9 scaffold `HANDOFF.md` bodies as each product's own state is
    recorded (product-owned work).
-5. Re-promote each pilot project at its current `HEAD` once its release pipeline
+6. Re-promote each pilot project at its current `HEAD` once its release pipeline
    produces real artifacts, and replace the pilot-context `release_evidence`
    placeholders.
-6. Commit the sibling declaration/rules edits in their own repositories when
+7. Commit the sibling declaration/rules edits in their own repositories when
    those repositories' pending work is ready.
 
 ## Evidence boundary
