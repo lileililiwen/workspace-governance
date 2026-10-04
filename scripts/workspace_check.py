@@ -361,6 +361,46 @@ SPEC_PURPOSE_SPECS_DIR = "openspec/specs"
 SPEC_PURPOSE_PLACEHOLDER_LEVEL = "ERROR"
 SPEC_PURPOSE_AUDIT_ENABLED = True
 
+# A declared verification command that no Gate runs (see
+# `driftwatchdog/openspec/changes/bind-declared-verification-command/`).
+#
+# Ruling D18: a verifier that no gate runs does not gate. Measured on
+# 2026-10-04, all 81 sibling repositories declare a `verification.command` in
+# their `.project.json` and 6 bind a command into `.ai-gate/gate.yaml`, leaving
+# 70 whose gate executed nothing. The existing `VERIFICATION_COMMAND` rule
+# checks the opposite direction — that a command is *present* — so it is
+# satisfied by all 81 and catches none of this. This rule closes the gap: the
+# declaration must reach a blocking gate.
+#
+# This is the taxonomy rule's fence pattern exactly, and the only one for this
+# rule: a committed, repo-relative constant, never an environment variable, no
+# skip flag, no exemption registry. The level is fixed at ERROR below and is
+# never softened to WARNING to achieve the hold — softening the level would
+# hide the rule in a second, dishonest way.
+#
+# Shipped `False`. The alternative, `True`, reports ERROR for every repository
+# that declares a command and binds none: 70 today, of which 4 are excluded
+# because their manifest is dirty and 11 cannot parse at all because they carry
+# an unknown top-level field, so `True` right now is red for reasons this rule
+# does not own. Flipping the constant is the owner's single decision; the fence
+# test proves that flipping it changes the result.
+#
+# Like the taxonomy fence, this flag alone does not make the rule gate anything.
+# The `governance-quality` concern in `driftwatchdog` filters its verdict to
+# `GOVERNANCE_QUALITY_DECLARED_CODES`, so the code below must be in that
+# allow-list or the concern reports PASS while this checker exits 1. That
+# declaration ships in the same change.
+QUALITY_VERIFICATION_COMMAND_UNBOUND = "QUALITY_VERIFICATION_COMMAND_UNBOUND"
+QUALITY_VERIFICATION_COMMAND_UNBOUND_LEVEL = "ERROR"
+VERIFICATION_BINDING_AUDIT_ENABLED = False
+
+# The concern id `scripts/bind_verification_command.py` writes into
+# `.ai-gate/gate.yaml`, and the concern id that must also be selected in
+# `checks:` for the binding to run at all. The rule and the generator must agree
+# on these names or the generator binds something the rule calls unbound.
+GATE_MANIFEST_RELATIVE = ".ai-gate/gate.yaml"
+DECLARED_VERIFICATION_CONCERN = "declared-verification"
+
 
 def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:
     """Resolve the ruling-2 sequencing gate.
@@ -378,6 +418,16 @@ def spec_purpose_audit_enabled(explicit: bool | None = None) -> bool:
     an explicit value to exercise both states of the gate.
     """
     return SPEC_PURPOSE_AUDIT_ENABLED if explicit is None else explicit
+
+
+def verification_binding_audit_enabled(explicit: bool | None = None) -> bool:
+    """Resolve the sequencing gate for an unbound declared verification command.
+
+    `None` (every production call path) reads the committed constant; tests pass
+    an explicit value to exercise both states of the gate. Same shape and same
+    rationale as the other two fences, so one mechanism governs all three.
+    """
+    return VERIFICATION_BINDING_AUDIT_ENABLED if explicit is None else explicit
 
 
 @dataclass
@@ -2647,6 +2697,160 @@ def validate_spec_purposes(project_path: Path, findings: list[Finding], project_
         )
 
 
+def validate_declared_verification_is_bound(
+    project_path: Path, findings: list[Finding], project_id: str
+) -> None:
+    """Report a declared `verification.command` that no Gate actually runs.
+
+    The existing `VERIFICATION_COMMAND` rule asks the opposite question — is a
+    command *declared*? — and all 81 repositories satisfy it, so it catches none
+    of the 70 whose `.ai-gate/gate.yaml` binds no command and whose gate
+    therefore executes nothing. Ruling D18 calls that documentation: a verifier
+    that no gate runs does not gate.
+
+    Both halves must be present for a binding to be real, and this rule checks
+    both, because the manifest parser refuses one without the other:
+
+    * `checks:` must select `declared-verification` as `true` — a selection of
+      `false` binds nothing, and the generator refuses to override it;
+    * `commands:` must bind that concern.
+
+    A repository with no `.ai-gate/gate.yaml` is reported too, and distinctly:
+    there is no manifest to bind into, which is a different defect from a
+    manifest that declines to bind. The message says which, so the remediation
+    is not "add a command" for a repository that has nowhere to put one.
+
+    The reading is line-based on purpose. The concern id is a fixed constant
+    written by `scripts/bind_verification_command.py`, and the rule reads the
+    same constant, so the two cannot disagree about what "bound" means. A full
+    YAML parse is not used because a manifest carrying an unknown top-level
+    field fails to parse at all — 11 of the 76 in the fleet do — and a rule
+    that crashed on those would be blind exactly where the state is worst.
+    """
+    manifest = project_path / GATE_MANIFEST_RELATIVE
+    command = _declared_verification_command(project_path)
+    if command is None:
+        return
+
+    if not manifest.is_file():
+        native = project_path / "gate.toml"
+        where = (
+            f"uses a native {native.name}, which this rule does not read; its "
+            f"declared command must be bound there"
+            if native.is_file()
+            else f"has no {GATE_MANIFEST_RELATIVE} to bind it into"
+        )
+        finding(
+            findings,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND_LEVEL,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND,
+            f"declares verification.command {command!r} but {where}; "
+            "the command is documentation, not a gate",
+            project_id,
+        )
+        return
+
+    try:
+        lines = manifest.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        finding(
+            findings,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND_LEVEL,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND,
+            f"declares verification.command but {GATE_MANIFEST_RELATIVE} cannot be read: {exc}",
+            project_id,
+        )
+        return
+
+    checks = _yaml_block(lines, "checks")
+    commands = _yaml_block(lines, "commands")
+    if checks is None:
+        # No selection block at all: nothing could be bound, whatever
+        # `commands:` says.
+        finding(
+            findings,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND_LEVEL,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND,
+            f"declares verification.command {command!r} but {GATE_MANIFEST_RELATIVE} "
+            "selects no `checks:` block, so a bound command could never run",
+            project_id,
+        )
+        return
+
+    selected = _yaml_entry(checks, DECLARED_VERIFICATION_CONCERN)
+    if selected != "true":
+        detail = "does not select it" if selected is None else f"selects it as {selected!r}, not `true`"
+        finding(
+            findings,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND_LEVEL,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND,
+            f"declares verification.command {command!r} but {GATE_MANIFEST_RELATIVE} "
+            f"{detail} under `checks:`",
+            project_id,
+        )
+        return
+
+    if _yaml_entry(commands or [], DECLARED_VERIFICATION_CONCERN) is None:
+        finding(
+            findings,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND_LEVEL,
+            QUALITY_VERIFICATION_COMMAND_UNBOUND,
+            f"declares verification.command {command!r} but {GATE_MANIFEST_RELATIVE} "
+            f"binds no `commands.{DECLARED_VERIFICATION_CONCERN}`; the gate runs nothing",
+            project_id,
+        )
+
+
+def _declared_verification_command(project_path: Path) -> str | None:
+    """The repository's own declared command, or None when it declares none.
+
+    Reads the same field the generator reads, with the same refusals: an
+    unparseable or absent declaration yields None, and this rule then has
+    nothing to report. A rule that reported "declares a command it does not
+    declare" would be the rule's own bug, not the repository's.
+    """
+    declaration_path = project_path / ".project.json"
+    if not declaration_path.is_file():
+        return None
+    try:
+        data = json.loads(declaration_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    verification = data.get("verification")
+    if not isinstance(verification, dict):
+        return None
+    command = verification.get("command")
+    if not isinstance(command, str) or not command.strip():
+        return None
+    return command.strip()
+
+
+def _yaml_block(lines: list[str], key: str) -> list[str] | None:
+    """The indented lines of a top-level `key:` block, or None if absent."""
+    try:
+        start = next(i for i, line in enumerate(lines) if line.startswith(f"{key}:"))
+    except StopIteration:
+        return None
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if line.strip() and not line[0].isspace():
+            end = index
+            break
+    return lines[start + 1 : end]
+
+
+def _yaml_entry(block: list[str], key: str) -> str | None:
+    """One `  <key>: <value>` entry's value inside a block, or None."""
+    needle = f"  {key}:"
+    for line in block:
+        if line.startswith(needle):
+            return line[len(needle) :].strip()
+    return None
+
+
 def validate_change_names(project_path: Path, findings: list[Finding], project_id: str) -> None:
     changes = project_path / "openspec" / "changes"
     if not changes.is_dir():
@@ -2730,6 +2934,7 @@ def validate_project(
     scanned_projects: set[str] | None = None,
     taxonomy_enabled: bool | None = None,
     spec_purpose_enabled: bool | None = None,
+    verification_binding_enabled: bool | None = None,
     readme_claim_coverage: list[tuple[str, str, int, str, str]] | None = None,
     promoted_projects: set[str] | None = None,
 ) -> None:
@@ -2760,6 +2965,8 @@ def validate_project(
     verification = declaration.get("verification")
     if requires_verification and (not isinstance(verification, dict) or not str(verification.get("command", "")).strip()):
         finding(findings, "ERROR", "VERIFICATION_COMMAND", "a real verification command is required", project_id)
+    if verification_binding_audit_enabled(verification_binding_enabled):
+        validate_declared_verification_is_bound(project_path, findings, project_id)
     if profile != "inventory":
         from repository_metadata import validate_discoverability, validate_publication
 
