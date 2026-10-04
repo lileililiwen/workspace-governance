@@ -1,6 +1,6 @@
 ---
 name: workspace-governance
-description: Entry point for workspace governance situations in this portfolio: project declarations and registry, kind/profile vocabulary, quality gates and release evidence, the shared rules baseline, platform adoption, and shared contracts. Routes each situation to the owning script or canonical spec.
+description: Use when a portfolio task touches Workspace Governance, Forge, another manager project, shared platform contracts, project declarations, quality evidence, release readiness, or cross-project ownership and cooperation.
 ---
 
 # Workspace Governance
@@ -24,6 +24,7 @@ beside an existing one.
 | License, discoverability, GitHub metadata, or repository publication | `skills/workspace-governance/references/repository-metadata.md` (`scripts/repository_metadata.py`, `scripts/github_metadata.py`, `scripts/init_project.py`) |
 | Shared library adoption (.NET / Rust) | `skills/workspace-governance/references/platform-adoption.md` (dotnet-platform-libs, rust-platform-libs, `docs/capabilities.md`) |
 | Shared contracts or schemas | `skills/workspace-governance/references/contracts.md` (platform-contracts) |
+| Forge and common-project cooperation, project factory, idea graduation, publishing, or post-publish operations | `skills/workspace-governance/references/portfolio-cooperation.md` (owner and contract routing) |
 | Unknown or ambiguous | Safe default: `python3 scripts/workspace_check.py --root .. --audit`, then `openspec list`. Say that no route matched; never guess. |
 
 ## Boundaries
