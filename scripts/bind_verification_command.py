@@ -161,7 +161,7 @@ def yaml_scalar(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def _top_level_block_bounds(lines: list[str], key: str) -> tuple[int, int] | None:
+def top_level_block_bounds(lines: list[str], key: str) -> tuple[int, int] | None:
     """Return `(header_index, end_index)` for a top-level `key:` block.
 
     `end_index` is exclusive and stops at the next non-blank line at column 0,
@@ -185,7 +185,7 @@ def _top_level_block_bounds(lines: list[str], key: str) -> tuple[int, int] | Non
     return start, end
 
 
-def _entry_value(lines: list[str], start: int, end: int, key: str) -> str | None:
+def entry_value(lines: list[str], start: int, end: int, key: str) -> str | None:
     """Read one `  <key>: <value>` entry from a top-level block, or None."""
     needle = f"  {key}:"
     for index in range(start + 1, end):
@@ -207,12 +207,12 @@ def render_manifest(text: str, command: str) -> tuple[str, str]:
     existing_command = None
     existing_selection = None
 
-    checks = _top_level_block_bounds(lines, "checks")
+    checks = top_level_block_bounds(lines, "checks")
     if checks is not None:
-        existing_selection = _entry_value(lines, checks[0], checks[1], CONCERN_ID)
-    commands = _top_level_block_bounds(lines, "commands")
+        existing_selection = entry_value(lines, checks[0], checks[1], CONCERN_ID)
+    commands = top_level_block_bounds(lines, "commands")
     if commands is not None:
-        existing_command = _entry_value(lines, commands[0], commands[1], CONCERN_ID)
+        existing_command = entry_value(lines, commands[0], commands[1], CONCERN_ID)
 
     # An existing selection that is not `true` is the operator having said no.
     # Do not flip it: a generated tool overriding a recorded decision is the
@@ -249,7 +249,7 @@ def _insert_selection(lines: list[str], command: str) -> list[str]:
     function only places the entry at the end of it, so the concern lands
     inside the block rather than after the next top-level key.
     """
-    block = _top_level_block_bounds(lines, "checks")
+    block = top_level_block_bounds(lines, "checks")
     if block is None:  # pragma: no cover - guarded by the caller
         return lines
     _start, end = block
@@ -259,7 +259,7 @@ def _insert_selection(lines: list[str], command: str) -> list[str]:
 
 def _insert_command(lines: list[str], command: str) -> list[str]:
     """Ensure `commands: declared-verification: '<command>'` is present."""
-    block = _top_level_block_bounds(lines, "commands")
+    block = top_level_block_bounds(lines, "commands")
     entry = f"  {CONCERN_ID}: {yaml_scalar(command)}\n"
     if block is None:
         # Create the block at the end of the document, separated by a blank
