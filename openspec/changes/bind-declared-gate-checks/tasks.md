@@ -163,7 +163,107 @@ records the state the tests were added to.
   sibling rename first, then `HANDOFF.md` only. No archive commit, no
   branch, no push.
 
-## 5. Deliberately not done
+## 5. The debt record under-reported: the defect this pass found
+
+- [x] 5.1 **Measured, not assumed.** The gate (`driftwatchdog gate
+  --dry-run`, the build at `driftwatchdog/target/debug/`) reports **55
+  repositories and 170 unbound required checks**. The committed
+  `gate-debt.json` named **25 repositories and 48 checks**. 122 pairs
+  across 30 repositories were missing, and no pair was spurious. The
+  `driftwatchdog` on `PATH` is a `cargo install` build from 2026-10-01
+  that predates unbound reporting and answers 0 for the whole fleet; the
+  scan must use the repository build.
+- [x] 5.2 **The cause, with the evidence.** A manifest selects a check two
+  ways: by listing it under `checks:`, and by naming a `profile:` whose
+  default set the gate schedules anyway (`driftwatchdog/src/gate/manifest.rs`
+  `selected_without_triggers` → `profile_defaults`). `read_manifest` read
+  only the first. Every missing pair is a concern the gate's
+  `product`/`rust-product` profile schedules: 41 `placeholder-threshold`,
+  41 `product-code-boundary`, 40 `governance-quality` — the 41st is
+  `driftwatchdog`, the one repository that lists `governance-quality` under
+  `checks:` itself and is therefore the single `governance-quality` entry
+  the old record did have. `aesthra` is the shape: six declared checks, all
+  bound, three profile-scheduled checks the gate still fails on, and no
+  entry in the record at all. A repository with no unresolved check of its
+  own was dropped for "having no gaps", so the record read as complete.
+- [x] 5.3 **The stated hypothesis was wrong and is not what was fixed.** The
+  binder did report the no-rule/no-fallback class: `script_concern()`
+  returns exactly the reason string quoted in the bug report, and that
+  string is in `by_reason` for the one repository that declares
+  `governance-quality` under `checks:`. Nothing was silently skipped for
+  want of a rule; the class was invisible because those repositories never
+  declared the concern in the first place.
+- [x] 5.4 **The fix.** `PROFILE_DEFAULTS` mirrors the gate's
+  `profile_defaults`, and `gate_required()` resolves the set the gate would
+  fail on: the manifest's own `checks:`, plus the profile's defaults, minus
+  what the gate excuses — a `checks: <id>: false` that deselects a profile
+  default, a `not_applicable:` exemption with a reason, and
+  `source-file-size`, which the gate executes in-process
+  (`is_source_file_size_concern`) and never counts unbound. `"optional"`
+  stays out because `read_manifest` reads only `true`, and the gate does
+  not fail on a non-required check.
+- [x] 5.5 **A profile-scheduled check is recorded, never written.** Proved
+  against the binary: a manifest whose `commands:` names a check the
+  manifest does not select is refused outright —
+  `manifest parse error: commands.governance-quality references a check
+  that is not selected`. Writing one would trade a reported gap for a
+  manifest the gate cannot parse, so the reason tells the reader the fix
+  instead: select it under `checks:`, add `scripts/check-<id>.*`, or
+  exempt it.
+- [x] 5.6 **The second, quieter hole: a dirty manifest.** The `is_dirty`
+  check ran before the manifest was read, so a repository with uncommitted
+  work returned with no concerns and vanished from the record while the gate
+  still failed on it — the exact behaviour §5 below recorded as a
+  reporting quirk. The write is still refused; the classification is not.
+  An `--apply` run immediately after a previous one no longer writes a
+  record that omits every repository it had just written to.
+- [x] 5.7 **The record is regenerated and committed.**
+  `python3 scripts/bind_gate_commands.py --root /home/paul/code --apply
+  --debt-out /home/paul/code/workspace-governance/gate-debt.json` — run
+  from a clean fleet, so the record is not built from a run that skipped its
+  own writes. It now names **55 repositories and 170 checks**, equal to the
+  gate's own count. A dry run first confirmed `0` repositories with a
+  pending binding, so `--apply` wrote **no** sibling manifest; the fleet was
+  re-checked afterwards and every `git status --porcelain -- .ai-gate/gate.yaml`
+  across the 81 repositories is empty.
+- [x] 5.8 **The regression is now impossible to reintroduce silently.**
+  `ProfileSelectionTests` (12) pins the selection model on fixtures,
+  including the repository whose only debt is profile-scheduled, the
+  in-process check, the disabled check, the exemption, the optional check,
+  and the refusal to write. `GateOracleTest` (5) compares the committed
+  record **and a fresh dry run** against the real binary's unbound set, by
+  set equality and never by count, so the fleet may grow or re-profile
+  freely. It skips when the binary is not built, and skips with a named
+  reason when the binary is too old to report unbound checks — proven first
+  against a throwaway one-check repository, so the comparison can never run
+  against a blind oracle.
+- [x] 5.9 **Negative controls, run and then reverted.**
+  (a) Making `gate_required` return the manifest's `checks:` alone — the
+  pre-fix behaviour — turned 5 tests red, including
+  `test_a_repository_whose_only_debt_is_profile_scheduled_is_still_listed`
+  with `AssertionError: demo is missing from the debt record; the record
+  names []` and `test_a_fresh_run_reproduces_the_gate_set` with the 122-pair
+  diff and the message "the gate reports unbound checks a fresh run does not
+  find; the record would be regenerated without them".
+  (b) Moving the `is_dirty` check back above the classification turned
+  `test_a_dirty_manifest_is_still_classified_and_recorded` red with
+  `AssertionError: Lists differ: [] != [('demo', ['build', 'tests'])]`.
+  Both controls were reverted and the suite returned to 722.
+- [x] 5.10 **The shared fixture moved to `profile: minimal`.** It said
+  `profile: product`, so every one of the 89 fixture tests gained three
+  unresolvable concerns that had nothing to do with what each test was
+  about. `minimal` is the built-in profile with an empty default set, which
+  leaves `checks:` as the only selection in play and each test asserting
+  exactly what it asserted before. The profile path is covered against
+  `product` itself in `ProfileSelectionTests`. No assertion was weakened,
+  skipped or filtered.
+- [x] 5.11 Spec delta extended: a new requirement, *The debt record is
+  complete against the gate's own unbound set*, with five scenarios, and
+  *Only a concern the repository declared is bound* amended to say that a
+  `profile:` is a declaration and that a profile-only check MUST NOT be
+  written.
+
+## 6. Deliberately not done
 
 - [ ] **The 283 bindings are not applied to the 69 sibling
   repositories.** That is a separate authorization. The debt record is
@@ -185,9 +285,23 @@ records the state the tests were added to.
     directory is labelled `unknown` in the debt record's `shape` field,
     because `Shape.label()` reads `python_dirs`, which detection only
     populates from a test directory.
-  - A second `--apply` run immediately after the first sees its own writes
+  - ~~A second `--apply` run immediately after the first sees its own writes
     as `DIRTY`, skips those repositories, and therefore writes a debt
-    record that under-reports. Two *dry* runs are byte-identical, which is
-    what the tests assert.
+    record that under-reports.~~ **Fixed in §5.6.** The dirty check now
+    refuses only the write; the checks are classified and recorded either
+    way, and `test_a_dirty_manifest_is_still_classified_and_recorded` pins
+    it. Two dry runs and two `--apply` runs are now byte-identical.
+- [ ] **Three `FleetTest` tests are red, and were red before this pass.**
+  `test_every_path_a_bound_command_names_really_exists`,
+  `test_no_bound_dotnet_command_is_missing_its_entry_file` and
+  `test_the_fleet_exercises_the_slnx_path_at_scale` filter on
+  `status == BOUND`. The fleet is now applied, so a dry run classifies
+  every command as `ALREADY_BOUND` and the filter matches nothing:
+  `AssertionError: 0 not greater than 0 : no path was checked at all`. The
+  baseline on arrival was **704 passed, 3 failed**, not 707 green. The
+  assertions are stale about the fleet's state, not about this defect, and
+  they were left alone rather than edited inside a fix that has its own
+  evidence. Widening the filter to `ALREADY_BOUND` is the obvious repair
+  and belongs to whoever owns that file's fleet assumptions.
 - [ ] **The change is not archived.** Archiving needs separate
   authorization.

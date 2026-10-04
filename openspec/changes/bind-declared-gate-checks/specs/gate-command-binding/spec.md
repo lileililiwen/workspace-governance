@@ -152,15 +152,22 @@ it does not have.
 
 ### Requirement: Only a concern the repository declared is bound
 
-A command MUST be written only for a concern the repository's own
-manifest already selected under `checks:`. The tool MUST NOT add a
-concern, MUST NOT remove a concern, MUST NOT change a `checks:` value,
-and MUST NOT turn a disabled concern on. A concern that is disabled or
-absent from `checks:` MUST be left alone whether or not a command could
-be derived for it. A command already present for a declared concern MUST
-be left byte-for-byte alone when it equals the derived command, and MUST
-be reported as a conflict and left untouched when it differs, because an
-existing binding is a decision somebody made by hand.
+A command MUST be written only for a concern the repository's own manifest
+selected, whether by listing it under `checks:` or by naming a `profile:`
+whose default selection includes it. The tool MUST NOT add a concern, MUST
+NOT remove a concern, MUST NOT change a `checks:` value, and MUST NOT turn a
+disabled concern on. A concern that is disabled or absent from `checks:`
+MUST be left alone whether or not a command could be derived for it. A
+command already present for a declared concern MUST be left byte-for-byte
+alone when it equals the derived command, and MUST be reported as a
+conflict and left untouched when it differs, because an existing binding is
+a decision somebody made by hand.
+
+A concern that only a `profile:` selected, and that the manifest does not
+also list under `checks:`, MUST NOT be written. The gate's manifest reader
+refuses a document whose `commands:` names a check the manifest does not
+select, so such a binding would replace a reported gap with a manifest the
+gate cannot parse.
 
 #### Scenario: A concern nobody asked for stays unbound
 
@@ -179,6 +186,64 @@ existing binding is a decision somebody made by hand.
   `tests` command
 - **THEN** the concern is reported as a conflict, the existing command is
   left exactly as it is, and the file is not written
+
+#### Scenario: A profile-scheduled check is recorded, not written
+
+- **WHEN** a repository's manifest says `profile: product` and does not list
+  `placeholder-threshold` under `checks:`
+- **THEN** `placeholder-threshold` is recorded as unresolved with a reason
+  naming the profile and the way to bind it, and no
+  `commands.placeholder-threshold` entry is written, because the gate would
+  refuse to parse a manifest that carried one
+
+### Requirement: The debt record is complete against the gate's own unbound set
+
+The set of (repository, concern) pairs in the debt record MUST equal the set
+the gate reports as unbound required checks, with the gate's own dry-run
+output as the authority. A repository MUST appear in the record whenever the
+gate reports an unbound required check for it, including when the only
+unbound checks are ones a `profile:` scheduled rather than the manifest
+listing, and including when the repository's manifest has uncommitted work.
+A check the manifest disabled under `checks:`, a check exempted under
+`not_applicable:` with a reason, and a check the gate executes in-process
+MUST NOT be recorded, because the gate reports none of them as unbound.
+
+A record that names a subset of the gaps MUST be treated as a defect rather
+than as a shorter list: a reader — human or agent — cannot tell an
+under-reporting record from a complete one by reading it, and a gate check
+nobody can see is a gate check nobody closes.
+
+#### Scenario: A profile-scheduled check is in the record
+
+- **WHEN** a repository binds every check its manifest declares, and its
+  `profile: product` schedules three more that bind no command
+- **THEN** all three appear in that repository's entry, each with a reason
+
+#### Scenario: A repository whose only debt is profile-scheduled is still listed
+
+- **WHEN** a repository has no unresolved check in its own `checks:` and
+  three unresolved checks from its profile
+- **THEN** it appears in `repositories` with those three, rather than being
+  absent for having no gaps of its own
+
+#### Scenario: Uncommitted work does not hide debt
+
+- **WHEN** a repository's manifest has uncommitted changes
+- **THEN** the manifest is not written, and the checks the gate would report
+  as unbound for it are still classified and recorded
+
+#### Scenario: An excused check is not debt
+
+- **WHEN** a repository exempts a check under `not_applicable:` with a reason
+- **THEN** that check does not appear in the record, because the gate does
+  not fail on it
+
+#### Scenario: The record and the gate agree
+
+- **WHEN** the tool runs over the fleet and the gate is available
+- **THEN** no (repository, concern) pair the gate reports as unbound is
+  missing from the record, and no pair in the record is absent from the
+  gate's report
 
 ### Requirement: A run is dry by default and refuses a dirty manifest
 

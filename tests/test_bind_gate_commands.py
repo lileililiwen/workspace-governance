@@ -22,6 +22,7 @@ stdout and can fail. Cleanup uses `shutil.rmtree(..., ignore_errors=True)`.
 
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -41,16 +42,20 @@ from bind_gate_commands import (  # noqa: E402
     GENERATED_MARKER,
     NO_MANIFEST,
     PARTIAL,
+    PROFILE_DEFAULTS,
     REFUSED,
     RESOLVED,
     SOLUTION_SUFFIXES,
     UNRESOLVED,
+    Report,
     bind_repo,
     build_debt,
     derive,
     detect_shape,
     format_detail,
+    gate_required,
     main,
+    read_gate_policy,
     read_manifest,
     render_manifest,
     roll_up,
@@ -61,9 +66,17 @@ from bind_gate_commands import (  # noqa: E402
 
 # The manifest a fixture starts from. `checks:` is the only thing a test
 # varies about policy; everything else is fixed so a binding diff is readable.
+#
+# `profile: minimal` is deliberate. A built-in profile schedules checks the
+# manifest never lists, and `product` — 41 of this fleet's 76 manifests —
+# schedules three that bind no command, so every fixture using it would
+# carry three unresolvable concerns that have nothing to do with what each
+# test is about. `minimal` is the built-in profile with an empty default
+# set, which leaves `checks:` as the only selection in play here.
+# `ProfileSelectionTests` covers the profile path against `product` itself.
 MANIFEST = """version: 1
 runtime: driftwatchdog
-profile: product
+profile: minimal
 checks:
 {checks}blocking:
   - FAIL
@@ -76,7 +89,7 @@ TESTS_ONLY = "  tests: true\n"
 # exercised against a document that already has one.
 WITH_COMMANDS = """version: 1
 runtime: driftwatchdog
-profile: product
+profile: minimal
 checks:
   build: true
   tests: true
@@ -738,6 +751,31 @@ class GitWriteContractTests(GitRepoCase):
         outcome = bind_repo(self.repo, apply=True, check_clean=True)
         self.assertEqual(outcome.status, DIRTY)
 
+    def test_a_dirty_manifest_is_still_classified_and_recorded(self):
+        # The write is refused; the reading is not. The gate resolves a
+        # dirty repository exactly as it resolves a clean one and fails on
+        # the same checks, so a repository skipped for uncommitted work
+        # would take its real debt out of the record — and an `--apply` run
+        # straight after a previous one writes a record missing every
+        # repository it had just written to.
+        self.write("pyproject.toml", "[project]\nname = 'p'\n")
+        self.commit()
+        with (self.repo / ".ai-gate" / "gate.yaml").open("a", encoding="utf-8") as handle:
+            handle.write("# owner WIP\n")
+        outcome = bind_repo(self.repo, apply=True, check_clean=True)
+        self.assertEqual(outcome.status, DIRTY)
+        report = Report()
+        report.add(outcome)
+        debt = build_debt(report, self.repo)
+        self.assertEqual(
+            [(r["repo"], [u["concern"] for u in r["unresolved"]])
+             for r in debt["repositories"]],
+            [("demo", ["build", "tests"])],
+        )
+        self.assertEqual(
+            self.concern(outcome, "build").reason, PURE_PYTHON_BUILD
+        )
+
 
 class WorkspaceWriteTests(GitRepoCase):
     """The write contract across a whole fixture workspace, via `run()`."""
@@ -1149,6 +1187,365 @@ class FleetTest(unittest.TestCase):
                 self.assertTrue(
                     concern.evidence, f"{outcome.repo}/{concern.concern} has no evidence"
                 )
+
+
+# --- what a profile selects ------------------------------------
+
+
+# `aesthra`'s real shape, reduced: a product repository that binds every
+# check it declares, so the only thing the gate can still fail on is what
+# its profile scheduled. Before this pass that repository was absent from
+# `gate-debt.json` while the gate reported three UNBOUND checks for it.
+PRODUCT_MANIFEST = """version: 1
+runtime: driftwatchdog
+profile: product
+checks:
+{checks}blocking:
+  - FAIL
+"""
+
+# The three checks `profile: product` schedules and no repository in this
+# fleet binds. `source-file-size` is the fourth: the gate runs it in
+# process, so it is never unbound and must never appear in the record.
+PRODUCT_PROFILE_DEBT = (
+    "governance-quality",
+    "placeholder-threshold",
+    "product-code-boundary",
+)
+
+
+class ProfileSelectionTests(RepoCase):
+    """A `profile:` schedules checks the manifest never lists.
+
+    The binder used to read only `checks:`, so every check the gate
+    scheduled through a profile was invisible to it: a repository whose
+    only unbound checks came from its profile had no unresolved concerns,
+    and therefore no entry in the debt record at all. Across this fleet
+    that was 30 repositories and 122 checks the gate was failing on.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.write_manifest(checks=BUILD_AND_TESTS, text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS
+        ))
+
+    def debt(self) -> dict:
+        report = Report()
+        report.add(self.bind())
+        return build_debt(report, self.repo)
+
+    def entry(self, debt: dict) -> dict:
+        """This repository's debt entry, or a failure naming what is there."""
+        found = [r for r in debt["repositories"] if r["repo"] == "demo"]
+        if len(found) != 1:
+            raise AssertionError(
+                "demo is missing from the debt record; the record names "
+                f"{[r['repo'] for r in debt['repositories']]}"
+            )
+        return found[0]
+
+    def unresolved(self, debt: dict) -> dict[str, str]:
+        return {u["concern"]: u["reason"] for u in self.entry(debt)["unresolved"]}
+
+    def test_a_profile_scheduled_check_is_recorded_as_debt(self):
+        self.write("App.sln", A_SOLUTION)
+        self.write("App/App.csproj", A_CSPROJ)
+        # `build` and `tests` bind, so the profile's three are the only debt
+        # left, and they are the three the gate reports for this manifest.
+        self.assertEqual(set(self.unresolved(self.debt())), set(PRODUCT_PROFILE_DEBT))
+
+    def test_a_repository_whose_only_debt_is_profile_scheduled_is_still_listed(self):
+        # The shape that lost 30 repositories: every declared check is
+        # bound, so nothing in `checks:` is unresolved and the entry used to
+        # be dropped for having no gaps at all.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        debt = self.debt()
+        self.assertEqual(set(self.unresolved(debt)), set(PRODUCT_PROFILE_DEBT))
+        self.assertEqual(debt["totals"]["repositories_with_debt"], 1)
+        self.assertEqual(debt["totals"]["unresolved_checks"], 3)
+
+    def test_a_profile_scheduled_check_names_the_way_out(self):
+        reason = self.unresolved(self.debt())["placeholder-threshold"]
+        self.assertIn("profile: product", reason)
+        self.assertIn("commands.placeholder-threshold", reason)
+        self.assertIn("not_applicable", reason)
+
+    def test_the_in_process_check_is_never_recorded(self):
+        # The gate executes `source-file-size` itself; it is scheduled by
+        # the same profile as the other three and is never unbound.
+        self.assertNotIn("source-file-size", self.unresolved(self.debt()))
+
+    def test_a_disabled_profile_check_is_not_recorded(self):
+        self.write_manifest(text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS + "  governance-quality: false\n"
+        ))
+        self.assertNotIn("governance-quality", self.unresolved(self.debt()))
+
+    def test_an_exempted_check_is_not_recorded(self):
+        self.write_manifest(text=PRODUCT_MANIFEST.format(checks=BUILD_AND_TESTS).replace(
+            "blocking:",
+            'not_applicable:\n  placeholder-threshold: "no placeholder text here"\nblocking:',
+        ))
+        self.assertNotIn("placeholder-threshold", self.unresolved(self.debt()))
+
+    def test_an_optional_check_is_neither_bound_nor_recorded(self):
+        # `"optional"` schedules the check but does not make it required, so
+        # the gate does not fail on it having no command.
+        self.write_manifest(text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS + "  accessibility: optional\n"
+        ))
+        self.assertNotIn("accessibility", self.unresolved(self.debt()))
+
+    def test_a_profile_scheduled_check_is_never_written_as_a_command(self):
+        # The gate's `.ai-gate` reader refuses a manifest whose `commands:`
+        # names a check the manifest does not select, so a binding here would
+        # trade a reported gap for an unparseable manifest.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        self.write("scripts/check-placeholder-threshold.mjs", "export default [];\n")
+        before = self.manifest_text()
+        outcome = self.bind(apply=True)
+        self.assertEqual(self.manifest_text(), before, "a profile-only check was written")
+        self.assertEqual(
+            self.concern(outcome, "placeholder-threshold").status, UNRESOLVED
+        )
+
+    def test_a_manifest_declared_profile_check_with_a_script_is_bound(self):
+        # `driftwatchdog`'s shape: the concern is named under `checks:` as
+        # well as by the profile, so a command for it is legal and binds.
+        self.write_manifest(text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS + "  governance-quality: true\n"
+        ))
+        self.write("scripts/check-governance-quality.mjs", "export default [];\n")
+        outcome = self.bind(apply=True)
+        self.assertEqual(self.concern(outcome, "governance-quality").status, BOUND)
+        self.assertIn(
+            "  governance-quality: 'scripts/check-governance-quality.mjs'",
+            self.manifest_text(),
+        )
+
+    def test_an_unknown_profile_schedules_nothing(self):
+        # A profile that is not built in selects exactly the checks the
+        # manifest declares, so 17 of this fleet's 21 profile names add
+        # nothing on their own. The declared `build` and `tests` are
+        # unresolvable in this bare fixture; the point is that no
+        # profile-scheduled check joins them.
+        self.write_manifest(text=PRODUCT_MANIFEST.format(checks=BUILD_AND_TESTS).replace(
+            "profile: product", "profile: web-saas"
+        ))
+        self.assertEqual(set(self.unresolved(self.debt())), {"build", "tests"})
+
+    def test_the_minimal_profile_schedules_nothing(self):
+        self.assertEqual(gate_required([], read_gate_policy("profile: minimal\n")), [])
+
+    def test_the_profile_table_matches_the_gate(self):
+        # Every built-in profile name the gate accepts, with the same
+        # defaults. A name added on the gate's side without a row here would
+        # silently stop contributing debt, which is this defect again.
+        self.assertEqual(
+            set(PROFILE_DEFAULTS),
+            {
+                "backend", "frontend", "full", "minimal", "product",
+                "rust-product", "release", "deployable",
+            },
+        )
+        self.assertEqual(
+            PROFILE_DEFAULTS["product"],
+            (
+                "governance-quality",
+                "placeholder-threshold",
+                "product-code-boundary",
+                "source-file-size",
+            ),
+        )
+
+
+# --- the committed record against the gate itself --------------
+
+
+GATE_PLAN_HEADER = "gate plan (dry-run"
+GATE_UNBOUND_HEADER = "unbound required checks ("
+GATE_UNBOUND_ENTRY = re.compile(r"^  - ([A-Za-z0-9_.-]+):")
+
+
+def gate_binary(root: Path) -> Path | None:
+    """The gate binary to use as the oracle, or None when it is not built.
+
+    `PATH` is deliberately not consulted. A `cargo install`ed build is
+    routinely older than the repository it is asked about, and an older
+    build does not report unbound checks at all — the test below proves the
+    binary is a usable oracle before it compares anything against it.
+    """
+    for candidate in (
+        root / "driftwatchdog" / "target" / "debug" / "driftwatchdog",
+        root / "driftwatchdog" / "target" / "release" / "driftwatchdog",
+    ):
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def gate_unbound(gate: Path, repo: Path) -> set[str]:
+    """The check ids `driftwatchdog gate --dry-run` reports unbound for `repo`.
+
+    The gate's own dry-run output is the authority for what it fails on;
+    this reads the one section of it that says so, and refuses to guess
+    when that section is absent or unrecognised.
+    """
+    completed = subprocess.run(
+        [str(gate), "gate", "--dry-run"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    text = completed.stdout + completed.stderr
+    if GATE_PLAN_HEADER not in text:
+        raise AssertionError(
+            f"{repo.name}: the gate printed no dry-run plan, so it cannot be "
+            f"read as an oracle:\n{text.strip()[:400]}"
+        )
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not line.startswith(GATE_UNBOUND_HEADER):
+            continue
+        found = set()
+        for entry in lines[index + 1:]:
+            match = GATE_UNBOUND_ENTRY.match(entry)
+            if match is None:
+                break
+            found.add(match.group(1))
+        return found
+    return set()
+
+
+class GateOracleTest(unittest.TestCase):
+    """The committed debt record must equal the gate's unbound set.
+
+    The record exists so that a reader — human or agent — cannot walk past
+    an unclosed gate check. A record that names a subset reads as complete,
+    which is the failure this pins: 48 of 170 checks across 25 of 55
+    repositories is worse than no record, because nothing in the file says
+    so.
+
+    Every assertion is set equality, never a count, so the fleet may grow,
+    shrink or re-profile without breaking it. What cannot change is that the
+    record and the gate agree.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = Path(__file__).parents[2]
+        if not (cls.root / "workspace-governance").is_dir():
+            raise unittest.SkipTest(f"workspace root not present: {cls.root}")
+        cls.gate = gate_binary(cls.root)
+        if cls.gate is None:
+            raise unittest.SkipTest(
+                "the driftwatchdog gate binary is not built; run `cargo build` "
+                "in driftwatchdog/ to check the debt record against the gate"
+            )
+        if not cls.gate_reports_unbound():
+            raise unittest.SkipTest(
+                f"{cls.gate} does not report unbound required checks, so it "
+                "predates the feature and cannot be the oracle; rebuild it"
+            )
+        cls.record = json.loads(
+            (cls.root / "workspace-governance" / DEBT_FILE).read_text(encoding="utf-8")
+        )
+        cls.recorded = {
+            (r["repo"], u["concern"])
+            for r in cls.record["repositories"]
+            for u in r["unresolved"]
+        }
+        cls.unbound = set()
+        for repo in sorted(cls.root.iterdir()):
+            if not (repo / ".ai-gate" / "gate.yaml").is_file():
+                continue
+            cls.unbound |= {(repo.name, c) for c in gate_unbound(cls.gate, repo)}
+
+    @classmethod
+    def gate_reports_unbound(cls) -> bool:
+        """Positive control: does this binary report an unbound check at all?
+
+        One throwaway repository with a required check and no command. A
+        build that does not report unbound checks answers an empty set for
+        every repository, and the comparison below would then fail on the
+        record instead of on the tool.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "oracle-probe"
+            (repo / ".ai-gate").mkdir(parents=True)
+            (repo / ".ai-gate" / "gate.yaml").write_text(
+                "version: 1\nruntime: driftwatchdog\nprofile: minimal\nchecks:\n"
+                "  tests: true\nblocking:\n  - FAIL\n",
+                encoding="utf-8",
+            )
+            try:
+                return gate_unbound(cls.gate, repo) == {"tests"}
+            except AssertionError:
+                return False
+
+    def test_the_record_names_every_check_the_gate_calls_unbound(self):
+        missing = sorted(self.unbound - self.recorded)
+        self.assertEqual(
+            missing,
+            [],
+            f"{len(missing)} unbound required check(s) the gate reports and the debt "
+            f"record does not name, in {len({r for r, _ in missing})} "
+            f"repositories; first few: {missing[:6]}",
+        )
+
+    def test_the_record_names_nothing_the_gate_calls_bound(self):
+        extra = sorted(self.recorded - self.unbound)
+        self.assertEqual(
+            extra,
+            [],
+            f"{len(extra)} check(s) the record calls debt that the gate does not "
+            f"report as unbound; first few: {extra[:6]}",
+        )
+
+    def test_a_fresh_run_reproduces_the_gate_set(self):
+        # The committed record can only stay right while the generator is.
+        # A binder that stopped seeing profile-scheduled checks would leave
+        # today's record looking perfect and the next `--apply` quietly
+        # write a worse one, which is the same defect one commit later.
+        report = run(self.root, apply=False)
+        produced = {
+            (outcome.repo, concern.concern)
+            for outcome in report.outcomes
+            for concern in outcome.concerns
+            if concern.status == UNRESOLVED
+        }
+        self.assertEqual(
+            sorted(produced - self.unbound),
+            [],
+            "a fresh run finds debt the gate does not report as unbound",
+        )
+        self.assertEqual(
+            sorted(self.unbound - produced),
+            [],
+            "the gate reports unbound checks a fresh run does not find; the "
+            "record would be regenerated without them",
+        )
+
+    def test_the_record_totals_match_what_it_lists(self):
+        self.assertEqual(
+            self.record["totals"]["unresolved_checks"], len(self.recorded)
+        )
+        self.assertEqual(
+            self.record["totals"]["repositories_with_debt"],
+            len({r for r, _ in self.recorded}),
+        )
+
+    def test_every_listed_gap_carries_a_reason(self):
+        for entry in self.record["repositories"]:
+            for gap in entry["unresolved"]:
+                self.assertTrue(
+                    gap["reason"],
+                    f"{entry['repo']}/{gap['concern']} is listed with no reason",
+                )
+
 
 
 # Suffixes that make a token a file rather than prose. A concern's evidence is

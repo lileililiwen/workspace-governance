@@ -27,6 +27,29 @@ and use `*.slnx` instead, which a `.sln` glob cannot see.
 So `stack` is not an argument of any function here. It is not read, and it
 cannot leak in later.
 
+## What the gate selects, and why the debt record had to learn it
+
+A manifest selects a check two ways: by listing it under `checks:`, and by
+naming a `profile:` whose default set the gate schedules anyway. The gate
+fails on an unbound *required* check either way. This tool originally read
+only the first, so a repository whose only unbound checks came from its
+profile dropped out of `repositories` altogether — 30 repositories and 122
+checks, while the gate was failing on all of them. A debt record naming 48
+of 170 gaps reads as complete, which is worse than no record at all.
+
+`PROFILE_DEFAULTS` and `gate_required` now mirror the gate's own resolution,
+and `GateOracleTest` in `tests/test_bind_gate_commands.py` checks that
+mirror against the real binary: the (repository, concern) pairs in this
+record MUST equal the set `driftwatchdog gate --dry-run` reports as unbound.
+The table is a copy of `profile_defaults` in
+`driftwatchdog/src/gate/manifest.rs`; the test is what keeps the copy honest,
+and it skips rather than fails when the binary has not been built.
+
+A check only the profile scheduled is recorded, never written. The gate's
+`.ai-gate` reader refuses a manifest whose `commands:` names a check the
+manifest does not select, so a binding written for one would trade a
+reported gap for an unparseable manifest.
+
 ## What it refuses to do
 
 * **Never invents a command.** An unknown shape, a `package.json` without the
@@ -175,6 +198,46 @@ SCRIPT_SUFFIXES = (".sh", ".mjs", ".js", ".py")
 # repository's own check, and is looked for as a script instead.
 SHAPE_CONCERNS = ("build", "tests", "security", "format", "lint")
 
+# --- what a `profile:` selects -----------------------------------
+
+# The concerns a built-in gate profile schedules on its own, mirroring
+# `profile_defaults` in driftwatchdog's `src/gate/manifest.rs` (checked
+# against the built binary by `GateOracleTest`, which fails if this table
+# and the gate ever disagree).
+#
+# This is the selection a manifest makes by naming a profile rather than by
+# listing a check. `aesthra` lists six concerns and says `profile: product`;
+# the gate then schedules four more it never wrote down, and fails on the
+# three that bind no command. A binder that reads only the `checks:` block
+# cannot see them, which is exactly how 30 repositories whose only unbound
+# checks were profile-scheduled went missing from the debt record while the
+# gate was failing on them.
+PRODUCT_PROFILE_CONCERNS = (
+    "governance-quality",
+    "placeholder-threshold",
+    "product-code-boundary",
+    "source-file-size",
+)
+RELEASE_GATE_CONCERNS = ("capability-conformance", "release-evidence")
+DEPLOYABLE_CONCERNS = ("ci-contract", "compose-contract")
+
+PROFILE_DEFAULTS: dict[str, tuple[str, ...]] = {
+    "backend": ("api-contract", "migration", "secret-scan"),
+    "frontend": ("a11y", "api-contract", "responsive"),
+    "full": ("a11y", "api-contract", "migration", "responsive", "secret-scan"),
+    "minimal": (),
+    "product": PRODUCT_PROFILE_CONCERNS,
+    "rust-product": PRODUCT_PROFILE_CONCERNS,
+    "release": RELEASE_GATE_CONCERNS,
+    "deployable": DEPLOYABLE_CONCERNS,
+}
+
+# The gate runs this one itself, in-process, and never counts it unbound
+# (`is_source_file_size_concern`). Deriving a command for it would hand the
+# gate a binding for a check it never asks a command for, and recording it
+# as debt would name a failure that does not exist.
+IN_PROCESS_CONCERNS = frozenset({"source-file-size"})
+
 # The .NET command for each concern, given the resolved entry point. The
 # dependency-audit form matches the one .NET security binding already
 # proven in this fleet (`therapist-commons`), minus `--format json`, which
@@ -217,6 +280,40 @@ IMPORT_UNITTEST = re.compile(r"^\s*(import\s+unittest|from\s+unittest\s+import)"
 # --- reading the manifest's own declarations ------------------
 
 
+def block_entries(lines: list[str], key: str) -> list[tuple[str, str]]:
+    """`(entry, value)` for every `  <entry>: <value>` line in a top-level block.
+
+    The value keeps its own quoting and is stripped of surrounding
+    whitespace only, so `commands:` and `checks:` are read the same way
+    whichever style wrote them. Comment lines, list items and anything not
+    at two-space indentation are skipped.
+    """
+    bounds = top_level_block_bounds(lines, key)
+    if bounds is None:
+        return []
+    start, end = bounds
+    entries = []
+    for index in range(start + 1, end):
+        line = lines[index]
+        if not line.startswith("  ") or line.strip().startswith(("#", "-")):
+            continue
+        if ":" not in line:
+            continue
+        entry, value = line.strip().split(":", 1)
+        entries.append((entry.strip(), value.strip()))
+    return entries
+
+
+def top_level_scalar(lines: list[str], key: str) -> str:
+    """The value of a top-level `key: value` line, unquoted, or `""`."""
+    prefix = f"{key}:"
+    for line in lines:
+        if not line.startswith(prefix):
+            continue
+        return unquote_scalar(line[len(prefix):].strip())
+    return ""
+
+
 def read_manifest(text: str) -> tuple[list[str], dict[str, str], str]:
     """Return `(selected, commands, problem)` for one manifest.
 
@@ -225,33 +322,100 @@ def read_manifest(text: str) -> tuple[list[str], dict[str, str], str]:
     declared rather than in the order this tool happened to derive them.
     `problem` is non-empty when the manifest cannot be read as a gate
     manifest, in which case nothing may be written.
+
+    Only a `true` value is a required selection. `false` and `"optional"`
+    are read by [`read_gate_policy`] instead: both leave the concern out of
+    the gate's unbound set, and `"optional"` is a scheduling decision the
+    gate does not fail on.
     """
     lines = text.splitlines(keepends=True)
-    checks = top_level_block_bounds(lines, "checks")
-    if checks is None:
+    if top_level_block_bounds(lines, "checks") is None:
         return [], {}, "no `checks:` block, so the manifest selects nothing to bind"
-    selected = []
-    for index in range(checks[0] + 1, checks[1]):
-        line = lines[index]
-        if not line.startswith("  ") or line.strip().startswith(("#", "-")):
-            continue
-        if ":" not in line:
-            continue
-        key, value = line.strip().split(":", 1)
-        if value.strip() == "true":
-            selected.append(key.strip())
-    commands = top_level_block_bounds(lines, "commands")
-    bound = {}
-    if commands is not None:
-        for index in range(commands[0] + 1, commands[1]):
-            line = lines[index]
-            if not line.startswith("  ") or line.strip().startswith(("#", "-")):
-                continue
-            if ":" not in line:
-                continue
-            key, value = line.strip().split(":", 1)
-            bound[key.strip()] = value.strip()
+    selected = [entry for entry, value in block_entries(lines, "checks") if value == "true"]
+    bound = dict(block_entries(lines, "commands"))
     return selected, bound, ""
+
+
+@dataclass
+class GatePolicy:
+    """The three manifest keys that decide which checks the gate fails on
+    without the manifest listing them.
+
+    `profile` names the built-in profile whose default selection applies;
+    `disabled` and `exempt` are concerns the manifest took out of that
+    selection again, by `checks: <id>: false` and by a `not_applicable:`
+    exemption with a reason.
+    """
+
+    profile: str
+    disabled: frozenset[str] = frozenset()
+    exempt: frozenset[str] = frozenset()
+
+
+def read_gate_policy(text: str) -> GatePolicy:
+    """Read the selection the gate resolves from keys other than `checks:`.
+
+    The gate's own `.ai-gate` reader (`driftwatchdog/src/gate/aigate.rs`)
+    turns `checks: <id>: false` into a disabled check, which *removes* the
+    concern even when a profile selected it, and a `not_applicable`
+    exemption removes it from the unbound set. Both are read here for the
+    same reason: a check the gate does not fail on is not debt, and naming
+    it would over-report in the other direction.
+    """
+    lines = text.splitlines()
+    disabled = {
+        entry
+        for entry, value in block_entries(lines, "checks")
+        if value == "false"
+    }
+    exempt = {entry for entry, _reason in block_entries(lines, "not_applicable")}
+    return GatePolicy(
+        profile=top_level_scalar(lines, "profile"),
+        disabled=frozenset(disabled),
+        exempt=frozenset(exempt),
+    )
+
+
+def gate_required(selected: list[str], policy: GatePolicy) -> list[str]:
+    """Every concern the gate would report as an unbound required check.
+
+    The manifest's own `checks:` in the order it declares them, then the
+    built-in profile's defaults it did not declare, minus everything the
+    gate excuses: a check the manifest disabled, a check exempted under
+    `not_applicable`, and the one check the gate executes in-process. What
+    comes back is what the debt record must name, so this function and the
+    gate's `unbound_required_checks` are required to agree.
+    """
+    declared = set(selected)
+    concerns = list(selected)
+    concerns.extend(
+        concern
+        for concern in PROFILE_DEFAULTS.get(policy.profile, ())
+        if concern not in declared and concern not in policy.disabled
+    )
+    return [
+        concern
+        for concern in concerns
+        if concern not in policy.exempt and concern not in IN_PROCESS_CONCERNS
+    ]
+
+
+def profile_only_reason(concern: str, profile: str) -> str:
+    """Why a profile-scheduled check is debt this tool will not write away.
+
+    The gate's `.ai-gate` reader refuses a manifest whose `commands:` names
+    a check the manifest does not select, so a command for a check that
+    only `profile:` selected would not close the gap — it would make the
+    manifest unparseable, which fails the gate harder than the gap does.
+    The fix is in the manifest, and it is one line.
+    """
+    return (
+        f"the gate schedules {concern} through `profile: {profile}` and this manifest "
+        f"does not select it under `checks:`, so the gate refuses a `commands.{concern}` "
+        f"entry for it; select it under `checks:` and add scripts/check-{concern}.* to "
+        f"bind it, or exempt it under `not_applicable:` with a reason"
+    )
+
 
 
 # --- detecting the shape from disk -----------------------------
@@ -925,10 +1089,29 @@ def render_manifest(text: str, bindings: list[tuple[str, str]]) -> str:
 
 
 def classify_repo(repo_path: Path, selected: list[str], bound: dict[str, str],
-                  shape: Shape) -> list[ConcernOutcome]:
-    """Decide each selected concern, without writing anything."""
+                  shape: Shape, profile_only: frozenset[str] = frozenset(),
+                  profile: str = "") -> list[ConcernOutcome]:
+    """Decide each selected concern, without writing anything.
+
+    `selected` is the gate's required set, which is a superset of the
+    manifest's own `checks:` — see [`gate_required`]. `profile_only` names
+    the ones only the profile scheduled. Those are recorded and never
+    bound: the gate's manifest reader rejects a `commands:` entry for a
+    check the manifest does not select, so writing one would replace a
+    reported gap with an unparseable manifest.
+    """
     outcomes = []
     for concern in selected:
+        if concern in profile_only:
+            outcomes.append(
+                ConcernOutcome(
+                    repo_path.name,
+                    concern,
+                    UNRESOLVED,
+                    reason=profile_only_reason(concern, profile),
+                )
+            )
+            continue
         if concern in bound:
             command, evidence, _reason = derive(concern, shape, repo_path)
             if not command:
@@ -1020,9 +1203,10 @@ def build_debt(report: Report, root: Path) -> dict:
     return {
         "generator": "scripts/bind_gate_commands.py",
         "note": (
-            "Every check listed here is selected by a repository's own "
-            ".ai-gate/gate.yaml under checks: and has no command bound under "
-            "commands:. The gate reports UNBOUND for these and fails the project. "
+            "Every check listed here is one the gate would report as UNBOUND: a "
+            "check this repository's .ai-gate/gate.yaml selects under `checks:`, or "
+            "one its `profile:` schedules by default, with no command bound under "
+            "`commands:`. The gate reports UNBOUND for these and fails the project. "
             "A wrong command is worse than a listed gap: resolve these by hand, "
             "then re-run the generator."
         ),
@@ -1043,18 +1227,12 @@ def write_debt_record(debt: dict, path: Path) -> None:
 
 
 def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) -> Outcome:
-    """Bind one repository's declared concerns. Never raises."""
+    """Bind one repository's gate-required concerns. Never raises."""
     name = repo_path.name
     manifest = repo_path / GATE_YAML
     if not manifest.is_file():
         return Outcome(
             name, NO_MANIFEST, f"no {GATE_YAML}; nothing was written"
-        )
-    if check_clean and is_dirty(repo_path):
-        return Outcome(
-            name,
-            DIRTY,
-            f"{GATE_YAML} has uncommitted work; stopped rather than write into it",
         )
     try:
         before = manifest.read_text(encoding="utf-8")
@@ -1065,23 +1243,53 @@ def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) ->
     if problem:
         return Outcome(name, REFUSED, problem)
 
+    policy = read_gate_policy(before)
+    required = gate_required(selected, policy)
+    profile_only = frozenset(c for c in required if c not in set(selected))
+
     try:
         shape = detect_shape(repo_path)
     except Exception as exc:  # noqa: BLE001 - a bad repository must not stop the fleet
         return Outcome(name, REFUSED, f"could not inspect the repository: {exc}")
 
     try:
-        concerns = classify_repo(repo_path, selected, bound, shape)
+        concerns = classify_repo(
+            repo_path,
+            required,
+            bound,
+            shape,
+            profile_only=profile_only,
+            profile=policy.profile,
+        )
     except Exception as exc:  # noqa: BLE001
         return Outcome(name, REFUSED, f"{GATE_YAML} could not be evaluated: {exc}")
 
-    status = roll_up(concerns, len(selected))
+    status = roll_up(concerns, len(required))
+    label = f"{len(required)} required check(s)"
+
+    # The dirty check refuses the *write*, not the reading. The gate
+    # resolves a dirty repository exactly as it resolves a clean one and
+    # fails on the same unbound checks, so leaving them out of the record
+    # would hide real debt the moment somebody had work in progress — and
+    # an `--apply` run immediately after a previous one would write a
+    # record that silently under-reports.
+    if check_clean and is_dirty(repo_path):
+        return Outcome(
+            name,
+            DIRTY,
+            f"{GATE_YAML} has uncommitted work; {label} classified and recorded, nothing written",
+            before=before,
+            after=before,
+            concerns=concerns,
+            shape=shape.label(),
+        )
+
     pending = [c for c in concerns if c.status == BOUND]
     if not pending:
         return Outcome(
             name,
             status,
-            f"{len(selected)} declared check(s), all already bound or refused",
+            f"{label}, all already bound or refused",
             before=before,
             after=before,
             concerns=concerns,
