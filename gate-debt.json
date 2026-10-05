@@ -2,17 +2,18 @@
   "generator": "scripts/bind_gate_commands.py",
   "note": "Every check listed here is one the gate would report as UNBOUND: a check this repository's .ai-gate/gate.yaml selects under `checks:`, or one its `profile:` schedules by default, with no command bound under `commands:`. The gate reports UNBOUND for these and fails the project. A wrong command is worse than a listed gap: resolve these by hand, then re-run the generator.",
   "totals": {
-    "repositories_with_debt": 55,
-    "unresolved_checks": 170
+    "repositories_with_debt": 54,
+    "unresolved_checks": 127
   },
   "by_reason": [
     {
-      "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason",
-      "checks": 33,
+      "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason",
+      "checks": 80,
       "repositories": [
         "aegify",
         "aesthra",
         "alltools-platform",
+        "argoset",
         "arivio",
         "bargora",
         "chinago",
@@ -20,14 +21,18 @@
         "crossify",
         "cvunify",
         "dharmatlas",
+        "driftwatchdog",
         "fotofy",
+        "hermexa",
         "hermora",
         "hestiaLab",
         "hookit",
         "hypora",
         "lexora",
+        "mnemyx",
         "mortalect",
         "namevia",
+        "openaccounting",
         "opendockify",
         "openlearning",
         "orphevia",
@@ -35,267 +40,98 @@
         "ploutify",
         "reelio",
         "rostera",
+        "rust-ecommerce",
         "singleatee",
         "smotoox",
         "somodanote",
         "stylify",
         "sutravia",
         "tantalyn",
-        "triplanify",
-        "trippify"
-      ],
-      "entries": [
-        "aegify:governance-quality",
-        "aesthra:governance-quality",
-        "alltools-platform:governance-quality",
-        "arivio:governance-quality",
-        "bargora:governance-quality",
-        "chinago:governance-quality",
-        "crossalheart:governance-quality",
-        "crossify:governance-quality",
-        "cvunify:governance-quality",
-        "dharmatlas:governance-quality",
-        "fotofy:governance-quality",
-        "hermora:governance-quality",
-        "hestiaLab:governance-quality",
-        "hookit:governance-quality",
-        "hypora:governance-quality",
-        "lexora:governance-quality",
-        "mortalect:governance-quality",
-        "namevia:governance-quality",
-        "opendockify:governance-quality",
-        "openlearning:governance-quality",
-        "orphevia:governance-quality",
-        "pangoman:governance-quality",
-        "ploutify:governance-quality",
-        "reelio:governance-quality",
-        "rostera:governance-quality",
-        "singleatee:governance-quality",
-        "smotoox:governance-quality",
-        "somodanote:governance-quality",
-        "stylify:governance-quality",
-        "sutravia:governance-quality",
-        "tantalyn:governance-quality",
-        "triplanify:governance-quality",
-        "trippify:governance-quality"
-      ]
-    },
-    {
-      "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason",
-      "checks": 33,
-      "repositories": [
-        "aegify",
-        "aesthra",
-        "alltools-platform",
-        "arivio",
-        "bargora",
-        "chinago",
-        "crossalheart",
-        "crossify",
-        "cvunify",
-        "dharmatlas",
-        "fotofy",
-        "hermora",
-        "hestiaLab",
-        "hookit",
-        "hypora",
-        "lexora",
-        "mortalect",
-        "namevia",
-        "opendockify",
-        "openlearning",
-        "orphevia",
-        "pangoman",
-        "ploutify",
-        "reelio",
-        "rostera",
-        "singleatee",
-        "smotoox",
-        "somodanote",
-        "stylify",
-        "sutravia",
-        "tantalyn",
+        "transitfy",
         "triplanify",
         "trippify"
       ],
       "entries": [
         "aegify:placeholder-threshold",
-        "aesthra:placeholder-threshold",
-        "alltools-platform:placeholder-threshold",
-        "arivio:placeholder-threshold",
-        "bargora:placeholder-threshold",
-        "chinago:placeholder-threshold",
-        "crossalheart:placeholder-threshold",
-        "crossify:placeholder-threshold",
-        "cvunify:placeholder-threshold",
-        "dharmatlas:placeholder-threshold",
-        "fotofy:placeholder-threshold",
-        "hermora:placeholder-threshold",
-        "hestiaLab:placeholder-threshold",
-        "hookit:placeholder-threshold",
-        "hypora:placeholder-threshold",
-        "lexora:placeholder-threshold",
-        "mortalect:placeholder-threshold",
-        "namevia:placeholder-threshold",
-        "opendockify:placeholder-threshold",
-        "openlearning:placeholder-threshold",
-        "orphevia:placeholder-threshold",
-        "pangoman:placeholder-threshold",
-        "ploutify:placeholder-threshold",
-        "reelio:placeholder-threshold",
-        "rostera:placeholder-threshold",
-        "singleatee:placeholder-threshold",
-        "smotoox:placeholder-threshold",
-        "somodanote:placeholder-threshold",
-        "stylify:placeholder-threshold",
-        "sutravia:placeholder-threshold",
-        "tantalyn:placeholder-threshold",
-        "triplanify:placeholder-threshold",
-        "trippify:placeholder-threshold"
-      ]
-    },
-    {
-      "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason",
-      "checks": 33,
-      "repositories": [
-        "aegify",
-        "aesthra",
-        "alltools-platform",
-        "arivio",
-        "bargora",
-        "chinago",
-        "crossalheart",
-        "crossify",
-        "cvunify",
-        "dharmatlas",
-        "fotofy",
-        "hermora",
-        "hestiaLab",
-        "hookit",
-        "hypora",
-        "lexora",
-        "mortalect",
-        "namevia",
-        "opendockify",
-        "openlearning",
-        "orphevia",
-        "pangoman",
-        "ploutify",
-        "reelio",
-        "rostera",
-        "singleatee",
-        "smotoox",
-        "somodanote",
-        "stylify",
-        "sutravia",
-        "tantalyn",
-        "triplanify",
-        "trippify"
-      ],
-      "entries": [
         "aegify:product-code-boundary",
+        "aesthra:placeholder-threshold",
         "aesthra:product-code-boundary",
+        "alltools-platform:placeholder-threshold",
         "alltools-platform:product-code-boundary",
-        "arivio:product-code-boundary",
-        "bargora:product-code-boundary",
-        "chinago:product-code-boundary",
-        "crossalheart:product-code-boundary",
-        "crossify:product-code-boundary",
-        "cvunify:product-code-boundary",
-        "dharmatlas:product-code-boundary",
-        "fotofy:product-code-boundary",
-        "hermora:product-code-boundary",
-        "hestiaLab:product-code-boundary",
-        "hookit:product-code-boundary",
-        "hypora:product-code-boundary",
-        "lexora:product-code-boundary",
-        "mortalect:product-code-boundary",
-        "namevia:product-code-boundary",
-        "opendockify:product-code-boundary",
-        "openlearning:product-code-boundary",
-        "orphevia:product-code-boundary",
-        "pangoman:product-code-boundary",
-        "ploutify:product-code-boundary",
-        "reelio:product-code-boundary",
-        "rostera:product-code-boundary",
-        "singleatee:product-code-boundary",
-        "smotoox:product-code-boundary",
-        "somodanote:product-code-boundary",
-        "stylify:product-code-boundary",
-        "sutravia:product-code-boundary",
-        "tantalyn:product-code-boundary",
-        "triplanify:product-code-boundary",
-        "trippify:product-code-boundary"
-      ]
-    },
-    {
-      "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason",
-      "checks": 8,
-      "repositories": [
-        "argoset",
-        "driftwatchdog",
-        "forge",
-        "hermexa",
-        "mnemyx",
-        "openaccounting",
-        "rust-ecommerce",
-        "transitfy"
-      ],
-      "entries": [
         "argoset:placeholder-threshold",
-        "driftwatchdog:placeholder-threshold",
-        "forge:placeholder-threshold",
-        "hermexa:placeholder-threshold",
-        "mnemyx:placeholder-threshold",
-        "openaccounting:placeholder-threshold",
-        "rust-ecommerce:placeholder-threshold",
-        "transitfy:placeholder-threshold"
-      ]
-    },
-    {
-      "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason",
-      "checks": 8,
-      "repositories": [
-        "argoset",
-        "driftwatchdog",
-        "forge",
-        "hermexa",
-        "mnemyx",
-        "openaccounting",
-        "rust-ecommerce",
-        "transitfy"
-      ],
-      "entries": [
         "argoset:product-code-boundary",
+        "arivio:placeholder-threshold",
+        "arivio:product-code-boundary",
+        "bargora:placeholder-threshold",
+        "bargora:product-code-boundary",
+        "chinago:placeholder-threshold",
+        "chinago:product-code-boundary",
+        "crossalheart:placeholder-threshold",
+        "crossalheart:product-code-boundary",
+        "crossify:placeholder-threshold",
+        "crossify:product-code-boundary",
+        "cvunify:placeholder-threshold",
+        "cvunify:product-code-boundary",
+        "dharmatlas:placeholder-threshold",
+        "dharmatlas:product-code-boundary",
+        "driftwatchdog:placeholder-threshold",
         "driftwatchdog:product-code-boundary",
-        "forge:product-code-boundary",
+        "fotofy:placeholder-threshold",
+        "fotofy:product-code-boundary",
+        "hermexa:placeholder-threshold",
         "hermexa:product-code-boundary",
+        "hermora:placeholder-threshold",
+        "hermora:product-code-boundary",
+        "hestiaLab:placeholder-threshold",
+        "hestiaLab:product-code-boundary",
+        "hookit:placeholder-threshold",
+        "hookit:product-code-boundary",
+        "hypora:placeholder-threshold",
+        "hypora:product-code-boundary",
+        "lexora:placeholder-threshold",
+        "lexora:product-code-boundary",
+        "mnemyx:placeholder-threshold",
         "mnemyx:product-code-boundary",
+        "mortalect:placeholder-threshold",
+        "mortalect:product-code-boundary",
+        "namevia:placeholder-threshold",
+        "namevia:product-code-boundary",
+        "openaccounting:placeholder-threshold",
         "openaccounting:product-code-boundary",
+        "opendockify:placeholder-threshold",
+        "opendockify:product-code-boundary",
+        "openlearning:placeholder-threshold",
+        "openlearning:product-code-boundary",
+        "orphevia:placeholder-threshold",
+        "orphevia:product-code-boundary",
+        "pangoman:placeholder-threshold",
+        "pangoman:product-code-boundary",
+        "ploutify:placeholder-threshold",
+        "ploutify:product-code-boundary",
+        "reelio:placeholder-threshold",
+        "reelio:product-code-boundary",
+        "rostera:placeholder-threshold",
+        "rostera:product-code-boundary",
+        "rust-ecommerce:placeholder-threshold",
         "rust-ecommerce:product-code-boundary",
-        "transitfy:product-code-boundary"
-      ]
-    },
-    {
-      "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason",
-      "checks": 7,
-      "repositories": [
-        "argoset",
-        "forge",
-        "hermexa",
-        "mnemyx",
-        "openaccounting",
-        "rust-ecommerce",
-        "transitfy"
-      ],
-      "entries": [
-        "argoset:governance-quality",
-        "forge:governance-quality",
-        "hermexa:governance-quality",
-        "mnemyx:governance-quality",
-        "openaccounting:governance-quality",
-        "rust-ecommerce:governance-quality",
-        "transitfy:governance-quality"
+        "singleatee:placeholder-threshold",
+        "singleatee:product-code-boundary",
+        "smotoox:placeholder-threshold",
+        "smotoox:product-code-boundary",
+        "somodanote:placeholder-threshold",
+        "somodanote:product-code-boundary",
+        "stylify:placeholder-threshold",
+        "stylify:product-code-boundary",
+        "sutravia:placeholder-threshold",
+        "sutravia:product-code-boundary",
+        "tantalyn:placeholder-threshold",
+        "tantalyn:product-code-boundary",
+        "transitfy:placeholder-threshold",
+        "transitfy:product-code-boundary",
+        "triplanify:placeholder-threshold",
+        "triplanify:product-code-boundary",
+        "trippify:placeholder-threshold",
+        "trippify:product-code-boundary"
       ]
     },
     {
@@ -626,16 +462,6 @@
       ]
     },
     {
-      "reason": "no rule derives a governance-quality command and this repository has no scripts/check-governance-quality.* to run",
-      "checks": 1,
-      "repositories": [
-        "driftwatchdog"
-      ],
-      "entries": [
-        "driftwatchdog:governance-quality"
-      ]
-    },
-    {
       "reason": "no rule derives a provenance command and this repository has no scripts/check-provenance.* to run",
       "checks": 1,
       "repositories": [
@@ -683,19 +509,14 @@
           "reason": "2 .csproj files and no solution"
         },
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -709,19 +530,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -746,19 +562,14 @@
           "reason": "3 equally plausible entry points: cd rust && cargo build --workspace (rust/Cargo.toml (declares [workspace])); cd django_archived && npm run build (django_archived/package.json declares scripts.build); cd rust && npm run build (rust/package.json declares scripts.build)"
         },
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -772,19 +583,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -804,19 +610,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -825,19 +626,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -857,19 +653,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -894,19 +685,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -920,19 +706,14 @@
           "reason": "2 equally plausible entry points: dotnet build backend/CourseBridge.slnx (the only solution, backend/CourseBridge.slnx); cd frontend && npm run build (frontend/package.json declares scripts.build)"
         },
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -951,19 +732,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -972,19 +748,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -993,40 +764,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a governance-quality command and this repository has no scripts/check-governance-quality.* to run"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
-        }
-      ]
-    },
-    {
-      "repo": "forge",
-      "shape": "rust",
-      "unresolved": [
-        {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
-          "concern": "placeholder-threshold",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
-          "concern": "product-code-boundary",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1035,19 +780,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1056,19 +796,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1077,19 +812,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1103,19 +833,14 @@
           "reason": "2 .csproj files and no solution"
         },
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1134,19 +859,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1155,19 +875,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1192,19 +907,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1266,19 +976,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1287,19 +992,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1308,19 +1008,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1329,19 +1024,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1350,19 +1040,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "tests",
@@ -1376,19 +1061,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "tests",
@@ -1407,19 +1087,14 @@
           "reason": "2 equally plausible entry points: dotnet build src/Orphevia.slnx (the only solution, src/Orphevia.slnx); cd src/Orphevia.Web && npm run build (src/Orphevia.Web/package.json declares scripts.build)"
         },
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1438,19 +1113,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1480,19 +1150,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1501,19 +1166,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "tests",
@@ -1548,19 +1208,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1569,19 +1224,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1595,19 +1245,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1637,19 +1282,14 @@
           "reason": "4 .csproj files and no solution"
         },
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1668,19 +1308,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1689,19 +1324,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1710,19 +1340,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1731,19 +1356,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1768,19 +1388,14 @@
       "shape": "rust",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: rust-product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1789,19 +1404,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1810,19 +1420,14 @@
       "shape": "dotnet",
       "unresolved": [
         {
-          "concern": "governance-quality",
-          "status": "UNRESOLVED",
-          "reason": "the gate schedules governance-quality through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.governance-quality` entry for it; select it under `checks:` and add scripts/check-governance-quality.* to bind it, or exempt it under `not_applicable:` with a reason"
-        },
-        {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules placeholder-threshold through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.placeholder-threshold` entry for it; select it under `checks:` and add scripts/check-placeholder-threshold.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "the gate schedules product-code-boundary through `profile: product` and this manifest does not select it under `checks:`, so the gate refuses a `commands.product-code-boundary` entry for it; select it under `checks:` and add scripts/check-product-code-boundary.* to bind it, or exempt it under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
