@@ -2,7 +2,7 @@
 
 ## Current state
 
-current_spec: identity-and-taxonomy-axis-split
+current_spec: bind-declared-gate-checks
 
 **The test suite is green, and one decided row was the reason it was not.**
 `test_the_gate_is_open_and_the_fleet_corpus_is_clean` was the only failure
@@ -62,36 +62,40 @@ Also changed, and why it had to change with the table:
   `python: 16`, `typescript: 1` — it grew from 12 because the validator set grew,
   and the conclusion does not change with it.
 
-**This change is implemented and still not archived**, as are eight others:
-`bind-declared-gate-checks`, `bind-declared-verification`,
-`capability-adoption-gate`, `close-unbound-gate-checks`,
-`cross-repo-adoption-grant`, `derived-kind-canonical-form`,
-`readme-claim-verification`, `spec-purpose-backfill-gate`. Recorded here rather
-than archived by this commit, because archiving is a separate decision from
-fixing the two failures. `bind-declared-verification` holds only
-`rollback-manifest.json` — no proposal, design, tasks or spec delta — and is the
-one item `openspec validate --all --strict` reports as failing; it is untracked
-and was left untracked, as `bind-declared-gate-checks/tasks.md:21` already
-requires and as the entry further down this file already records.
+**This change is implemented and still not archived**, as are seven others:
+`bind-declared-gate-checks`, `capability-adoption-gate`,
+`close-unbound-gate-checks`, `cross-repo-adoption-grant`,
+`derived-kind-canonical-form`, `readme-claim-verification`,
+`spec-purpose-backfill-gate`. Recorded here rather than archived, because
+archiving is a separate decision from fixing the failures, and because
+`spec-purpose-backfill-gate` is deliberately unarchived while its gate is not
+wired (D18). **`bind-declared-verification` is no longer among them.** The
+untracked directory held only the `--apply` run's `rollback-manifest.json` and
+no proposal, design, tasks or spec delta, so it was never a change; it was the
+one item `openspec validate --all --strict` reported as failing. The change
+itself is **`bind-declared-verification-command` in `driftwatchdog`**, which
+owns the Gate contract its two spec deltas amend
+(`gate-project-configuration`, `generic-gate-contract`), and it is valid under
+`--strict`. The tool lives here, the contract lives there. The record is
+tracked at `migration/bind-declared-verification-command-rollback.json` and the
+empty directory is gone, so `openspec validate --all --strict` is **22 passed,
+0 failed**.
 
-**Left standing, not fixed here: 8 failures from work that landed in this tree
-during the session that fixed the two named ones.** Measured 2026-10-05 15:06
-with this commit's changes applied: `Ran 800 tests, FAILED (failures=8)` — 7 in
-`test_promote_project`, 1 in `test_gate_debt_precondition`. None is caused by
-this change; the same 7 fail with this commit's changes stashed. They come from
-the in-flight `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` precondition
-(`scripts/workspace_check.py` +355, `scripts/gate_debt_baseline.py`,
-`gate-debt-baseline.json`, `gate-debt-exceptions.json`, all uncommitted and
-untracked at the time of writing), whose new committed input
-`gate-debt-baseline.json` is **not** in
+**The 8 failures are fixed, and the fixture that caused 7 of them no longer
+breaks that way.** `Ran 800 tests, FAILED (failures=8)` — 7 in
+`test_promote_project`, 1 in `test_gate_debt_precondition` — is now **803
+passed, 0 failed**, three consecutive runs. The cause was as recorded: the new
+committed input `gate-debt-baseline.json` was not in
 `test_promote_project.setup_sandboxed_governance_root`'s copy list, so the rule
-fails closed on the sandbox and `promote_project` returns 2. Adding
-`"gate-debt-baseline.json"` to that fixture's `for record in (...)` loop is the
-one-line remedy. Not done here on purpose: those files belong to that change,
-were being written minutes before this commit, and landing them would sweep
-another piece of work into this commit. The suite is green for everything this
-change owns — `tests.test_identity_and_taxonomy` is **70 passed, 0 failures**
-and both originally reported failures now pass.
+failed closed on the sandbox and `promote_project` returned 2. `9105360` adds
+the three records, and replaces the hand-kept list itself with one declared
+set plus an exclusion table that states its evidence, and a test that fails
+when a new top-level `.json` reaches the root and is in neither. Measured
+negative control: a probe file at the root turns that one test red naming the
+file, where the old fixture surfaced the same gap as 7 unrelated exit-code
+failures. The exit-code assertions were checked against `promote_project`'s own
+contract, not against current behaviour: two codes exist, `EXIT_OK = 0` and
+`EXIT_REJECTED = 2`.
 
 The prior active change, `derived-kind-canonical-form`, is implemented and
 committed at `97f6c68`, **not archived**. It is a one-rule
@@ -183,6 +187,74 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
 
+- **Fixture and strict-validation cleanup (`9105360`).** Two problems cleared,
+  both diagnosed before acting and neither papered over.
+
+  | Gate | Result |
+  |---|---|
+  | `python3 -m unittest discover -s tests` | **803 passed, 0 failed**, 3 consecutive runs |
+  | `python3 scripts/workspace_check.py --self-check` | `errors=0 warnings=0`, exit 0 |
+  | `python3 scripts/axis_migration.py --root /home/paul/code --check` | exit 0 |
+  | `python3 scripts/workspace_check.py --root /home/paul/code --audit` | `Summary: errors=279 warnings=20` — the pre-existing fleet baseline; **0** are `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` |
+  | `openspec validate --all --strict --no-interactive` | **22 passed, 0 failed** |
+  | `node scripts/check-openspec-change-names.mjs` | change names valid |
+  | `git diff --check` | clean |
+
+  **The 7 `test_promote_project` failures: cause confirmed, then the list
+  itself fixed.** The diagnosis held — the new committed input
+  `gate-debt-baseline.json` was absent from the sandbox, the
+  `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` precondition failed closed, and
+  `promote_project` returned 2. What was wrong with the documented remedy is
+  that it extends a hand-kept list that had **already broken twice on this
+  exact axis** (`rules-drift-baseline.json`, then these three), spread over
+  three ad-hoc blocks and guarded by `if source.is_file()` — under which a
+  file that failed to copy is indistinguishable from one never needed, exactly
+  the "checker that reports OK without comparing" pattern `AGENTS.md` calls
+  worse than no checker. Replaced with one declared set
+  (`GOVERNANCE_ROOT_DATA_FILES`, six files, copied unconditionally, a missing
+  declared file raising), a table of exclusions each stating its evidence, and
+  `SandboxCoverageTests` (3 tests) failing when a top-level `.json` reaches the
+  root and is in neither. `projects.json` is excluded because the fixture writes
+  its own registry; `decisions.json` because a portfolio audit tolerates its
+  absence with a single `DECISIONS_REGISTER_ABSENT` warning
+  (`load_decisions_register`) and only `--self-check` requires it. **Negative
+  control, run:** a probe `gate-debt-probe.json` at the root turns that one
+  test red naming the file and the remedy, where the old fixture surfaced the
+  identical gap as 7 unrelated exit-code failures; the probe was removed and
+  the suite returned to green. The `SandboxCoverageTests` absence-reason
+  assertion also caught a real defect in the new table on its first run — a
+  reason with no terminal punctuation — which is why the table reads the way it
+  does.
+
+  **The exit codes are the intended ones, checked against the contract and not
+  against current behaviour.** `promote_project` defines exactly two,
+  `EXIT_OK = 0` and `EXIT_REJECTED = 2` (`scripts/promote_project.py:34-35`).
+  The tests assert 0 for a completed promotion, a completed demote and the
+  idempotent re-run, and 2 for each refusal — missing evidence ref, conflict
+  without `--force`, unknown project id. A code of 3 appears nowhere in the
+  module. The assertions describe the contract.
+
+  **`bind-declared-verification` was a stray, not unfinished work.** Evidence,
+  in order of strength: (1) its `rollback-manifest.json` is the only one of the
+  three in this repository keyed on `"manifest": ".ai-gate/gate.yaml"` — the
+  file `scripts/bind_verification_command.py` writes — and all 73 entries have
+  differing before/after SHAs, so it is a real fleet write record, not a
+  placeholder; (2) for `forge`, the manifest's `5019d129` → `19a623fa` pair
+  diffs to **exactly** the `declared-verification` entry plus its generated
+  comment, and the second commit is titled `bind(gate): run this repository's
+  declared verification command`; (3) the binder's own module docstring cites
+  `driftwatchdog/openspec/changes/bind-declared-verification-command/design.md`
+  §1, and that change exists with `proposal.md`, `design.md`, `tasks.md` and
+  **two** spec deltas (`gate-project-configuration`, `generic-gate-contract`),
+  and is valid under `--strict`. The tool lives in this repository and the
+  Gate contract it writes lives in the sibling that owns those capabilities, so
+  the change was never going to be authored here under that name. The record is
+  tracked at `migration/bind-declared-verification-command-rollback.json` —
+  untracked it was one `git clean` from gone, and it is the only rollback
+  record for a 73-repository cross-repo write. The empty directory was removed
+  with the recoverable-delete tool, not `rm`. No sibling repository was
+  written, read-only checks only.
+
 - `bind-declared-gate-checks` (`8e3aecd`) evidence. **This change was resumed,
   not started**: the generator and the spec directory existed uncommitted from an
   aborted session, and the gap was that a 47KB tool with no tests is exactly the
@@ -242,10 +314,15 @@ lands, the work-on-`main` rule is **stated and reported, not enforced**.
   its dry run still reports `BOUND: 0, ALREADY_BOUND: 76, CONFLICT: 0,
   REFUSED: 0`, so no behaviour moved.
 
-  `openspec validate --changes --strict` reports this change valid. The tree's
-  one failure is `bind-declared-verification`, an untracked directory from an
-  earlier session that holds no `specs/` delta at all. It is not part of this
-  change, is not staged by it, and was deliberately left alone.
+  `openspec validate --changes --strict` reports this change valid, and
+  `openspec validate --all --strict` is **22 passed, 0 failed**. The tree's
+  former one failure, `bind-declared-verification`, was an untracked directory
+  holding no `specs/` delta at all — a stray copy of the verification binder's
+  `--apply` rollback record. That change is
+  `bind-declared-verification-command` in `driftwatchdog`, which owns the Gate
+  contract; the record is tracked here at
+  `migration/bind-declared-verification-command-rollback.json`. Resolved at
+  `9105360`.
 
 - `spec-purpose-backfill-gate` (`6de0dd7`) evidence. Archiving a change writes
   `TBD - created by archiving change <name>.` into the `## Purpose` of every spec
@@ -1220,7 +1297,9 @@ acceptance, and restoring it turns them green.
 The pre-existing failure this session started with,
 `test_the_gate_is_open_and_the_fleet_corpus_is_clean`, was fixed by the owner's
 concurrent commits `f192771` and `57dd605`, not here. Nothing in this change
-narrows what that test checks. `openspec validate --changes --strict`: 8 passed,
-1 failed — `bind-declared-verification`, an untracked directory from an earlier
-session that has no `specs/` deltas. Not this change's, not fixed here. The
-change is **not archived**; archiving needs separate authorization.
+narrows what that test checks. `openspec validate --all --strict` is now
+**22 passed, 0 failed**; the 1 failure recorded here, `bind-declared-verification`,
+was a stray untracked rollback record with no `specs/` deltas, resolved at
+`9105360` — the change is `bind-declared-verification-command` in
+`driftwatchdog`. The change is **not archived**; archiving needs separate
+authorization.
