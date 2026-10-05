@@ -147,6 +147,9 @@ def classify(reason: str) -> str:
         return "D"
     if "equally plausible entry points" in reason:
         return "E"
+    dirty_manifest_prefix = "gate manifest is dirty; binding remains unbound:"
+    if reason.startswith(dirty_manifest_prefix) and reason[len(dirty_manifest_prefix):].strip():
+        return "G"
     if (
         "no 'build' script" in reason
         or "no package.json" in reason and "build" in reason
@@ -190,6 +193,9 @@ QUESTIONS = {
          "product. Which directory is the product?",
     "F": "no package.json in this repository declares a build script, so there is "
          "nothing to derive. What does this repository build?",
+    "G": "the gate manifest has uncommitted changes, so the binder did not write "
+         "the derived command. review and commit the manifest change, then rerun "
+         "the binder; the driver will not edit a dirty manifest.",
     "?": "this reason is not one the driver knows. It needs a new remedy class.",
 }
 
@@ -427,7 +433,7 @@ class Report:
     def _one(self, repo: str, concern: str, reason: str) -> None:
         kind = classify(reason)
         project = self.root / repo
-        if kind in ("E", "F", "?"):
+        if kind in ("E", "F", "G", "?"):
             self.remedies.append(Remedy(
                 repo, concern, reason, kind,
                 question=QUESTIONS.get(kind, QUESTIONS["?"]),

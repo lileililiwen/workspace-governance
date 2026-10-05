@@ -19,7 +19,7 @@ from check_concern import (
 
 
 class ClassificationTests(unittest.TestCase):
-    def test_current_debt_reason_families_map_to_a_through_f(self):
+    def test_current_debt_reason_families_map_to_a_through_g(self):
         cases = {
             "no rule derives an accessibility command and this repository has no scripts/check-accessibility.py to run": "A",
             "2 .csproj files and no solution": "B",
@@ -29,6 +29,7 @@ class ClassificationTests(unittest.TestCase):
             "no Python security tool is declared": "D",
             "2 equally plausible entry points: a vs b": "E",
             "no package.json declares a 'build' script": "F",
+            "gate manifest is dirty; binding remains unbound: python3 check.py": "G",
         }
         for reason, expected in cases.items():
             with self.subTest(reason=reason):
@@ -36,6 +37,37 @@ class ClassificationTests(unittest.TestCase):
 
     def test_unknown_reason_escalates_without_classifying_as_a_remedy(self):
         self.assertEqual(driver.classify("new binder refusal wording"), "?")
+
+    def test_dirty_manifest_class_is_owner_action_without_mutation_in_apply_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / ".ai-gate" / "gate.yaml"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text("profile: tooling\n", encoding="utf-8")
+            before = manifest.read_bytes()
+            report = driver.Report(root=root, apply=True)
+            report._one(
+                "demo", "governance-quality",
+                "gate manifest is dirty; binding remains unbound: python3 check.py",
+            )
+
+            self.assertEqual(len(report.remedies), 1)
+            remedy = report.remedies[0]
+            self.assertEqual(remedy.kind, "G")
+            self.assertFalse(remedy.applied)
+            self.assertIn("review and commit", remedy.question)
+            self.assertEqual(manifest.read_bytes(), before)
+
+    def test_dirty_manifest_classifier_requires_the_binder_reason_marker(self):
+        self.assertEqual(driver.classify("gate manifest dirty; command not bound"), "?")
+        self.assertEqual(
+            driver.classify("prefix: gate manifest is dirty; binding remains unbound: python3 check.py"),
+            "?",
+        )
+        self.assertEqual(
+            driver.classify("gate manifest is dirty; binding remains unbound:   "),
+            "?",
+        )
 
     def test_malformed_debt_record_fails_closed_without_raising(self):
         with tempfile.TemporaryDirectory() as directory:

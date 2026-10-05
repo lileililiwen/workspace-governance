@@ -2,8 +2,8 @@
   "generator": "scripts/bind_gate_commands.py",
   "note": "Every check listed here is one the gate would report as UNBOUND: a check this repository's .ai-gate/gate.yaml selects under `checks:`, or one its `profile:` schedules by default, with no command bound under `commands:`. The gate reports UNBOUND for these and fails the project. A wrong command is worse than a listed gap: resolve these by hand, then re-run the generator.",
   "totals": {
-    "repositories_with_debt": 3,
-    "unresolved_checks": 5
+    "repositories_with_debt": 8,
+    "unresolved_checks": 11
   },
   "by_reason": [
     {
@@ -37,6 +37,66 @@
       ]
     },
     {
+      "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project alethefy --json",
+      "checks": 1,
+      "repositories": [
+        "alethefy"
+      ],
+      "entries": [
+        "alethefy:governance-quality"
+      ]
+    },
+    {
+      "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project ariadex --json",
+      "checks": 1,
+      "repositories": [
+        "ariadex"
+      ],
+      "entries": [
+        "ariadex:governance-quality"
+      ]
+    },
+    {
+      "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project catchen --json",
+      "checks": 1,
+      "repositories": [
+        "catchen"
+      ],
+      "entries": [
+        "catchen:governance-quality"
+      ]
+    },
+    {
+      "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project jenkins-local --json",
+      "checks": 1,
+      "repositories": [
+        "jenkins-local"
+      ],
+      "entries": [
+        "jenkins-local:governance-quality"
+      ]
+    },
+    {
+      "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project linglitch --json",
+      "checks": 1,
+      "repositories": [
+        "linglitch"
+      ],
+      "entries": [
+        "linglitch:governance-quality"
+      ]
+    },
+    {
+      "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project platform-contracts --json",
+      "checks": 1,
+      "repositories": [
+        "platform-contracts"
+      ],
+      "entries": [
+        "platform-contracts:governance-quality"
+      ]
+    },
+    {
       "reason": "no package.json in this repository declares a 'build' script, so there is no build command to derive",
       "checks": 1,
       "repositories": [
@@ -58,6 +118,39 @@
     }
   ],
   "repositories": [
+    {
+      "repo": "alethefy",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "governance-quality",
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project alethefy --json"
+        }
+      ]
+    },
+    {
+      "repo": "ariadex",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "governance-quality",
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project ariadex --json"
+        }
+      ]
+    },
+    {
+      "repo": "catchen",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "governance-quality",
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project catchen --json"
+        }
+      ]
+    },
     {
       "repo": "hestiaLab",
       "shape": "dotnet",
@@ -82,6 +175,33 @@
           "concern": "build",
           "status": "UNRESOLVED",
           "reason": "no readable pyproject.toml declares a Python build backend"
+        },
+        {
+          "concern": "governance-quality",
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project jenkins-local --json"
+        }
+      ]
+    },
+    {
+      "repo": "linglitch",
+      "shape": "dotnet",
+      "unresolved": [
+        {
+          "concern": "governance-quality",
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project linglitch --json"
+        }
+      ]
+    },
+    {
+      "repo": "platform-contracts",
+      "shape": "python",
+      "unresolved": [
+        {
+          "concern": "governance-quality",
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: python3 ../workspace-governance/scripts/workspace_check.py --root .. --project platform-contracts --json"
         }
       ]
     },
