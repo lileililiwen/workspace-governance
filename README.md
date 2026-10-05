@@ -94,6 +94,83 @@ as a finding against the repository that wrote it. There is no
 can be switched off is not a check. See the "README status claims" section
 of `docs/product-code-quality.md`.
 
+## Gate command binding
+
+A check the gate selects but has no command for is a check that never runs,
+and the gate counts it as `UNBOUND` and fails the project. `scripts/bind_gate_commands.py`
+derives those commands from what is on disk in each repository and writes them
+into `.ai-gate/gate.yaml`.
+
+```bash
+# Dry run: classify every check, write nothing.
+python3 scripts/bind_gate_commands.py --root /home/paul/code
+
+# Write the bindings and refresh the debt record.
+python3 scripts/bind_gate_commands.py --root /home/paul/code --apply
+
+# Refresh only the debt record; the manifest run is forced dry.
+python3 scripts/bind_gate_commands.py --root /home/paul/code --debt-only
+```
+
+### It refuses rather than guesses
+
+The tool's rule is *a wrong command is worse than a listed gap*. A guessed
+command is worse because it is invisible; a listed gap is on the record, names
+its own cause, and is read by the next person. So it binds one command, or
+refuses and says why.
+
+Three outcomes, in order:
+
+| Situation | Result |
+|---|---|
+| One candidate | Bound |
+| A root-level entry point beats a nested one | The root is bound |
+| Candidates spanning two or more stacks | Joined with ` && ` |
+| Two candidates of the same stack | **Refused**, naming both |
+
+The composite case is the one worth understanding. A repository with a .NET
+backend and an npm frontend needs both built, so the tool joins them rather
+than picking one:
+
+```
+(dotnet build backend/App.slnx) && (cd frontend && npm run build)
+```
+
+Each part is wrapped in a subshell, and that is load-bearing. A candidate may
+`cd` into its own directory, and `cd` is not scoped to one command in an `&&`
+chain — joined flat, the second `cd frontend` would run from inside the first
+part's directory, where it does not exist.
+
+Two candidates of the **same** stack still refuse. Two Flutter packages are
+one product described twice; composing them would run the same suite twice and
+picking one would skip the other.
+
+### The debt record
+
+Every refusal is written to `gate-debt.json` in this repository, grouped by
+cause, with the specific reason per check. It is the durable statement of what
+is still unbound.
+
+`GateOracleTest` pins that record **set-equal** to what the real gate reports
+as unbound, by running the gate itself. If the tool ever stops finding a check
+the gate still fails on, that test goes red rather than the record quietly
+drifting. `--debt-out` redirects the record; the default follows `--root`.
+
+### A new change waits on the debt
+
+A repository listed in `gate-debt.json` may not open a new OpenSpec change.
+`workspace_check.py` fails it with `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` and
+names the unbound checks, so debt is paid as work starts rather than in a
+cleanup that never happens.
+
+Changes that were already open when the rule landed are listed in
+`gate-debt-baseline.json` and stay silent; anything opened afterwards is
+reported. `close-unbound-gate-checks` is never a trigger — a repository must
+be able to start the work that fixes its debt. A deliberate exception is a
+committed line in `gate-debt-exceptions.json` with its reason, and it is
+reported at WARNING so it stays visible. All three records fail closed: a
+missing or malformed one is an error, never read as "no debt".
+
 ## Registry and declaration integrity
 
 `projects.json` is the single source of project identity, and the audit fails

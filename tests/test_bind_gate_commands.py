@@ -33,6 +33,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "bind_gate_commands.py"
 from bind_gate_commands import (  # noqa: E402
     ALREADY_BOUND,
     BOUND,
@@ -540,41 +541,188 @@ class RefusalTests(RepoCase):
 # --- ambiguity: reported, not resolved ------------------------
 
 
+class DebtRecordLocationTests(unittest.TestCase):
+    """The record follows `--root`; only `--debt-out` moves it.
+
+    An earlier attempt made the default the script's own repository, on the
+    reasoning that the record belongs to the governance repository rather than
+    beside the siblings it describes. That reasoning was true and the change
+    was still wrong: a default that ignores the `--root` the caller passed is
+    not a default, and the first test run overwrote this repository's real
+    `gate-debt.json` with one test repository's debt. The record follows
+    `--root`, and `--debt-out` is how a caller redirects it.
+    """
+
+    def test_the_record_follows_the_root_argument(self):
+        workspace = Path(tempfile.mkdtemp())
+        try:
+            (workspace / "solo").mkdir()
+            (workspace / "solo" / ".ai-gate").mkdir()
+            (workspace / "solo" / ".ai-gate" / "gate.yaml").write_text(
+                "version: 1\nprofile: inventory\nchecks:\n  tests: true\n", encoding="utf-8"
+            )
+            (workspace / "solo" / "test_x.py").write_text(
+                "import unittest\n\n\nclass T(unittest.TestCase):\n"
+                "    def test_it(self):\n        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "--root", str(workspace), "--debt-only"],
+                capture_output=True, text=True,
+            )
+            self.assertTrue(
+                (workspace / DEBT_FILE).is_file(),
+                "the record must be written under the --root the caller named, "
+                f"not somewhere else: {result.stderr.strip()}",
+            )
+            self.assertFalse(
+                (Path(__file__).resolve().parents[1] / DEBT_FILE).read_text(
+                    encoding="utf-8"
+                ).count('"solo"') > 0,
+                "the test wrote this repository's real debt record; the "
+                "generator's default path must follow --root",
+            )
+        finally:
+            shutil.rmtree(workspace, ignore_errors=True)
+
+    def test_debt_out_redirects_the_record(self):
+        workspace = Path(tempfile.mkdtemp())
+        try:
+            (workspace / "solo").mkdir()
+            (workspace / "solo" / ".ai-gate").mkdir()
+            (workspace / "solo" / ".ai-gate" / "gate.yaml").write_text(
+                "version: 1\nprofile: inventory\nchecks:\n  tests: true\n", encoding="utf-8"
+            )
+            (workspace / "solo" / "test_x.py").write_text(
+                "import unittest\n\n\nclass T(unittest.TestCase):\n"
+                "    def test_it(self):\n        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            target = workspace / "elsewhere.json"
+            subprocess.run(
+                [sys.executable, str(SCRIPT), "--root", str(workspace),
+                 "--debt-only", "--debt-out", str(target)],
+                capture_output=True, text=True,
+            )
+            self.assertTrue(target.is_file())
+            self.assertFalse((workspace / DEBT_FILE).exists())
+        finally:
+            shutil.rmtree(workspace, ignore_errors=True)
+
+
 class AmbiguityTests(RepoCase):
-    def test_two_equally_plausible_entry_points_are_reported_not_chosen(self):
+    def test_two_disjoint_surfaces_compose_into_one_command(self):
         # `retakeKit`'s shape: a root solution and a root `package.json` with a
-        # `test` script. Both can answer `tests`; choosing one would assert a
-        # shape the repository does not have.
+        # `test` script. Both must run for the repository to be sound, so the
+        # command is both — joined, and neither half left out. Binding only the
+        # .NET half would report a green `tests` on a repository whose Node
+        # tests never ran, which is the false green this tool exists to avoid.
         self.write("App.sln", A_SOLUTION)
         self.write("App/App.csproj", A_CSPROJ)
         self.write("package.json", json.dumps({"scripts": {"test": "jest"}}))
         got = self.concern(self.bind(), "tests")
-        self.assertEqual(got.status, UNRESOLVED)
-        self.assertEqual(got.command, "")
-        self.assertEqual(
-            got.reason,
-            "2 equally plausible entry points: dotnet test App.sln "
-            "(root solution App.sln); npm test (package.json declares scripts.test)",
-        )
+        self.assertEqual(got.status, BOUND)
+        self.assertEqual(got.command, "(dotnet test App.sln) && (npm test)")
+        self.assertIn("dotnet test App.sln", got.evidence)
+        self.assertIn("npm test", got.evidence)
 
-    def test_the_ambiguity_reason_names_both_candidates(self):
+    def test_a_composite_names_every_part_it_joins(self):
         self.write("App.sln", A_SOLUTION)
         self.write("App/App.csproj", A_CSPROJ)
         self.write("package.json", json.dumps({"scripts": {"test": "jest"}}))
         got = self.concern(self.bind(), "tests")
-        self.assertIn("dotnet test App.sln", got.reason)
-        self.assertIn("npm test", got.reason)
+        self.assertIn("root solution App.sln", got.evidence)
+        self.assertIn("package.json declares scripts.test", got.evidence)
 
-    def test_an_ambiguous_repository_binds_neither_concern(self):
+    def test_a_repository_spanning_two_stacks_writes_its_commands(self):
         self.write_manifest(TESTS_ONLY)
         self.write("App.sln", A_SOLUTION)
         self.write("App/App.csproj", A_CSPROJ)
         self.write("package.json", json.dumps({"scripts": {"test": "jest"}}))
         outcome = self.bind()
         self.assertEqual(
-            [c.command for c in outcome.concerns if c.status == BOUND], []
+            [c.command for c in outcome.concerns if c.status == BOUND],
+            ["(dotnet test App.sln) && (npm test)"],
         )
-        self.assertNotIn("commands:", outcome.after)
+        self.assertIn("commands:", outcome.after)
+
+    def test_two_candidates_of_one_stack_are_still_refused(self):
+        # Two Flutter packages are one product described twice, not two halves
+        # of a repository. Composing them would run the same suite twice, and
+        # picking one would silently skip the other — so the refusal stands.
+        self.write("app/pubspec.yaml", "name: app\n")
+        self.write("lib/pubspec.yaml", "name: lib\n")
+        got = self.concern(self.bind(), "tests")
+        self.assertEqual(got.status, UNRESOLVED)
+        self.assertEqual(got.command, "")
+        self.assertIn("2 equally plausible entry points", got.reason)
+        self.assertIn("flutter test", got.reason)
+
+    def test_a_same_stack_refusal_names_both_candidates(self):
+        self.write("app/pubspec.yaml", "name: app\n")
+        self.write("lib/pubspec.yaml", "name: lib\n")
+        got = self.concern(self.bind(), "tests")
+        self.assertIn("app/pubspec.yaml", got.reason)
+        self.assertIn("lib/pubspec.yaml", got.reason)
+
+    def test_dominance_is_applied_before_composability(self):
+        # `linglitch`'s shape: the solution is at the root and the Node manifest
+        # is under `frontend/`. The root entry point wins on its own, so the two
+        # stacks are NOT composed — dominance runs first, and a nested
+        # `npm test` is a layout detail rather than a second product.
+        self.write("App.sln", A_SOLUTION)
+        self.write("App/App.csproj", A_CSPROJ)
+        self.write("web/package.json", json.dumps({"scripts": {"test": "vitest"}}))
+        self.assertEqual(self.bound_command("tests"), "dotnet test App.sln")
+
+    def test_a_composite_is_byte_identical_across_runs(self):
+        # Order comes from the generators, which iterate sorted manifests. If it
+        # varied, every polyglot repository would read DIRTY on every re-run.
+        self.write("App.sln", A_SOLUTION)
+        self.write("App/App.csproj", A_CSPROJ)
+        self.write("package.json", json.dumps({"scripts": {"test": "jest"}}))
+        first = self.concern(self.bind(), "tests").command
+        self.assertEqual(self.concern(self.bind(), "tests").command, first)
+        self.assertEqual(first, "(dotnet test App.sln) && (npm test)")
+
+    def test_each_part_of_a_composite_runs_in_its_own_directory(self):
+        # `alltools-platform`'s shape, and the reason every part is wrapped in a
+        # subshell. A candidate may `cd` into its own directory, and `cd` is
+        # not scoped to one command in an `&&` chain: run flat, the second
+        # `cd django_archived` executes from inside `rust/`, where that
+        # directory does not exist, and the gate writes a command that can
+        # only fail. This test runs the derived command in a real shell with
+        # real directories, because the defect is in the shell's semantics and
+        # no assertion on the string would see it.
+        self.write("rust/Cargo.toml", "[workspace]\nmembers = []\n")
+        self.write("frontend/package.json", json.dumps({"scripts": {"build": "tsc"}}))
+        self.write_manifest("  build: true\n")
+        command = self.concern(self.bind(), "build").command
+        self.assertIn("(cd rust", command)
+        self.assertIn("(cd frontend", command)
+        # Prove the wrapping is what makes it work: the same chain without the
+        # subshells must fail, which is the regression this guards.
+        flat = command.replace("(", "").replace(")", "")
+        self.assertNotEqual(flat, command)
+        for marker, directory in (("rust", "rust"), ("frontend", "frontend")):
+            (self.repo / directory).mkdir(parents=True, exist_ok=True)
+        failed = subprocess.run(
+            ["sh", "-c", flat.replace("cargo build --workspace", "true").replace("npm run build", "true")],
+            cwd=self.repo, capture_output=True, text=True,
+        )
+        self.assertNotEqual(
+            failed.returncode, 0,
+            "the unwrapped chain was expected to fail its second `cd`; if it "
+            "succeeded, the directory this test relies on is not being exercised",
+        )
+        wrapped = subprocess.run(
+            ["sh", "-c", command.replace("cargo build --workspace", "true").replace("npm run build", "true")],
+            cwd=self.repo, capture_output=True, text=True,
+        )
+        self.assertEqual(
+            wrapped.returncode, 0,
+            f"the wrapped composite failed: {wrapped.stderr.strip()}",
+        )
 
     def test_a_root_candidate_beats_a_nested_one(self):
         # `linglitch`'s shape: the solution is at the root and the Node manifest

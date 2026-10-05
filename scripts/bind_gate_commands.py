@@ -695,11 +695,19 @@ def python_runner(repo: Path, shape: Shape) -> tuple[str, str]:
 
 @dataclass
 class Candidate:
-    """One entry point that could answer a concern, and its evidence."""
+    """One entry point that could answer a concern, and its evidence.
+
+    `stack` is the toolchain the candidate came from, declared by the
+    generator that produced it and never parsed back out of `command`. It is
+    what makes composability decidable: two candidates that cover different
+    stacks are two halves of one repository, and two that cover the same stack
+    are one product described twice.
+    """
 
     command: str
     evidence: str
     root_level: bool
+    stack: str = ""
 
 
 def dotnet_entry(shape: Shape, *, for_tests: bool) -> tuple[str, str]:
@@ -798,7 +806,7 @@ def rust_commands(shape: Shape, concern: str) -> list[Candidate]:
                 else f"{prefix}cargo clippy --all-targets -- -D warnings"
             )
             note = "clippy is the Rust linter"
-        candidates.append(Candidate(command, f"{manifest} ({note})", root_level))
+        candidates.append(Candidate(command, f"{manifest} ({note})", root_level, "rust"))
     return candidates
 
 
@@ -830,6 +838,7 @@ def node_commands(shape: Shape, concern: str) -> list[Candidate]:
                         f"{prefix}npm run {script}",
                         f"{manifest} declares a {script!r} script",
                         root_level,
+                        "node",
                     )
                 )
             else:
@@ -838,13 +847,14 @@ def node_commands(shape: Shape, concern: str) -> list[Candidate]:
                         f"{prefix}npm audit --audit-level=high",
                         f"{manifest} has no security script, so this is the npm dependency audit",
                         root_level,
+                        "node",
                     )
                 )
             continue
         if key is None or key not in scripts:
             continue
         command = f"{prefix}npm test" if key == "test" else f"{prefix}npm run {key}"
-        candidates.append(Candidate(command, f"{manifest} declares scripts.{key}", root_level))
+        candidates.append(Candidate(command, f"{manifest} declares scripts.{key}", root_level, "node"))
     return candidates
 
 
@@ -860,7 +870,7 @@ def python_candidates(repo: Path, shape: Shape, concern: str) -> tuple[list[Cand
     if concern == "tests":
         command, evidence = python_runner(repo, shape)
         if command:
-            candidates.append(Candidate(command, evidence, True))
+            candidates.append(Candidate(command, evidence, True, "python"))
         else:
             return [], evidence
     elif concern == "security":
@@ -875,6 +885,7 @@ def python_candidates(repo: Path, shape: Shape, concern: str) -> tuple[list[Cand
                         PYTHON_SECURITY_TOOLS[tool],
                         f"the repository declares the {tool} dependency",
                         True,
+                        "python",
                     )
                 ], ""
         if not shape.security_tools:
@@ -892,17 +903,32 @@ def flutter_candidates(shape: Shape, concern: str) -> list[Candidate]:
         prefix = "" if directory == "." else f"cd {directory} && "
         if concern == "tests":
             candidates.append(
-                Candidate(f"{prefix}flutter test", f"{manifest} is a Flutter package", directory == ".")
+                Candidate(f"{prefix}flutter test", f"{manifest} is a Flutter package", directory == ".", "flutter")
             )
     return candidates
 
 
 def resolve(candidates: list[Candidate]) -> tuple[Candidate | None, str]:
-    """Apply the dominance rule and return `(winner, reason_when_refused)`.
+    """Apply dominance, then composability, and return `(winner, reason_if_refused)`.
 
-    One answer or none. A root-level entry point beats a nested one; two
-    candidates of equal standing are two answers, and choosing between them
-    would assert a shape the repository does not have.
+    Three answers, in this order.
+
+    1. **One.** A single candidate is bound unchanged.
+    2. **A dominant one.** A root-level entry point beats a nested one.
+    3. **A composite.** Candidates spanning two or more stacks are joined
+       with ` && `, because neither implies the other and the gate's job is
+       to cover the whole repository, not half of it.
+
+    Only then is it a refusal. Two candidates of the **same** stack still
+    refuse: two Flutter packages or two `package.json` files are one product
+    described twice, and choosing between them would assert a shape the
+    repository does not have.
+
+    The order matters and is not cosmetic. Dominance runs first, so a
+    repository with a root `package.json` and a nested one still resolves to
+    the root without a composite. Composability runs before the refusal, so a
+    polyglot repository is joined rather than refused — the case that would
+    otherwise leave `crossify`'s frontend unbuilt behind a green `build`.
     """
     if not candidates:
         return None, ""
@@ -912,8 +938,57 @@ def resolve(candidates: list[Candidate]) -> tuple[Candidate | None, str]:
     if len(roots) == 1:
         return roots[0], ""
     remaining = roots or candidates
+    composite = compose(remaining)
+    if composite is not None:
+        return composite, ""
     described = "; ".join(f"{c.command} ({c.evidence})" for c in remaining)
     return None, f"{len(remaining)} equally plausible entry points: {described}"
+
+
+def compose(candidates: list[Candidate]) -> Candidate | None:
+    """Join candidates that cover disjoint product surfaces, or return None.
+
+    A composite is offered only when the candidates span **two or more
+    distinct stacks**. That is the test for "both must run", and it is
+    available from declared information rather than from the shape label or
+    by parsing the command: each generator tags its own candidates with the
+    toolchain it speaks for.
+
+    A candidate with no declared stack cannot be reasoned about, so it is not
+    composable. An empty stack is a gap in a generator, not a repository
+    shape, and guessing one would reintroduce the guessing this tool exists to
+    avoid.
+
+    Each part is wrapped in a subshell. This is load-bearing, not decoration:
+    a candidate may `cd` into its own directory, and `cd` mutates the shell's
+    working directory for everything after it. Joining
+    `cd rust && cargo build --workspace` and `cd django_archived && npm run
+    build` with a bare ` && ` would run the second `cd` from inside `rust/`,
+    where `django_archived` does not exist. The gate would then report a
+    composite that can only fail, and the repository would go red for a
+    command the tool wrote. Wrapping every part in `( ... )` confines each
+    `cd` to its own subshell, and it is applied uniformly so the shape of the
+    command does not depend on whether a particular part happens to `cd`.
+
+    Order is the generators' emission order, which is already deterministic
+    because each iterates a sorted manifest list. That is load-bearing: a
+    composite whose order varied between runs would report every polyglot
+    repository `DIRTY` on every re-run, which would be a false positive
+    introduced by this function.
+
+    `root_level` is False on the result because a composite is never a single
+    entry point, and no later rule should treat it as one.
+    """
+    if len({c.stack for c in candidates}) < 2:
+        return None
+    if any(not c.stack for c in candidates):
+        return None
+    return Candidate(
+        command=" && ".join(f"({c.command})" for c in candidates),
+        evidence="; ".join(f"{c.command} ({c.evidence})" for c in candidates),
+        root_level=False,
+        stack="+".join(dict.fromkeys(c.stack for c in candidates)),
+    )
 
 
 @dataclass
@@ -1362,7 +1437,7 @@ def derive(concern: str, shape: Shape, repo: Path) -> tuple[str, str, str]:
         if not entry:
             return "", "", evidence
         candidates.append(
-            Candidate(DOTNET_COMMANDS[concern](entry), evidence, "/" not in entry)
+            Candidate(DOTNET_COMMANDS[concern](entry), evidence, "/" not in entry, "dotnet")
         )
     if shape.crates:
         candidates.extend(rust_commands(shape, concern))
@@ -1966,7 +2041,14 @@ def main(argv: list[str] | None = None) -> int:
         "--debt-out",
         type=Path,
         default=None,
-        help=f"where to write the debt record (default: <root>/{DEBT_FILE})",
+        help=(
+            f"where to write the debt record (default: this repository's own "
+            f"{DEBT_FILE}). The record belongs to the governance repository, "
+            f"not beside the sibling repositories it describes — "
+            f"`workspace_check.py` reads it from the governance root, so "
+            f"writing it under `--root` put the authoritative copy somewhere "
+            f"nothing reads while the real one went stale"
+        ),
     )
     parser.add_argument(
         "--repo",
@@ -2005,6 +2087,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{outcome.repo:32} {marker:12}{detail}")
 
     debt = build_debt(report, root)
+    # `--debt-out` is the only thing that redirects the record, and the default
+    # is the workspace root the caller named. Hard-coding the script's own
+    # repository instead looked more correct and was much worse: a test
+    # pointing `--root` at a temporary workspace overwrote the real
+    # `gate-debt.json` in this repository, because the default no longer
+    # followed the argument the caller gave. A default that ignores its own
+    # flag is not a default. The stale-record problem this was meant to solve
+    # is a caller problem, and `--debt-out` is the fix.
     debt_path = args.debt_out or (root / DEBT_FILE)
     writing_debt = args.apply or args.debt_only
     if writing_debt:

@@ -29,3 +29,4 @@ commands:
   repository: 'git diff --check'
   tests: 'python3 -m unittest discover -s tests -v'
   product_quality: 'python3 scripts/product_code_quality.py .'
+  security: 'pip-audit'
