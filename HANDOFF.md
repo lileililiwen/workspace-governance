@@ -1004,16 +1004,72 @@ and asserting `placeholder` and `stub` are absent. Negative control: putting
 both words back raises marker findings 38 → 468 and red repositories 13 → 28;
 the file was restored byte-identically and the suite returned to 748.
 
+### The Rust boundary check reads the module tree now
+
+The defect this section used to list as an owner's problem is fixed, in commit
+`93e60cf`, and the fix is in the checker rather than in any repository. See
+`openspec/changes/bind-declared-gate-checks/tasks.md` §8 and
+`openspec/changes/bind-declared-gate-checks/specs/product-code-quality-boundary/spec.md`.
+
+`product_code_quality.py` decided "is this Rust file test code" from the file
+alone, so it could not see that `src/gate/governance/tests.rs` is only ever
+compiled by `#[cfg(test)] mod tests;` in `src/gate/governance/mod.rs:627`. A
+second, separate cause sat behind it: the guard was tracked per line rather than
+per item, so an attribute written *between* the guard and its item disarmed it —
+`#[cfg(test)]`, `#[path = "tests.rs"]`, `mod tests;` is one guarded item and was
+read as none.
+
+| `product-test-code` findings | Before | After |
+|---|---|---|
+| `driftwatchdog` | 24 | **0** |
+| `rust-ecommerce` | 18 | **0** |
+| `alltools-platform` | 2 | **1** |
+| fleet total | 60 | **17** |
+
+Real gate runs, `driftwatchdog/target/debug/driftwatchdog gate`:
+
+| Repository | `product-code-boundary` | Still red for |
+|---|---|---|
+| `rust-ecommerce` | FAIL → **PASS** | `security` unbound, `source-file-size`, two adapter timeouts |
+| `driftwatchdog` | FAIL (24 findings) → FAIL (0 test-code) | 2 placeholder markers in `src/gate/concerns.rs:20`, 8 files over 1000 lines |
+| `alltools-platform` | FAIL | 1 real bare `#[test]` in `test_prompt.rs`, 11 markers |
+| `argoset`, `crossify`, `fotofy`, `transitfy` | FAIL, unchanged | the **TypeScript** `describe(`/`it(` heuristic — a different defect |
+
+The five repositories that were red on `product-test-code` alone with zero
+markers — `argoset`, `crossify`, `fotofy`, `rust-ecommerce`, `transitfy` — split
+one and four. Only `rust-ecommerce` was red for the Rust reason; the other four
+are red on a TypeScript regex, which this change does not touch.
+
+No `exclude`, no filename exception list, no test weakened. A `tests.rs` that
+no `#[cfg(test)]` declaration reaches is still reported, which is what
+`RustModuleTreeBoundaryTests::test_the_declaration_is_what_clears_it_not_the_file_name`
+pins. Negative control on a **copy** of `src/gate/governance` in a temp
+directory, never on `driftwatchdog` itself: **0 → 24 → 0** findings. A `tests/`
+directory inside a product root needed no handling — `DEFAULT_EXCLUDED_DIRS`
+already matches the `tests` path segment, so it is out of scope before the module
+tree is consulted.
+
+Suite: **759 passed, 158 subtests, 2 failed** (13 added here). Both failures
+are independent of this change and reproduce with it stashed:
+
+- `GateOracleTest::test_the_record_names_nothing_the_gate_calls_bound` —
+  `gate-debt.json` calls `('metiscope', 'build')` debt the live gate does not.
+  Pre-existing on `main`; it is about the debt record, not the Rust scan.
+- `SequencingGateTests::test_the_gate_is_open_and_the_fleet_corpus_is_clean` —
+  `refused: lileililiwen-site: … census: 12 .py records kind 'product' but the
+  declaration says 'deployment'`. It reads the live sibling tree at
+  `/home/paul/code`, and `lileililiwen.github.io` has gained `scripts/*.py`
+  and `tests/*.py` from other work.
+
+The `748 passed, 0 failed` figure quoted above was true when it was measured.
+
 ### Open for their owners
 
-- **The Rust scan in `product_code_quality.py` is lexical and single-file, so
-  `#[cfg(test)]` modules are reported as product test code.** 24 false
-  `product-test-code` findings in `driftwatchdog`, where
-  `src/gate/governance/tests.rs` is declared `#[cfg(test)] mod tests;` from
-  `mod.rs:627`. Five of the 13 red repositories are red this way with **zero**
-  markers. The fix is a module graph, not a word list; recorded in
-  `docs/product-code-quality.md` under "Known limits" and in `tasks.md` §8, and
-  not worked around with an `exclude`.
+- **Four repositories are red on the TypeScript `describe(`/`it(` heuristic**
+  with zero marker findings: `argoset` 2, `crossify` 1, `fotofy` 6,
+  `transitfy` 6. The same class of false positive as the Rust one — a component
+  whose own name or subject is "test" trips a two-token regex — in a language
+  this change does not touch. Recorded in `tasks.md` §8; not fixed here.
 - **`opendockify` is `REVIEW_REQUIRED` on `readme-claim-unscoped`** — its README
   line 52 makes a negative status statement naming no surface the checker can
   resolve. A README finding for that repository's owner, surfaced only now
