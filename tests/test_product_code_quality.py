@@ -14,6 +14,8 @@ Covers the scenarios in
 
 import json
 import os
+import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -329,6 +331,63 @@ class TypeScriptBoundaryTests(unittest.TestCase):
         report = pcq.evaluate(pcq.load_policy(json.loads((self.root / ".project.json").read_text())).with_root(self.root))
         self.assertEqual(report.status, "PASS", report.notes)
         self.assertEqual(report.summary["test_code"], 0)
+
+
+class TypeScriptQualifierTests(unittest.TestCase):
+    """A method named `test` is a method, not a test.
+
+    Every line here was a measured false positive in the fleet. A two-token
+    lexical match cannot tell a Mocha global from a regular expression or a
+    string method that shares the name, and the fix anchors on the qualifier,
+    which is the only thing that separates them. These are the real lines, not
+    invented ones — `argoset`, `crossify`, `fotofy` and `transitfy` were red
+    for exactly these shapes.
+    """
+
+    CASES = [
+        ("regex_literal", 'if (/attestation/i.test(err.message)) { fail(); }'),
+        ("regex_literal_return", "return /iphone|android/.test(ua);"),
+        ("named_regex", "} else if (QUOTA_PATTERN.test(body)) {"),
+        ("string_literal", 'return typeof v === "string" && /^https?:\\/\\//.test(v);'),
+        ("optional_chain", "if (re?.test(body)) { x(); }"),
+        ("member", "suite.test('x');"),
+        ("prose_comment", " * contract drift test (see `src/api/contract.test.ts`) can compare"),
+        ("identifier_prefix", "const latest = compute();"),
+        ("word_suffix", "contest(1);"),
+    ]
+
+    def test_no_method_or_comment_is_reported_as_test_code(self):
+        for name, body in self.CASES:
+            with self.subTest(case=name):
+                tmp = pathlib.Path(tempfile.mkdtemp())
+                try:
+                    path = tmp / "sample.ts"
+                    findings = pcq._scan_typescript_test_code(path, body.splitlines())
+                    self.assertEqual(
+                        findings, [],
+                        f"{name} was reported as test code: {body!r}",
+                    )
+                finally:
+                    shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_a_bare_global_call_is_still_reported(self):
+        # The negative control for every case above. If the qualifier anchor
+        # were dropped to make the false positives go away, these would pass
+        # silently and the rule would be dead.
+        for name, body in (
+            ("describe", "describe('thing', () => {});"),
+            ("it", "  it('works', () => {});"),
+            ("test", "test('works', () => expect(1).toBe(1));"),
+        ):
+            with self.subTest(case=name):
+                tmp = pathlib.Path(tempfile.mkdtemp())
+                try:
+                    path = tmp / "sample.ts"
+                    findings = pcq._scan_typescript_test_code(path, body.splitlines())
+                    self.assertEqual(len(findings), 1, f"{name} was not reported")
+                    self.assertEqual(findings[0].rule_id, "product-test-code")
+                finally:
+                    shutil.rmtree(tmp, ignore_errors=True)
 
 
 class CSharpBoundaryTests(unittest.TestCase):

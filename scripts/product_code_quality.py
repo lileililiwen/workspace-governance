@@ -560,20 +560,65 @@ def _scan_python_test_code(path: Path, lines: list[str]) -> list[Finding]:
     return findings
 
 
+# A `describe`/`it`/`test` **call**, not a method of that name. The bare
+# function is a Mocha/Jest/Vitest global; `.test(` is overwhelmingly a regular
+# expression or a string being matched, which is the single largest source of
+# false positives this scanner had:
+#
+#   if (/attestation/i.test(err.message))            <- a regex match
+#   return /iphone|android/.test(ua);                 <- a regex match
+#   } else if (QUOTA_PATTERN.test(body)) {            <- a compiled regex
+#   return "...".test(value);                         <- a string method
+#
+# None of those is a test, and all four were reported as test code in product
+# scope. The qualifier is what separates them: a call on the bare identifier is
+# the framework global, and a call on any expression is a method on that
+# expression. A method named `test` is a method, whatever it is called on.
+_TS_TEST_CALL = re.compile(
+    r"(?<![\w.$])(describe|it|test)\s*\(",
+)
+# `foo.test(` and `foo?.test(` — a member call. Excluded so the lookbehind
+# above does not have to reason about the optional-chaining operator.
+_TS_MEMBER_CALL = re.compile(r"[\w$?)\]]\s*(?:\?\.)?\s*\.\s*(describe|it|test)\s*\(")
+
+
 def _scan_typescript_test_code(path: Path, lines: list[str]) -> list[Finding]:
+    """Detect a bare `describe`/`it`/`test` call outside test scope.
+
+    The same false-positive class the Rust scanner had, in a different
+    language: a two-token lexical match cannot tell a framework global from a
+    method that happens to share its name. So the match is anchored on the
+    qualifier, which is the only thing that distinguishes them.
+
+    A comment mentioning a `*.test.ts` file is not a call either, and is not
+    reported — it is prose, and the remediation this rule exists to give
+    ("move it into a test file") makes no sense for a doc comment.
+    """
     findings: list[Finding] = []
     for index, line in enumerate(lines, start=1):
         stripped = line.strip()
-        if re.search(r"\b(describe|it|test)\s*\(", stripped) and "import" not in stripped:
-            findings.append(Finding(
-                rule_id="product-test-code",
-                level="ERROR",
-                severity="FAIL",
-                file=path.name,
-                line=index,
-                marker=stripped,
-                remediation="move describe/it/test calls into a *.test.ts or *.spec.ts file under the project tests/ root",
-            ))
+        if "import" in stripped:
+            continue
+        # Prose about tests, not a call. A `//` or `*` or `/*` prefix means the
+        # line is a comment, and a comment cannot call anything.
+        if re.match(r"(//|/\*|\*)", stripped):
+            continue
+        if not _TS_TEST_CALL.search(stripped):
+            continue
+        # Strip member calls and re-test: what remains is a call on a bare
+        # identifier, which is the framework global.
+        without_members = _TS_MEMBER_CALL.sub("", stripped)
+        if not _TS_TEST_CALL.search(without_members):
+            continue
+        findings.append(Finding(
+            rule_id="product-test-code",
+            level="ERROR",
+            severity="FAIL",
+            file=path.name,
+            line=index,
+            marker=stripped,
+            remediation="move describe/it/test calls into a *.test.ts or *.spec.ts file under the project tests/ root",
+        ))
     return findings
 
 
