@@ -2,7 +2,92 @@
 
 ## Current state
 
-current_spec: bind-declared-gate-checks
+current_spec: derive-composite-gate-command
+
+**A polyglot repository no longer gets refused for having two halves.** 24
+required checks across 11 repositories were unbound for one reason: the binder
+found two equally plausible entry points and, having only two answers — bind
+one, or refuse — refused. The rule behind that is sound (*a wrong command is
+worse than a listed gap*) and it stays. What changed is that there is now a
+third answer.
+
+`crossify` holds `backend/CourseBridge.slnx` and `frontend/package.json`. Both
+answer `build`. They are not two answers to one question — they are two halves
+of one repository, and the command that builds the repository is both:
+
+```
+(dotnet build backend/CourseBridge.slnx) && (cd frontend && npm run build)
+```
+
+The test for composability is **different stacks**, not "two candidates". Two
+Flutter packages are one product described twice; composing them would run the
+same suite twice, and picking one would skip the other. So same-stack ambiguity
+still refuses, naming both, and `AmbiguityTests` now proves both halves of that.
+
+| Measurement | Before | After |
+|---|---|---|
+| Unbound checks | 44 | **24** |
+| Repositories carrying debt | 22 | **12** |
+| `unittest discover -s tests` | 810 passed | **813 passed, 0 failed** |
+| `workspace_check.py --self-check` | exit 0 | **exit 0** |
+| `openspec validate --all --strict` | 23 passed | **24 passed, 0 failed** |
+
+### The bug this change nearly shipped
+
+Each part is wrapped in a subshell, and that is not decoration. A candidate may
+`cd` into its own directory, and `cd` is not scoped to one command in an `&&`
+chain. `alltools-platform` would have received:
+
+```
+cd rust && cargo build --workspace && cd django_archived && npm run build
+```
+
+The second `cd` runs from inside `rust/`, where `django_archived` does not
+exist. Measured in a real shell before the apply: flat exits 2, wrapped exits 0,
+same directories. Ten manifests were written after that measurement, not before
+it. `test_each_part_of_a_composite_runs_in_its_own_directory` runs both forms
+against real directories, because a string assertion cannot see a shell
+semantics bug.
+
+### A wrong fix, reverted
+
+The debt record was being written under the workspace root rather than the
+governance root, so regenerating it looked successful and left the
+authoritative copy stale. The first fix hard-coded the script's own repository
+as the default — and was wrong: a default that ignores the `--root` the caller
+passed is not a default, and the first test run **overwrote this repository's
+real `gate-debt.json`** with one test repository's debt. Reverted. The record
+follows `--root`; `--debt-out` redirects it. `GateOracleTest` passing is the
+evidence it is right again, and two tests now pin the contract — one of which
+asserts the real file was not touched.
+
+### The debt this repository was carrying
+
+`QUALITY_NEW_CHANGE_WITH_GATE_DEBT` then refused to let this change open, because
+`security` was unbound here. That is the rule working on the repository that
+wrote it, and the response was to close the debt rather than waive it: the tests
+imported `jsonschema` and `PyYAML` with nothing declaring them, so
+`requirements-dev.txt` now declares them plus `pip-audit`. Run for real before
+binding — no known vulnerabilities, exit 0.
+
+### What is still unbound, and why
+
+24 checks in 12 repositories. Each is real work or an owner decision, and each
+carries its reason in `gate-debt.json`:
+
+| Reason | What closing it needs |
+|---|---|
+| no `scripts/check-*.py` to run | a real checker, or `checks: <concern>: false` with a reason |
+| a pure-Python package has no build step | a packaging decision by the owner |
+| several `.csproj` and no solution | a `.sln` in the repository |
+| no Python security tool declared | declaring one, as done here |
+| two same-stack entry points | an owner decision on which is the product |
+
+`opendockify` is `REVIEW_REQUIRED` on `readme-claim-unscoped`. Its README line
+denies the e-signature seam in the MVP, and names no surface the checker can
+resolve. The README is accurate; the checker's surface vocabulary is what is
+narrow. It is not fixed here, and no repository's documentation was edited to
+make a check pass.
 
 **The test suite is green, and one decided row was the reason it was not.**
 `test_the_gate_is_open_and_the_fleet_corpus_is_clean` was the only failure
