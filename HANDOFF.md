@@ -2,9 +2,99 @@
 
 ## Current state
 
-current_spec: derived-kind-canonical-form
+current_spec: identity-and-taxonomy-axis-split
 
-Implemented and committed at `97f6c68`, **not archived**. It is a one-rule
+**The test suite is green, and one decided row was the reason it was not.**
+`test_the_gate_is_open_and_the_fleet_corpus_is_clean` was the only failure
+across 761 tests. It runs `axis_migration.py --check` over the live 81-project
+fleet, and that refused:
+
+```
+refused: lileililiwen-site: design.md §5.2 rule 4: ... records kind 'product'
+but the declaration says 'deployment'; the fleet has drifted from the decided table
+```
+
+**The guard was right; the table was stale.** The owner corrected
+`lileililiwen-site` to `stack: none` on two surfaces on 2026-10-05 — the sibling
+declaration in `e9cc5df` ("a static site ships no implementation language", and
+"Python runs only at build time for the content validators") and the registry in
+`9bab1b7` ("The project's own `.project.json` already declares stack 'none', so
+the two disagreed and `workspace_check` reported `TAXONOMY_MISMATCH`"). The
+third surface, the §5.2 decided table, was not updated, so it still described a
+superseded decision.
+
+The mechanism is the guard's accepted set, not a code defect. Under ruling 7 a
+decided row accepts its own recorded `kind` **and** the derived value of its own
+`role` × `stack`. With `stacks: ['python']` that set is
+`{'product', 'python-deployment'}`, while `role: deployment` with
+`stack: none` derives the bare `'deployment'` under ruling 5. A value that is
+correct on both live surfaces was therefore refused against its own table. The
+fix is the data, not the guard: the §5.2 `stack` cell is now `none`, and the
+guard accepts the bare derived role without being loosened.
+
+The extent was measured before the edit, because `_assert_row_matches_fleet`
+raises on the **first** refusal and hides everything behind it. A read-only
+probe of every decided row against the live declaration and registry axes found
+exactly **2** divergences, both this project's `stack`, and no other row.
+
+Also changed, and why it had to change with the table:
+
+- `migration/identity-and-taxonomy-axis-split.json`, the two
+  `lileililiwen-site` rows: `stack`, `rule` and `source`.
+  `declared_kind` stays `product` on purpose. `--write-plan` would regenerate
+  the file from today's fleet and rewrite `declared_kind` to the post-migration
+  `deployment` on all 81 rows, destroying the pre-migration measurement ruling 6
+  exists to preserve, so the four changed fields were edited directly.
+- `tests/test_identity_and_taxonomy.py`: the existing pin on this row moves from
+  `"python"` to `"none"` — still an exact assertion, so drift off `none` still
+  fails. Three tests were added, because the break had no cheap guard:
+  `test_a_stack_none_row_accepts_the_bare_derived_role`,
+  `test_a_stack_none_row_still_refuses_a_third_kind` (`kind: inventory` is still
+  refused, so ruling 9 is not a blanket pass), and
+  `test_the_decided_table_agrees_with_the_live_fleet_on_both_axes`, which pins
+  the invariant whose absence let a clean corpus fail.
+- **Negative control, run rather than asserted:** reverting only the §5.2
+  `stack` cell turned **4** tests red. `design.md` was restored and verified
+  byte-identical with `sha256sum -c`.
+- Two scenarios added to `specs/identity-and-taxonomy/spec.md`, and §10 ruling 9
+  records the correction and supersedes only the stack half of ruling 4. Ruling
+  4's `role: deployment` is unchanged, and the census is re-measured at
+  `python: 16`, `typescript: 1` — it grew from 12 because the validator set grew,
+  and the conclusion does not change with it.
+
+**This change is implemented and still not archived**, as are eight others:
+`bind-declared-gate-checks`, `bind-declared-verification`,
+`capability-adoption-gate`, `close-unbound-gate-checks`,
+`cross-repo-adoption-grant`, `derived-kind-canonical-form`,
+`readme-claim-verification`, `spec-purpose-backfill-gate`. Recorded here rather
+than archived by this commit, because archiving is a separate decision from
+fixing the two failures. `bind-declared-verification` holds only
+`rollback-manifest.json` — no proposal, design, tasks or spec delta — and is the
+one item `openspec validate --all --strict` reports as failing; it is untracked
+and was left untracked, as `bind-declared-gate-checks/tasks.md:21` already
+requires and as the entry further down this file already records.
+
+**Left standing, not fixed here: 8 failures from work that landed in this tree
+during the session that fixed the two named ones.** Measured 2026-10-05 15:06
+with this commit's changes applied: `Ran 800 tests, FAILED (failures=8)` — 7 in
+`test_promote_project`, 1 in `test_gate_debt_precondition`. None is caused by
+this change; the same 7 fail with this commit's changes stashed. They come from
+the in-flight `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` precondition
+(`scripts/workspace_check.py` +355, `scripts/gate_debt_baseline.py`,
+`gate-debt-baseline.json`, `gate-debt-exceptions.json`, all uncommitted and
+untracked at the time of writing), whose new committed input
+`gate-debt-baseline.json` is **not** in
+`test_promote_project.setup_sandboxed_governance_root`'s copy list, so the rule
+fails closed on the sandbox and `promote_project` returns 2. Adding
+`"gate-debt-baseline.json"` to that fixture's `for record in (...)` loop is the
+one-line remedy. Not done here on purpose: those files belong to that change,
+were being written minutes before this commit, and landing them would sweep
+another piece of work into this commit. The suite is green for everything this
+change owns — `tests.test_identity_and_taxonomy` is **70 passed, 0 failures**
+and both originally reported failures now pass.
+
+The prior active change, `derived-kind-canonical-form`, is implemented and
+committed at `97f6c68`, **not archived**. It is a one-rule
 checker fix: a `kind` outside the frozen 12-value `kinds` vocabulary is now
 known when it is the value its own canonical `role`/`stack` derive, so the 17
 `KIND_UNKNOWN` warnings the fleet audit reported — every one of them a correct
