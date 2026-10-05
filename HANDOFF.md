@@ -2,7 +2,38 @@
 
 ## Current state
 
-current_spec: ratchet-live-gate-debt
+current_spec: classify-dirty-gate-manifest-debt
+
+## Current package: classify dirty gate-manifest debt
+
+The driver now recognizes the binder's dirty-manifest refusal as class G. It
+reports the owner action—review and commit the manifest, then rerun the binder—
+without invoking a remedy or writing the target. The matcher requires the
+binder marker at the start and a non-empty derived command. Unknown reasons
+remain class `?`.
+
+The authorized full-workspace binder run refreshed `gate-debt.json` to 11
+entries across 8 repositories: eight class G dirty-manifest entries and three
+existing owner decisions (jenkins-local/build class C, sisyphusfy/build class F,
+and sisyphusfy/security class E). No debt is claimed closed. The dry-run digest
+check covered 76 sibling gate manifests and found zero changes.
+
+The binder apply left these sibling `.ai-gate/gate.yaml` additions uncommitted;
+preserve them and do not stage them from this repository:
+`aegify`, `argoscope`, `cargo-audit-boost`, `cargo-matrix-boost`, `cargo-sonar`,
+`dotnet-platform-libs`, `gradevia`, `kairion`, `labrys`, `metiscope`,
+`openpanel`, `pluggify`, `rust-platform-libs`, `shopifireman`, `sisyphusfy`,
+`smotoox`, and `testify`. Twenty dirty sibling repositories were withheld by
+the binder. Five repositories had no manifest and were not modified.
+
+Verification: focused driver tests 20 passed; full governance suite 849 passed,
+1 skipped; strict OpenSpec 14/14; self-check and project governance check 0
+errors/0 warnings; auto-gate PASS 0 errors/0 warnings; change names valid;
+`git diff --check` clean. The read-only reviewer found no remaining issues.
+The change stays active and unarchived. Commit 1 is `ab466b3`
+(`feat(governance): classify dirty manifest gate debt`) and contains the
+OpenSpec, driver, tests, and regenerated debt record. Commit 2 contains this
+HANDOFF evidence only.
 
 ## Current package: live gate debt ratchet
 
