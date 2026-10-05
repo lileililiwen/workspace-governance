@@ -402,7 +402,7 @@
       "path": "lileililiwen.github.io",
       "profile": "deployment",
       "role": "deployment",
-      "stack": "python",
+      "stack": "none",
       "lifecycle": "active",
       "adoption": "adopted"
     },
