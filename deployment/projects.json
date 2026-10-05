@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated_by": "workspace-governance/scripts/jenkins_manifest.py",
-  "generated_at": "2026-09-24T07:52:52.545450+00:00",
+  "generated_at": "2026-10-05T14:28:40.828157+00:00",
   "projects": [
     {
       "id": "alethefy",
@@ -22,7 +22,7 @@
       "path": "cvunify",
       "jenkins_job": "cvunify",
       "compose_file": "docker-compose.yml",
-      "verification_command": "dotnet test"
+      "verification_command": "CVUNIFY_TEST_ADMIN_CONNECTION=\"${CVUNIFY_TEST_ADMIN_CONNECTION:-Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=cvunify_ci}\" dotnet test"
     },
     {
       "id": "hermexa",
@@ -50,7 +50,14 @@
       "path": "openaccounting",
       "jenkins_job": "openaccounting",
       "compose_file": "docker-compose.yml",
-      "verification_command": "cargo test --features test-support"
+      "verification_command": "[ -n \"${DATABASE_URL:-}\" ] || { set -a; . ./.env.test; set +a; }; cargo test --features test-support"
+    },
+    {
+      "id": "argoscope",
+      "path": "argoscope",
+      "jenkins_job": "argoscope",
+      "compose_file": "docker-compose.yml",
+      "verification_command": "python3 scripts/verify_bootstrap.py && openspec validate --all --strict --no-interactive"
     }
   ]
 }

@@ -77,6 +77,28 @@
       "kind": "promote",
       "compose_file": "docker-compose.yml",
       "jenkins_job": "openaccounting"
+    },
+    {
+      "project_id": "argoscope",
+      "decided_at": "2026-10-05T14:25:56.589059+00:00",
+      "actor": "paul",
+      "revision": "9d5e35f07883a51af8c9fb43ed3b39ac04113073",
+      "evidence_ref": "local:HEAD:9d5e35f07883a51af8c9fb43ed3b39ac04113073",
+      "manifest_generated": true,
+      "kind": "promote",
+      "compose_file": "docker-compose.yml",
+      "jenkins_job": "argoscope"
+    },
+    {
+      "project_id": "argoscope",
+      "decided_at": "2026-10-05T14:28:40.201122+00:00",
+      "actor": "paul",
+      "revision": "068372f7743f08dcbf8919630ec84a4faf98a12e",
+      "evidence_ref": "local:HEAD:068372f7743f08dcbf8919630ec84a4faf98a12e",
+      "manifest_generated": true,
+      "kind": "promote",
+      "compose_file": "docker-compose.yml",
+      "jenkins_job": "argoscope"
     }
   ]
 }
