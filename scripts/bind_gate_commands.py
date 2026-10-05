@@ -74,7 +74,8 @@ That protocol is what decides the producers:
 * `product_code_quality.py` is fail-closed on a `quality` block and exits 2
   without one. It emits `schema_version`, not the `version` `parse_envelope`
   requires (`adapters.rs:1040`), so it always takes the text-mode exit-code
-  path. **Bound only where the repository already declares that policy.**
+  path — verified, not assumed. **Bound, and the `quality` block it reads is
+  derived from disk** — see `derive_quality_block`.
 * `forge_governance_adapter.py` reads `sys.stdin.read()` and emits an
   observation (`status`/`detail`/`evidence`), not a findings report. With no
   stdin it reads an empty input, and the report parser would not recognise the
@@ -92,11 +93,21 @@ findings is not a pass.
   script the concern needs, an undetectable test runner, a pure-Python
   `build`, and two equally plausible entry points are all *unresolved*, with
   the reason and the evidence. A wrong command is worse than an honest gap.
-* **Never invents a policy.** `placeholder-threshold` and
-  `product-code-boundary` need a `quality` block in the repository's own
-  `.project.json`. Which directories are product, which languages, and what
-  threshold are owner decisions, so the block is named in the debt record and
-  left unwritten.
+* **Derives policy where policy is derivable, and judges only where it must.**
+  `placeholder-threshold` and `product-code-boundary` need a `quality` block
+  in the repository's own `.project.json`. Its `product_roots` and
+  `languages` are facts about where the code is, so they are derived from
+  disk with the manifest each came from attached as evidence. Its
+  `placeholder_threshold` is a judgement, and is written as `0` — the
+  deliberately strict default both hand-written blocks chose, which a project
+  may relax on purpose in its own file. The block and the bound command are
+  written in one operation, and a hand-written block is never touched.
+* **Never invents an `exclude` list or a marker list.** Both are judgements
+  about what is not product, and a guessed exclusion hides a real finding
+  rather than reporting one. The marker vocabulary is the checker's own.
+* **Never names a product root it did not see.** A root is derived only from a
+  manifest on disk whose `src` directory exists and holds a file of that
+  manifest's language. No root means refusal by name, not a fallback to `.`.
 * **Never binds a concern the gate does not require.** Only a check the
   manifest selected, or one its `profile:` scheduled and it did not disable,
   exempt, or already bind. A disabled, exempted, `"optional"`, or
@@ -988,12 +999,46 @@ GOVERNANCE_CHECKERS: dict[str, tuple[str, str, str]] = {
 # raises `ConfigError("project declaration is missing the 'quality' block")`
 # and exits 2 — a configuration error — rather than scanning, so a repository
 # without one has no policy to run and the checker cannot answer the concern
-# at all. The threshold and the product roots are an owner decision about
-# which directories are product and how many placeholders are tolerable, so
-# this tool writes none of them: it names the missing block and leaves the
-# concern in the debt record.
+# at all.
 QUALITY_POLICY_FILE = ".project.json"
 QUALITY_POLICY_KEY = "quality"
+
+# The two concerns the derived `quality` block answers, by name. They are two
+# gates over one scan.
+QUALITY_CONCERNS = ("placeholder-threshold", "product-code-boundary")
+
+# The deliberately strict default. Not a derivation and not a neutral value:
+# `0` is the strictest threshold the checker accepts, and it is written as a
+# default a project may relax on purpose. The workspace principle is that a
+# check which runs and complains is worth more than a check which does not
+# run, and a threshold above `0` would let a repository pass a gate that
+# scanned its product code and found unfinished work. Both projects that
+# declare this block by hand chose `0`.
+QUALITY_DEFAULT_THRESHOLD = 0
+
+# Path segments that mark test scope. The checker already excludes these
+# (`DEFAULT_EXCLUDED_DIRS` in `product_code_quality.py`), so a root under one
+# of them would scan nothing and report PASS. A root that can only ever scan
+# nothing is a false pass, so it is never derived.
+QUALITY_TEST_SEGMENTS = frozenset({"tests", "test", "__tests__", "spec", "specs"})
+
+# Manifest name -> the language the checker scans for it, the file suffixes
+# that make a directory source rather than a manifest directory, and whether
+# the source sits in a `src` subdirectory beside the manifest.
+#
+# The `src` convention is **per manifest kind**, not one rule for all of them,
+# and getting it wrong refuses a whole toolchain: a Rust crate keeps its
+# sources in `src/` beside `Cargo.toml`, a Node package in `src/` beside
+# `package.json`, and a .NET project **beside the `.csproj` itself**, because
+# that file already names the project and the sources are its siblings. Naming
+# `src/Foo/src` for a project at `src/Foo/Foo.csproj` finds nothing, and a
+# directory with no source in it is a false pass waiting to happen.
+QUALITY_MANIFEST_LANGUAGES: tuple[tuple[str, str, tuple[str, ...], bool], ...] = (
+    ("Cargo.toml", "rust", (".rs",), True),
+    ("package.json", "typescript", (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"), True),
+    (".csproj", "csharp", (".cs",), False),
+    (".py", "python", (".py",), False),
+)
 
 
 def has_quality_policy(repo: Path) -> bool:
@@ -1007,7 +1052,172 @@ def has_quality_policy(repo: Path) -> bool:
     return isinstance(data, dict) and isinstance(data.get(QUALITY_POLICY_KEY), dict)
 
 
-def governance_concern(repo: Path, concern: str) -> tuple[str, str, str]:
+def _is_test_scope(relative: str) -> bool:
+    """True when a repository-relative path is inside test scope.
+
+    Checked on the whole path, not on the file name, because a test project
+    is identified by where it sits: `tests/Api.Tests/Api.Tests.csproj` is a
+    test project by its directory, whatever its file is called.
+    """
+    return any(part.lower() in QUALITY_TEST_SEGMENTS for part in Path(relative).parts[:-1])
+
+
+def _language_files_present(root: Path, extensions: tuple[str, ...], limit: int = 200) -> bool:
+    """True when `root` holds at least one file of the scanned language.
+
+    Bounded at `limit` matches: the question is only "is this directory
+    source, or is it a manifest directory?", and a repository that has not
+    produced a source file in its first 200 candidates is not one this tool
+    should name a product root for. Symlinks are refused, on the same rule
+    the checker applies.
+    """
+    seen = 0
+    for path in root.rglob("*"):
+        if seen >= limit:
+            break
+        if path.suffix in extensions:
+            try:
+                if path.is_file() and not path.is_symlink():
+                    return True
+            except OSError:
+                continue
+            seen += 1
+    return False
+
+
+def derive_quality_block(repo: Path, shape: Shape) -> tuple[dict | None, str, str]:
+    """Derive a `quality` block from disk, or refuse by name.
+
+    Returns `(block, evidence, reason)`. `block` is `None` when no product
+    root could be derived, and `reason` then says what was examined.
+
+    Two of the three fields are **derived**, from the same detection the
+    build commands use and never from the `stack` label, because a product
+    root is a fact about where the code is:
+
+    * `product_roots` — the `src` directory beside each manifest the shape
+      found, when that directory holds a file of the manifest's language.
+    * `languages` — the union of those languages.
+
+    The third is a **judgement**, and is written as a deliberately strict
+    default rather than a neutral one: `placeholder_threshold: 0`. See
+    [`QUALITY_DEFAULT_THRESHOLD`].
+
+    `exclude` and `placeholder_markers` are deliberately absent. Both are
+    judgements about what is not product and about which words mean
+    "unfinished"; a guessed exclusion hides a real finding instead of
+    reporting one, and the marker vocabulary is the checker's own
+    (`vocabulary.json`), so a copy in every `.project.json` would be a
+    second source of truth that drifts from the first.
+    """
+    candidates: list[tuple[str, str, str]] = []  # (root, language, manifest)
+    examined: list[str] = []
+
+    for manifest, language, extensions, uses_src in QUALITY_MANIFEST_LANGUAGES:
+        if manifest == "Cargo.toml":
+            found = shape.crates
+        elif manifest == "package.json":
+            found = shape.node_manifests
+        elif manifest == ".csproj":
+            found = shape.projects
+        else:
+            found = shape.python_dirs
+        for relative in found:
+            if manifest == ".csproj" and is_test_project(relative):
+                continue
+            directory = Path(relative).parent
+            if uses_src:
+                # `src/` beside the manifest. A manifest at the repository
+                # root is the common case, and its `src` is `src` like any
+                # other.
+                source = repo / directory / "src"
+                root_relative = (
+                    f"{directory.as_posix()}/src" if str(directory) != "." else "src"
+                )
+            else:
+                # The manifest's own directory: a `.csproj` already names its
+                # project, so its siblings are the product. The repository
+                # root is never used as a root — the checker rejects an empty
+                # entry, and a root that scans everything is not a derivation.
+                source = repo / directory
+                root_relative = "" if str(directory) == "." else directory.as_posix()
+                if not root_relative:
+                    continue
+            if _is_test_scope(root_relative):
+                continue
+            examined.append(relative)
+            if not source.is_dir():
+                continue
+            if not _language_files_present(source, extensions):
+                continue
+            candidates.append((root_relative, language, relative))
+
+    if not candidates:
+        looked = ", ".join(sorted(set(examined))) or "no manifest on disk"
+        return (
+            None,
+            "",
+            f"no product root is derivable: none of the source directories beside "
+            f"the manifests on disk ({looked}) holds a file of that manifest's "
+            f"language, so there is no directory the checker can be told to scan. "
+            f"Which directories are product is an owner decision this tool does "
+            f"not guess; add a `{QUALITY_POLICY_KEY}` block to "
+            f"{QUALITY_POLICY_FILE} naming the product roots, or exempt the "
+            f"concern under `not_applicable:` with a reason",
+        )
+
+    roots = sorted({root for root, _language, _manifest in candidates})
+    languages = sorted({language for _root, language, _manifest in candidates})
+    evidence = "; ".join(
+        f"{manifest} -> {root}/"
+        for root, _language, manifest in sorted(candidates, key=lambda c: (c[0], c[2]))
+    )
+    return (
+        {
+            "product_roots": roots,
+            "languages": languages,
+            "placeholder_threshold": QUALITY_DEFAULT_THRESHOLD,
+        },
+        evidence,
+        "",
+    )
+
+
+def render_quality_block(text: str, block: dict) -> str:
+    """Insert `block` as the `quality` key of a `.project.json` document.
+
+    The round trip is `json.dumps(..., indent=2)`, which is byte-identical to
+    all 81 declarations in this workspace as they stand, so the diff a run
+    produces is the block and nothing else. Key order is preserved: the block
+    is appended last, which is where both hand-written examples put it.
+    """
+    data = json.loads(text)
+    ordered = dict(data)
+    ordered[QUALITY_POLICY_KEY] = block
+    return json.dumps(ordered, indent=2) + "\n"
+
+
+def write_quality_block(repo: Path, block: dict) -> str:
+    """Write `block` into the repository's `.project.json`; return the new text.
+
+    A repository with no `.project.json` is refused rather than created: the
+    declaration is the registry's document, and writing a one-key file to
+    stand in for it would be inventing the repository's identity.
+    """
+    target = repo / QUALITY_POLICY_FILE
+    if not target.is_file():
+        raise ValueError(
+            f"no {QUALITY_POLICY_FILE} to add a `{QUALITY_POLICY_KEY}` block to; the "
+            f"declaration is the registry's document and is not created here"
+        )
+    text = target.read_text(encoding="utf-8")
+    updated = render_quality_block(text, block)
+    target.write_text(updated, encoding="utf-8")
+    return updated
+
+
+
+def governance_concern(repo: Path, concern: str, shape: Shape) -> tuple[str, str, str]:
     """Derive one of this workspace's own concerns, or refuse by name.
 
     A repository's **own** `scripts/check-<concern>.*` wins over the
@@ -1049,20 +1259,40 @@ def governance_concern(repo: Path, concern: str) -> tuple[str, str, str]:
             f"checker cannot be reached from it; {own_reason}",
         )
 
-    if concern in ("placeholder-threshold", "product-code-boundary"):
-        if not has_quality_policy(repo):
-            return (
-                "",
-                "",
-                f"{relative} reads a `{QUALITY_POLICY_KEY}` block out of this "
-                f"repository's {QUALITY_POLICY_FILE} and is fail-closed without one: "
-                f"it exits 2 with `project declaration is missing the "
-                f"'{QUALITY_POLICY_KEY}' block` and never scans. The block's "
-                f"product_roots, languages and placeholder_threshold are an owner "
-                f"decision this tool does not invent; add the block to "
-                f"{QUALITY_POLICY_FILE}, or exempt the concern under "
-                f"`not_applicable:` with a reason",
-            )
+    if concern in QUALITY_CONCERNS and not has_quality_policy(repo):
+        # The checker is reachable but has no policy to run. Two fields of the
+        # policy are derivable from disk and one is a judgement, so the tool
+        # derives the block rather than refusing outright — but the concern
+        # binds only once the block is actually on disk, which `bind_repo`
+        # writes in the same operation. Until then it is debt: a `commands:`
+        # entry whose checker still exits 2 for want of the policy it reads is
+        # a bound check that runs nothing, which is the same defect as a
+        # `checks:` entry with no command behind it.
+        block, _block_evidence, refusal = derive_quality_block(repo, shape)
+        if block is None:
+            return "", "", refusal
+        # The reason deliberately does NOT name the derived roots. Every
+        # repository's roots differ, so a reason carrying them would split
+        # this one cause into 39 near-identical groups in the debt record and
+        # destroy the grouping that lets a reader see the cause first. What
+        # derived a block is a function return value (`derive_quality_block`),
+        # and the roots it returns are in the diff the run writes.
+        return (
+            "",
+            "",
+            f"{relative} reads a `{QUALITY_POLICY_KEY}` block out of this "
+            f"repository's {QUALITY_POLICY_FILE} and is fail-closed without one: "
+            f"it exits 2 with `project declaration is missing the "
+            f"'{QUALITY_POLICY_KEY}' block` and never scans. A block IS derivable "
+            f"from this repository's files — its product_roots and languages from "
+            f"the manifests on disk, and placeholder_threshold "
+            f"{block['placeholder_threshold']}, the deliberately strict default a "
+            f"project may relax in its own {QUALITY_POLICY_FILE} — so a run with "
+            f"--apply writes the block and binds this concern in the same "
+            f"operation. Without --apply this run is a dry run, writes nothing, "
+            f"and the concern stays in the debt record. To opt out, exempt the "
+            f"concern under `not_applicable:` with a reason",
+        )
 
     # `{project}` is this repository's own directory name, which is also its
     # `path` in the registry for all 81 registered projects. It is read from
@@ -1092,7 +1322,7 @@ def derive(concern: str, shape: Shape, repo: Path) -> tuple[str, str, str]:
         return "", "", f"no {relative} in this repository"
 
     if concern in GOVERNANCE_CHECKERS:
-        return governance_concern(repo, concern)
+        return governance_concern(repo, concern, shape)
 
     if concern not in SHAPE_CONCERNS:
         return script_concern(repo, concern)
@@ -1482,6 +1712,32 @@ def write_debt_record(debt: dict, path: Path) -> None:
 # --- the per-repository driver ---------------------------------
 
 
+def declaration_dirty(repo_path: Path) -> bool:
+    """True when `.project.json` has uncommitted work.
+
+    The same rule the sibling's `is_dirty` applies to the manifest, applied to
+    the one other file this tool now writes. A run adds a `quality` block to
+    that file, and adding a key to a declaration somebody is mid-edit on
+    would write into their work. Untracked counts, for the reason
+    `is_dirty` gives: an uncommitted `.project.json` is still uncommitted.
+    """
+    import subprocess
+
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain", "--", PROJECT_JSON],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # If git cannot answer, do not guess that the tree is clean.
+        return True
+    return completed.stdout.strip() != ""
+
+
 def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) -> Outcome:
     """Bind one repository's gate-required concerns. Never raises."""
     name = repo_path.name
@@ -1508,6 +1764,52 @@ def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) ->
     except Exception as exc:  # noqa: BLE001 - a bad repository must not stop the fleet
         return Outcome(name, REFUSED, f"could not inspect the repository: {exc}")
 
+    # The dirty check refuses the *write*, not the reading. The gate
+    # resolves a dirty repository exactly as it resolves a clean one and
+    # fails on the same unbound checks, so leaving them out of the record
+    # would hide real debt the moment somebody had work in progress — and
+    # an `--apply` run immediately after a previous one would write a
+    # record that silently under-reports.
+    manifest_dirty = check_clean and is_dirty(repo_path)
+    # The `quality` block goes into `.project.json`, so that file's own
+    # uncommitted work refuses the write for the same reason.
+    declaration_dirty_now = (
+        check_clean and not has_quality_policy(repo_path) and declaration_dirty(repo_path)
+    )
+    dirty = manifest_dirty or declaration_dirty_now
+
+    # The two product-quality concerns need a `quality` block in the
+    # repository's own `.project.json` before the bound command can run
+    # anything, and the checker is fail-closed without it (exit 2). So the
+    # block is derived from disk and written HERE, before classification and
+    # under the same `--apply` and dirty guards as the manifest write — which
+    # is what makes the two halves one operation. No manifest on disk ever
+    # carries a `commands:` entry whose checker still exits 2 for want of the
+    # policy it reads, because the policy is written first or not at all.
+    quality_written = ""
+    if (
+        apply
+        and not dirty
+        and not has_quality_policy(repo_path)
+        and any(c in QUALITY_CONCERNS for c in required)
+    ):
+        block, block_evidence, block_reason = derive_quality_block(repo_path, shape)
+        if block is not None:
+            try:
+                write_quality_block(repo_path, block)
+            except (OSError, ValueError) as exc:
+                return Outcome(
+                    name, REFUSED,
+                    f"cannot write the `{QUALITY_POLICY_KEY}` block into "
+                    f"{QUALITY_POLICY_FILE}: {exc}",
+                    shape=shape.label(),
+                )
+            quality_written = f"{QUALITY_POLICY_KEY} -> {block_evidence}"
+        else:
+            # Not derivable. The concern is refused by name below, and the
+            # reason is the one this function produced.
+            quality_written = ""
+
     try:
         concerns = classify_repo(
             repo_path,
@@ -1523,17 +1825,22 @@ def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) ->
     status = roll_up(concerns, len(required))
     label = f"{len(required)} required check(s)"
 
-    # The dirty check refuses the *write*, not the reading. The gate
-    # resolves a dirty repository exactly as it resolves a clean one and
-    # fails on the same unbound checks, so leaving them out of the record
-    # would hide real debt the moment somebody had work in progress — and
-    # an `--apply` run immediately after a previous one would write a
-    # record that silently under-reports.
-    if check_clean and is_dirty(repo_path):
+    if manifest_dirty:
         return Outcome(
             name,
             DIRTY,
             f"{GATE_YAML} has uncommitted work; {label} classified and recorded, nothing written",
+            before=before,
+            after=before,
+            concerns=concerns,
+            shape=shape.label(),
+        )
+
+    if declaration_dirty_now:
+        return Outcome(
+            name,
+            DIRTY,
+            f"{PROJECT_JSON} has uncommitted work; {label} classified and recorded, nothing written",
             before=before,
             after=before,
             concerns=concerns,
@@ -1568,10 +1875,12 @@ def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) ->
         )
 
     if not apply:
+        suffix = f"; would write {quality_written} in {QUALITY_POLICY_FILE}" if quality_written else ""
         return Outcome(
             name,
             status,
-            f"would bind {len(pending)} concern(s): {', '.join(c.concern for c in pending)}",
+            f"would bind {len(pending)} concern(s): "
+            f"{', '.join(c.concern for c in pending)}{suffix}",
             before=before,
             after=after,
             concerns=concerns,

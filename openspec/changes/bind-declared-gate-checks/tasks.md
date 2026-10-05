@@ -306,6 +306,79 @@ records the state the tests were added to.
 - [ ] **The change is not archived.** Archiving needs separate
   authorization.
 
+## 6. The `quality` block is derived, so 80 more checks can bind
+
+`placeholder-threshold` and `product-code-boundary` were 80 unbound checks in
+40 repositories: both are answered by `product_code_quality.py`, which is
+fail-closed and exits 2 without a `quality` block in the repository's own
+`.project.json`. Only 2 of 81 repositories declared one. The previous pass
+refused to write one, on the reasoning that the roots, languages and threshold
+are all owner decisions. That conflated two different things.
+
+- [x] 6.1 **Two of the three fields are derivable.** `product_roots` and
+  `languages` are facts about where the code is, so `derive_quality_block`
+  derives them from the same disk detection the build commands use, and
+  attaches the manifest each root came from as evidence. The third,
+  `placeholder_threshold`, is a judgement and is written as `0` — the
+  deliberately strict default both hand-written blocks chose, documented as
+  relaxable rather than neutral.
+- [x] 6.2 **No `exclude` and no marker list are invented.** A guessed
+  exclusion hides a real finding instead of reporting one, and the marker
+  vocabulary is the checker's own (`vocabulary.json`), so a copy in 40
+  declarations would be a second source of truth that drifts.
+- [x] 6.3 **The `src` convention is per manifest kind.** A Rust crate and a
+  Node package keep sources in `src/`; a .NET project keeps them **beside the
+  `.csproj`**. Getting this wrong refused 22 of the 40 repositories, which is
+  what the first implementation did.
+- [x] 6.4 **The block and the command are written in one operation**, both
+  under `--apply` and both behind the dirty check — `.project.json` now gets
+  the same uncommitted-work guard the manifest had. Until the block is on
+  disk the concern stays debt, because a `commands:` entry whose checker
+  still exits 2 is a bound check that runs nothing.
+- [x] 6.5 **The debt record and the gate still agree exactly**: 125 = 125
+  across 53 repositories, confirmed by set equality against
+  `driftwatchdog/target/debug/driftwatchdog`, not by count. It fell from 127
+  because `driftwatchdog` is the one repository the one-repository proof was
+  authorised against.
+- [x] 6.6 **Negative control.** Removing the `source.is_dir()` and
+  `_language_files_present` guards makes the tool write a `product_roots`
+  entry for a directory that does not exist; the checker then reports
+  `REVIEW_REQUIRED` / `product_roots entry is not a directory: src` and
+  exits 2, and `test_a_repository_with_no_derivable_product_root_is_refused`
+  goes red. Both guards restored, 741 green.
+
+### 6b. The fleet write is NOT done, and the red count is why
+
+Proven end to end on `driftwatchdog` alone: `placeholder-threshold` and
+`product-code-boundary` moved from `UNBOUND` to **running**, and the gate
+reports a real verdict — `FAIL: placeholder marker count 30 exceeds threshold
+0`. That is the mechanism working, not a defect.
+
+Applying it to all 40 was measured before it was written, by running the real
+checker over each repository with its derived block passed as `--policy`:
+
+| Measurement | Value |
+|---|---|
+| Repositories the block is derivable for | 40 of 40 |
+| Would go **red** under `placeholder_threshold: 0` | **29** |
+| Would stay green | 11 |
+| Refused (no derivable root) | 0 |
+
+**29 of 40 is not a number to ship quietly.** The breakdown says it is not
+what the threshold is for either: of 498 findings, 338 (68%) are the word
+`placeholder` and 120 (24%) are `stub` — ordinary vocabulary in prose and in
+identifiers — and only 40 are `todo`/`fixme`/`xxx`/`hack`. Excluding
+`placeholder` and `stub` leaves **8** repositories red. The strict default is
+right for a check that is genuinely about unfinished work; the marker
+vocabulary is currently about English words. Narrowing the vocabulary is a
+change to `vocabulary.json` and belongs to whoever owns it — it is not this
+change's to make, and it is not an `exclude` this tool may invent.
+
+So the fleet write is deliberately **not** applied. The derivation, the one-
+repository proof and the measurement are the deliverable; applying it to 39
+more repositories is a separate authorisation, taken after the marker
+vocabulary is settled.
+
 ## Follow-up: three fleet assertions were vacuous after the fleet was applied
 
 The three `FleetTest` assertions filtered concerns on `status == BOUND`, which

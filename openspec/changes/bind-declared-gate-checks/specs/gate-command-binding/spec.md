@@ -224,14 +224,24 @@ The `checks:` entry MUST be written with the value `true`, MUST be inserted
 into the existing `checks:` block in the position the profile schedules it,
 and MUST NOT be written twice when the repository already lists the concern.
 
-**A `quality` policy is not invented.** `placeholder-threshold` and
-`product-code-boundary` are answered by `product_code_quality.py`, which is
-fail-closed: without a `quality` block in the repository's own
-`.project.json` it exits `2` (configuration error) and never scans. Writing
-one would be inventing per-repository policy — which product directories
-count as product, which languages, what threshold — so for those two
-concerns condition 2 fails for every repository that has not written one, and
-they stay in the debt record.
+**A `quality` policy is derived from disk, and the judgement in it is stated
+as a default.** `placeholder-threshold` and `product-code-boundary` are
+answered by `product_code_quality.py`, which is fail-closed: without a
+`quality` block in the repository's own `.project.json` it exits `2`
+(configuration error) and never scans. Two of the fields in that block are
+derivable from the files on disk and are derived, the way a build command is
+derived and with the same on-disk evidence attached; the third is a judgement,
+and is written as a default a project may relax deliberately rather than as a
+neutral one. The two are not treated alike, because they are not alike: a
+product root is a fact about where the code is, and a threshold is a decision
+about how much unfinished work to tolerate.
+
+The block is written and the command bound in **one** operation, and the
+concern counts as bound only once the block is on disk. Until then the
+concern is debt, because a `commands:` entry whose checker still exits `2`
+for want of the policy it reads is a bound check that runs nothing — the same
+defect as a `checks:` entry with no command behind it, and refused for the
+same reason.
 
 #### Scenario: A profile-scheduled check with a reachable checker is bound in both blocks
 
@@ -242,15 +252,17 @@ they stay in the debt record.
   `commands: governance-quality` entry are written, and the concern is no
   longer in the debt record
 
-#### Scenario: A profile-scheduled check with no reachable checker stays in debt
+#### Scenario: A profile-scheduled check with a derivable quality policy is bound in both blocks
 
 - **WHEN** a repository's manifest says `profile: product`, does not list
-  `placeholder-threshold` under `checks:`, and no `quality` block exists in
-  its `.project.json`
-- **THEN** `placeholder-threshold` is recorded as unresolved naming the
-  missing `quality` block in `.project.json`, and **neither** a
-  `checks.placeholder-threshold` entry **nor** a `commands.placeholder-threshold`
-  entry is written
+  `placeholder-threshold` under `checks:`, no `quality` block exists in its
+  `.project.json`, and a product root and language set are both derivable from
+  the files on disk
+- **THEN** a `quality` block naming the derived roots and languages and a
+  `placeholder_threshold` of `0` is written to `.project.json`, both a
+  `checks: placeholder-threshold: true` entry and a
+  `commands: placeholder-threshold` entry are written in the same operation,
+  and the concern leaves the debt record
 
 #### Scenario: A concern the repository already declares is not duplicated
 
@@ -388,6 +400,88 @@ fail-closed on a `quality` block in the repository's `.project.json` and exits
   profile schedules `placeholder-threshold`
 - **THEN** the recorded reason names `.project.json`, names the `quality`
   block, and says the checker exits 2 without it
+
+#### Scenario: A refusal that is not about configuration names what was looked for
+
+- **WHEN** no product root can be derived from a repository's files
+- **THEN** the reason names the directories and manifests that were examined
+  and says that no source root was found among them, rather than naming a
+  missing configuration the reader could go and add
+
+### Requirement: The quality block's derivable fields come from disk, and its judgement is a stated strict default
+
+A `quality` block the tool writes MUST carry a `product_roots` list and a
+`languages` list that are **derived from the files on disk**, by the same
+detection the build commands use and never from the `stack` label, and each
+derived root MUST be accompanied by the manifest it was derived from as
+evidence. A root MUST be a directory that exists on disk, MUST be relative to
+the repository root, and MUST NOT escape it. A test project, and any
+directory under a `tests` or `test` path segment, MUST NOT become a product
+root: the checker excludes those segments anyway, so naming one would buy a
+scanned-nothing result that reads as a pass.
+
+Where **no** product root can be derived, the tool MUST refuse by name rather
+than write a block, and the reason MUST name what was examined. It MUST NOT
+fall back to the repository root, to `.`, or to any directory it did not
+verify contains source.
+
+`placeholder_threshold` is a judgement rather than a derivation, and the value
+written MUST be `0`. It MUST be documented as the **deliberately strict**
+default — the strictest value the checker accepts — chosen because both
+projects that declare the block by hand chose it, and because a check that
+runs and complains is worth more than a check that does not run. It MUST NOT
+be presented as a neutral default, and a project MUST be able to relax it
+deliberately in its own `.project.json`, where this tool will then leave it
+alone.
+
+The tool MUST NOT invent an `exclude` list. `exclude` is a judgement about
+which files are not product, and a guessed exclusion hides a real finding
+rather than reporting one. It MUST be omitted unless a derivation is
+mechanical, and no mechanical derivation for it exists. The same applies to
+`placeholder_markers`: the checker resolves its own markers from the
+workspace vocabulary, and a hand-written copy of that list in every
+`.project.json` would be a second source of truth that drifts.
+
+#### Scenario: The roots name the manifests they came from
+
+- **WHEN** a repository's disk shows one `Cargo.toml` at `rust/Cargo.toml` with
+  a `rust/src` directory
+- **THEN** the written `product_roots` names `rust/src`, the `languages` list
+  names `rust`, and the evidence names `rust/Cargo.toml`
+
+#### Scenario: No derivable root is a refusal, not a fallback
+
+- **WHEN** a repository has a `package.json` and no directory that source
+  files can be shown to live in
+- **THEN** no `quality` block is written, no `checks:` or `commands:` entry is
+  written, and the reason names the manifests that were examined
+
+#### Scenario: A test project is never a product root
+
+- **WHEN** a repository's only `.csproj` files are under `tests/`
+- **THEN** no product root is derived from them and the concern stays
+  unresolved, rather than a block being written whose only root the checker
+  would exclude in full
+
+#### Scenario: The threshold is zero and says it is strict
+
+- **WHEN** a `quality` block is derived
+- **THEN** it carries `placeholder_threshold` of `0`, and the reason and the
+  documentation describe it as the deliberately strict default a project may
+  relax, not as a neutral one
+
+#### Scenario: No exclude list is invented
+
+- **WHEN** a `quality` block is derived
+- **THEN** it carries no `exclude` key and no `placeholder_markers` key, so
+  the exclusions and the marker vocabulary remain the checker's own
+
+#### Scenario: A hand-written block is left exactly as it is
+
+- **WHEN** a repository's `.project.json` already carries a `quality` block
+- **THEN** the block is not read for its values, not rewritten, not merged
+  into, and not reordered; the tool binds the command and changes nothing
+  else in the file
 
 ### Requirement: The run reports per repository and refuses to exit clean on debt
 

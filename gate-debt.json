@@ -2,13 +2,13 @@
   "generator": "scripts/bind_gate_commands.py",
   "note": "Every check listed here is one the gate would report as UNBOUND: a check this repository's .ai-gate/gate.yaml selects under `checks:`, or one its `profile:` schedules by default, with no command bound under `commands:`. The gate reports UNBOUND for these and fails the project. A wrong command is worse than a listed gap: resolve these by hand, then re-run the generator.",
   "totals": {
-    "repositories_with_debt": 54,
-    "unresolved_checks": 127
+    "repositories_with_debt": 53,
+    "unresolved_checks": 125
   },
   "by_reason": [
     {
-      "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason",
-      "checks": 80,
+      "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason",
+      "checks": 78,
       "repositories": [
         "aegify",
         "aesthra",
@@ -21,7 +21,6 @@
         "crossify",
         "cvunify",
         "dharmatlas",
-        "driftwatchdog",
         "fotofy",
         "hermexa",
         "hermora",
@@ -74,8 +73,6 @@
         "cvunify:product-code-boundary",
         "dharmatlas:placeholder-threshold",
         "dharmatlas:product-code-boundary",
-        "driftwatchdog:placeholder-threshold",
-        "driftwatchdog:product-code-boundary",
         "fotofy:placeholder-threshold",
         "fotofy:product-code-boundary",
         "hermexa:placeholder-threshold",
@@ -511,12 +508,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -532,12 +529,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -564,12 +561,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -585,12 +582,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -612,12 +609,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -628,12 +625,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -655,12 +652,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -687,12 +684,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -708,12 +705,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -734,12 +731,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -750,28 +747,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
-        }
-      ]
-    },
-    {
-      "repo": "driftwatchdog",
-      "shape": "rust",
-      "unresolved": [
-        {
-          "concern": "placeholder-threshold",
-          "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
-        },
-        {
-          "concern": "product-code-boundary",
-          "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -782,12 +763,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -798,12 +779,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -814,12 +795,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -835,12 +816,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -861,12 +842,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -877,12 +858,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -909,12 +890,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -978,12 +959,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -994,12 +975,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1010,12 +991,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1026,12 +1007,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1042,12 +1023,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "tests",
@@ -1063,12 +1044,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "tests",
@@ -1089,12 +1070,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1115,12 +1096,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1152,12 +1133,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1168,12 +1149,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "tests",
@@ -1210,12 +1191,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1226,12 +1207,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1247,12 +1228,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1284,12 +1265,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "security",
@@ -1310,12 +1291,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1326,12 +1307,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1342,12 +1323,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1358,12 +1339,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1390,12 +1371,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1406,12 +1387,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },
@@ -1422,12 +1403,12 @@
         {
           "concern": "placeholder-threshold",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         },
         {
           "concern": "product-code-boundary",
           "status": "UNRESOLVED",
-          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. The block's product_roots, languages and placeholder_threshold are an owner decision this tool does not invent; add the block to .project.json, or exempt the concern under `not_applicable:` with a reason"
+          "reason": "scripts/product_code_quality.py reads a `quality` block out of this repository's .project.json and is fail-closed without one: it exits 2 with `project declaration is missing the 'quality' block` and never scans. A block IS derivable from this repository's files \u2014 its product_roots and languages from the manifests on disk, and placeholder_threshold 0, the deliberately strict default a project may relax in its own .project.json \u2014 so a run with --apply writes the block and binds this concern in the same operation. Without --apply this run is a dry run, writes nothing, and the concern stays in the debt record. To opt out, exempt the concern under `not_applicable:` with a reason"
         }
       ]
     },

@@ -51,6 +51,7 @@ from bind_gate_commands import (  # noqa: E402
     bind_repo,
     build_debt,
     derive,
+    derive_quality_block,
     detect_shape,
     format_detail,
     gate_required,
@@ -162,6 +163,18 @@ class RepoCase(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("# fixture\n", encoding="utf-8")
         return sibling
+
+    def write_declaration(self, extra: dict | None = None) -> Path:
+        """A minimal `.project.json`, which all 81 real repositories have.
+
+        The binder refuses to create one — the declaration is the registry's
+        document — so a fixture that needs the `quality` write path has to
+        supply it, as every repository the fleet write will touch does.
+        """
+        body = {"schema_version": 1, "id": "demo"}
+        if extra:
+            body.update(extra)
+        return self.write(".project.json", json.dumps(body, indent=2) + "\n")
 
     def forget_sibling(self) -> None:
         """Remove the sibling checkout, so no workspace checker is reachable."""
@@ -1342,8 +1355,12 @@ class ProfileSelectionTests(RepoCase):
 
     def test_a_profile_scheduled_check_names_the_way_out(self):
         # The reason has to name the file and the key, or the next reader
-        # has nothing to act on. It names both, and it offers the two real
-        # ways out: write the policy, or exempt the check with a reason.
+        # has nothing to act on. It names both, it names the block that would
+        # be written, and it offers the two real ways out: write the policy,
+        # or exempt the check with a reason. This fixture carries a Rust
+        # source root, so the block is derivable and the reason says so.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\n")
         reason = self.unresolved(self.debt())["placeholder-threshold"]
         self.assertIn(".project.json", reason)
         self.assertIn("`quality`", reason)
@@ -1450,26 +1467,190 @@ class ProfileSelectionTests(RepoCase):
         # The debt record has to be actionable. "needs configuration" tells
         # the next reader nothing; ".project.json has no `quality` block,
         # and the checker exits 2 without one" tells them what to write.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\n")
         self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
         reason = self.unresolved(self.debt())["placeholder-threshold"]
         self.assertIn(".project.json", reason)
         self.assertIn("`quality`", reason)
         self.assertIn("exits 2", reason)
-        # A policy is never invented, so this concern is not bound even
-        # though its checker is perfectly reachable.
+        # A dry run writes nothing, so the concern is not bound even though
+        # the block is derivable and the checker is perfectly reachable.
         self.assertNotIn("placeholder-threshold", self.manifest_text())
 
-    def test_a_quality_policy_is_never_invented(self):
-        # The checker is reachable and the concern is required; the only
-        # thing missing is the repository's own policy, and policy is an
-        # owner decision. `product_code_quality.py` is fail-closed, so this
-        # tool leaves the gap rather than writing a `quality` block.
+    def test_a_quality_block_is_derived_from_disk_and_binds_both_concerns(self):
+        # The change this class now covers. The block's two derivable fields
+        # come from the files on disk, with the manifest each root came from
+        # attached as evidence, and the third field is the stated strict
+        # default. Both concerns are answered by one scan, and both are bound
+        # in the same operation that writes the block.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\n")
+        self.write_declaration()
         self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        outcome = self.bind(apply=True)
+        for concern in ("placeholder-threshold", "product-code-boundary"):
+            self.assertEqual(self.concern(outcome, concern).status, BOUND, concern)
+        block = json.loads((self.repo / ".project.json").read_text(encoding="utf-8"))["quality"]
+        self.assertEqual(block["product_roots"], ["src"])
+        self.assertEqual(block["languages"], ["rust"])
+        self.assertEqual(block["placeholder_threshold"], 0)
+        # The judgement is written as a deliberate default, and the file
+        # carries no invented `exclude` and no hand-copied marker list: the
+        # marker vocabulary is the checker's own, and a guessed exclusion
+        # hides a real finding rather than reporting one.
+        self.assertNotIn("exclude", block)
+        self.assertNotIn("placeholder_markers", block)
+        text = self.manifest_text()
+        for concern in ("placeholder-threshold", "product-code-boundary"):
+            self.assertIn(f"  {concern}: true", text)
+            self.assertIn("product_code_quality.py .", text)
+        # And the concern left the debt record: a fresh run over the applied
+        # repository finds nothing unresolved, which is the point of writing
+        # the block and the command together.
+        self.assertEqual(self.debt()["totals"]["unresolved_checks"], 0)
+
+    def test_the_derived_root_names_the_manifest_it_came_from(self):
+        # A root is a fact about where the code is, and the evidence is what
+        # makes it checkable rather than asserted.
+        self.write("rust/Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("rust/src/lib.rs", "pub fn f() {}\n")
+        block, evidence, reason = derive_quality_block(self.repo, detect_shape(self.repo))
+        self.assertEqual(reason, "")
+        self.assertEqual(block["product_roots"], ["rust/src"])
+        self.assertIn("rust/Cargo.toml", evidence)
+        self.assertIn("rust/src", evidence)
+
+    def test_a_repository_with_no_derivable_product_root_is_refused(self):
+        # The refusal. A manifest with no `src` directory beside it gives
+        # nothing to scan, and this tool does not fall back to `.` — a root
+        # that scans the whole repository is not a derivation, and the
+        # checker would report on files that are not product.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("README.md", "# demo\n")
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        block, _evidence, reason = derive_quality_block(self.repo, detect_shape(self.repo))
+        self.assertIsNone(block)
+        self.assertIn("no product root is derivable", reason)
+        self.assertIn("Cargo.toml", reason, "the refusal must name what it examined")
+        self.assertIn(".project.json", reason, "and name the way out")
+        # Nothing was written for the quality concerns: not the block, not the
+        # selection, not the command. A selection with no command behind it is
+        # worse than the gap it replaced. (`governance-quality` is reachable
+        # in this fixture and does bind; it is not what this test is about.)
+        before = self.manifest_text()
+        outcome = self.bind(apply=True)
+        text = self.manifest_text()
+        self.assertNotIn("placeholder-threshold", text)
+        self.assertNotIn("product-code-boundary", text)
+        self.assertIn("governance-quality", text, "the fixture's own concern still binds")
+        self.assertNotEqual(text, before)
+        self.assertFalse((self.repo / ".project.json").exists())
+        self.assertEqual(
+            self.concern(outcome, "placeholder-threshold").status, UNRESOLVED
+        )
+        self.assertIn(
+            "placeholder-threshold", self.unresolved(self.debt())
+        )
+
+    def test_a_test_project_is_never_a_product_root(self):
+        # The checker's own `DEFAULT_EXCLUDED_DIRS` skips `tests`, so a root
+        # under one would scan nothing and report PASS. A false pass is worse
+        # than a refusal, so the only `.csproj` files here yield no root.
+        self.write("tests/Api.Tests/Api.Tests.csproj", A_CSPROJ)
+        self.write("tests/Api.Tests/Thing.cs", "class Thing {}\n")
+        block, _evidence, reason = derive_quality_block(self.repo, detect_shape(self.repo))
+        self.assertIsNone(block)
+        self.assertIn("no product root is derivable", reason)
+
+    def test_a_hand_written_quality_block_is_left_exactly_as_it_is(self):
+        # The repository's own policy is its own decision, including the parts
+        # this tool would derive differently. A project that wrote
+        # `product_roots: ["app"]` gets `app` scanned, not `src`.
+        original = {
+            "schema_version": 1,
+            "id": "demo",
+            "quality": {
+                "product_roots": ["app"],
+                "languages": ["python"],
+                "placeholder_threshold": 3,
+            },
+        }
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\n")
+        self.write(".project.json", json.dumps(original, indent=2) + "\n")
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        before = (self.repo / ".project.json").read_text(encoding="utf-8")
+        self.bind(apply=True)
+        after = (self.repo / ".project.json").read_text(encoding="utf-8")
+        self.assertEqual(after, before, "a hand-written block was rewritten")
+        self.assertEqual(
+            json.loads(after)["quality"],
+            original["quality"],
+            "the block's own values were changed",
+        )
+
+    def test_a_declared_concern_is_not_given_a_duplicate_selection(self):
+        # A repository that already lists the concern made the selection
+        # itself. The second run of an applied repository must add no second
+        # `checks:` entry and rewrite nothing.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\n")
+        self.write_declaration()
+        self.write_manifest(text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS + "  placeholder-threshold: true\n"
+        ))
         self.bind(apply=True)
         text = self.manifest_text()
-        self.assertNotIn("product-code-boundary: true", text)
-        self.assertNotIn("product_code_quality.py", text)
-        # And nothing was written into the repository's own declaration.
+        self.assertEqual(
+            text.count("  placeholder-threshold: true"), 1, "the selection was duplicated"
+        )
+        self.assertIn(
+            "  placeholder-threshold: 'python3 ../workspace-governance/scripts/"
+            "product_code_quality.py .'",
+            text,
+        )
+        # Idempotence: a second apply changes nothing.
+        manifest_before = self.manifest_text()
+        declaration_before = (self.repo / ".project.json").read_text(encoding="utf-8")
+        self.bind(apply=True)
+        self.assertEqual(self.manifest_text(), manifest_before)
+        self.assertEqual(
+            (self.repo / ".project.json").read_text(encoding="utf-8"),
+            declaration_before,
+            "a second run rewrote the block",
+        )
+
+    def test_a_dry_run_writes_no_quality_block(self):
+        # The whole tool is dry by default, and this is the file it did not
+        # write before. It stays unwritten.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\n")
+        self.write_declaration()
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        before = self.manifest_text()
+        declaration = (self.repo / ".project.json").read_text(encoding="utf-8")
+        outcome = self.bind(apply=False)
+        self.assertEqual(self.manifest_text(), before)
+        self.assertEqual(
+            (self.repo / ".project.json").read_text(encoding="utf-8"),
+            declaration,
+            "a dry run wrote the block",
+        )
+        self.assertIn("would bind", outcome.detail)
+        self.assertIn("placeholder-threshold", self.unresolved(self.debt()))
+
+    def test_a_repository_with_no_declaration_is_refused_not_given_one(self):
+        # `.project.json` is the registry's document. Writing a one-key file
+        # to stand in for it would be inventing the repository's identity, so
+        # the run refuses by name and writes no manifest entry either.
+        self.write("Cargo.toml", '[package]\nname = "demo"\n')
+        self.write("src/main.rs", "fn main() {}\\n")
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        outcome = self.bind(apply=True)
+        self.assertEqual(outcome.status, REFUSED)
+        self.assertIn(".project.json", outcome.detail)
+        self.assertNotIn("placeholder-threshold", self.manifest_text())
         self.assertFalse((self.repo / ".project.json").exists())
 
     def test_a_quality_policy_is_honoured_when_the_repository_wrote_one(self):
