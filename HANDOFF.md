@@ -912,3 +912,50 @@ project gate before archive, validate strictly, archive canonical specs, then
 create the required two commits. Each completed OpenSpec spec/change requires
 exactly two commits: first the implementation/tests/archive commit, then a
 HANDOFF.md-only pointer/evidence commit.
+
+## The `quality` block is derived now, and the fleet write is deliberately not done
+
+`placeholder-threshold` and `product-code-boundary` were 80 unbound checks in
+40 repositories — the second-largest gap in the fleet. Both are answered by
+`scripts/product_code_quality.py`, which is fail-closed and exits 2 without a
+`quality` block in the repository's own `.project.json`. Only 2 of 81
+repositories declared one, so the previous pass refused to write one and named
+the gap instead.
+
+`scripts/bind_gate_commands.py` now derives the block
+(`derive_quality_block`) and writes it with the command in one operation.
+`product_roots` and `languages` are derived from the same disk detection the
+build commands use, with the manifest each root came from attached as
+evidence. `placeholder_threshold` is a judgement and is written as `0`, the
+deliberately strict default both hand-written blocks chose. No `exclude` and no
+marker list are invented.
+
+Proven end to end on `driftwatchdog` alone, on a real `driftwatchdog gate` run:
+both concerns moved from `UNBOUND` to executing, and report
+`FAIL: placeholder marker count 30 exceeds threshold 0`.
+
+**The other 39 are not written, and the reason is measured, not assumed:**
+
+| Measurement | Value |
+|---|---|
+| Block derivable for | 40 of 40 |
+| Would go red under `placeholder_threshold: 0` | **29** |
+| Would stay green | 11 |
+
+Of 498 findings, 338 are the word `placeholder` and 120 are `stub`; only 40 are
+`todo`/`fixme`/`xxx`/`hack`. Excluding the two generic words leaves 8 red. The
+strict default is right; the marker vocabulary in `vocabulary.json` is
+currently matching ordinary English. Narrowing it is a change to that file and
+belongs to whoever owns it — it is not an `exclude` this tool may invent.
+
+Next step, when the vocabulary is settled: `python3 scripts/bind_gate_commands.py
+--root /home/paul/code --apply`, then re-run the gate across the fleet at
+**parallelism 2** (4 concurrent .NET builds get OOM-killed on this 14GB box and
+produce fake instant failures).
+
+The debt record and the gate agree exactly: 125 checks across 53 repositories,
+set-equal against `driftwatchdog/target/debug/driftwatchdog`. Note that the
+`driftwatchdog` on `PATH` is a 2026-10-01 `cargo install` build that reports 0
+unbound checks fleet-wide and is not a usable oracle.
+
+Suite: 741 passed, 158 subtests, 0 failed (baseline on arrival: 734).
