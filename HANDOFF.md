@@ -2,7 +2,37 @@
 
 ## Current state
 
-current_spec: anchor-typescript-test-code-match
+current_spec: admit-cross-cutting-capabilities
+
+**A cross-cutting shared capability is now declarable in every profile.**
+`capability-adoption-gate` measures adoption as a three-way join and expects a
+consumer to record the pairing in `capabilities[<id>].consumes[]`, but
+`validate_capabilities` warned `CAPABILITY_UNSUPPORTED` for any declared id its
+profile did not list — and no profile listed the registry's shared ids. A
+consumer that recorded a lawful, evidenced adoption of `telemetry`,
+`rate-limiting`, `idempotency`, or `feature-flags` was therefore reported as an
+anomaly.
+
+Reproduced before the fix, by calling the checker directly: a `dotnet-product`
+declaration recording `capabilities.telemetry` produced exactly one finding,
+`WARNING CAPABILITY_UNSUPPORTED capability 'telemetry' is not declared as
+supported by the project profile`.
+
+Fixed at `22638ae` by adding the four **cross-cutting** shared ids to the
+`supported_capabilities` list of all twelve profiles that declare one. The
+checker is unchanged and keeps its purpose: the registry's role-shaped ids
+(`persistence-postgres`, `health-checks`, `web-application-factory`,
+`postgres-test-fixture`) stay out by decision, the profile list stays an
+intentional maintainer statement, and the negative control (`billing` under
+`dotnet-library`) still warns. Three tests pin all of it, including the
+reproduction now green and the negative control still red.
+
+The change is archived (`2026-10-05-admit-cross-cutting-capabilities`) and the
+canonical `platform-capability-manifest` requirement it amended already carried
+a real `## Purpose`, so no archiver `TBD` marker was introduced. This unblocks
+the first real consumer: `argoscope` may adopt
+`Platform.Observability`/`Platform.Web.Telemetry` and record the required
+`consumes[]` edge without the spurious warning.
 
 **The TypeScript test-code rule was matching a name and ignoring the
 qualifier.** Measured against the real repositories: **15 findings in 4
@@ -319,6 +349,35 @@ follow-up in `ROADMAP.md`, deliberately a separate change because it turns a
 lands, the work-on-`main` rule is **stated and reported, not enforced**.
 
 ## Latest verification evidence
+
+- `admit-cross-cutting-capabilities` (`22638ae`) evidence. The defect was a
+  data mismatch between profiles written before the capability registry and the
+  registry's shared ids, not a missing check. Fixed by adding `telemetry`,
+  `rate-limiting`, `idempotency`, `feature-flags` to `supported_capabilities`
+  in `dotnet-library`, `dotnet-product`, `governance`, `platform`, `product`,
+  `python-product`, `python-runtime`, `rust-platform`, `rust-product`,
+  `tooling`, `typescript-monorepo`, `typescript-product`; `scripts/workspace_check.py`
+  and `capabilities.json` are untouched.
+
+  | Gate | Result |
+  |---|---|
+  | `python3 -m unittest discover -s tests` | **815 passed, 1 failed** — 812 prior + 3 new; the one failure is the pre-existing `test_bind_gate_commands.GateOracleTest.test_a_fresh_run_reproduces_the_gate_set` fleet gate-debt drift, unchanged by this change and naming no `argoscope` row |
+  | `python3 scripts/workspace_check.py --self-check` | `errors=0 warnings=0`, exit 0 |
+  | `python3 scripts/auto_gate.py --self-check --no-deployment` | `PASS errors=0 warnings=0` |
+  | `openspec validate admit-cross-cutting-capabilities --strict` | valid (pre-archive) |
+  | `openspec validate --all --strict --no-interactive` | **24 passed, 1 failed** — the failure is the untracked `drive-legacy-gate-debt-to-zero`, unchanged from baseline |
+  | `node scripts/check-openspec-change-names.mjs` | change names valid |
+  | `git diff --check` | clean |
+
+  The three new tests are the reproduction (green), the profile sweep (every
+  profile with a `supported_capabilities` list carries all four ids, failing
+  naming the profile and id), and the **negative control** (`billing` under
+  `dotnet-library` still emits `CAPABILITY_UNSUPPORTED`). The checker's emitted
+  finding set is otherwise unchanged: the only difference is that the four ids
+  no longer warn when declared. No sibling repository was written and the
+  pre-existing untracked work in this tree (`driftwatch.toml`,
+  `scripts/check_concern.py`, `scripts/close_gate_debt.py`,
+  `openspec/changes/drive-legacy-gate-debt-to-zero/`) is not staged.
 
 - **Fixture and strict-validation cleanup (`9105360`).** Two problems cleared,
   both diagnosed before acting and neither papered over.
