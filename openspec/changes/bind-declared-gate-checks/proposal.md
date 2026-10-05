@@ -97,6 +97,40 @@ repository:
    next agent to inherit a repository cannot quietly inherit the gap.
 6. **Runs dry by default.** `--apply` writes.
 
+## The record is read: a new change waits on the debt
+
+Writing the record is not enough. 22 repositories carry an unbound required
+check today, and nothing stopped the next feature from starting on top of
+them. The debt then sits still, and a cleanup push that never finishes is the
+likely shape of the failure.
+
+So the record is read by a second rule, `QUALITY_NEW_CHANGE_WITH_GATE_DEBT`,
+in `scripts/workspace_check.py`: a repository with debt that opens a **new**
+change is an `ERROR`. The change that closes the debt is exempt, because a
+repository that may not start the work which fixes its debt can never fix it.
+And the changes that were *already* open when the rule landed are recorded once
+in `gate-debt-baseline.json`, generated from disk — without that, the rule
+fails the whole legacy fleet for the state it was written to stop growing, and
+no action those repositories can take clears it.
+
+Both halves are read, not recomputed — the unbound half from `gate-debt.json`
+(set-equal to the gate's own unbound set by `GateOracleTest`), the
+unarchived-change half from the same directory walk `validate_change_names`
+uses. There is no second parser over manifests.
+
+The rule is fail-closed and has no off switch. Its grandfathering and its exit
+are two committed records in the shape of `rules-drift-baseline.json`:
+`gate-debt-baseline.json` (`(project, change)`, the work that predates the
+rule) and `gate-debt-exceptions.json` (`(project, change, reason)`, a
+deliberate decision about new work). Both are loaded with the same refusals, and
+there is no environment variable and no flag. A recorded exception is reported
+at `WARNING` with its reason quoted, so a deliberate decision is visible in the
+run rather than invisible in a pass.
+
+The code is added to `GOVERNANCE_QUALITY_DECLARED_CODES` in `driftwatchdog`
+in the same change. Without that, the concern filters the finding out and
+reports `PASS` while this checker exits 1.
+
 ## What this deliberately does not do
 
 **It does not invent a command for an ambiguous repository.** Six

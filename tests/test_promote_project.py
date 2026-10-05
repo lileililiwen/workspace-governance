@@ -117,6 +117,16 @@ def setup_sandboxed_governance_root(governance_root: Path):
     baseline = governance_root / "rules-drift-baseline.json"
     if baseline.is_file():
         shutil.copy2(baseline, sandbox / "rules-drift-baseline.json")
+    # gate-debt.json, gate-debt-baseline.json and gate-debt-exceptions.json are
+    # load-bearing for the same reason as the block above: the new-change
+    # precondition fails closed with QUALITY_NEW_CHANGE_WITH_GATE_DEBT when any
+    # of the three is missing, which would mask whatever these tests are actually
+    # asserting. The records name repositories the sandbox does not contain,
+    # which is harmless — the rule only reports a scanned project.
+    for record in ("gate-debt.json", "gate-debt-baseline.json", "gate-debt-exceptions.json"):
+        source = governance_root / record
+        if source.is_file():
+            shutil.copy2(source, sandbox / record)
     return temp, sandbox
 
 

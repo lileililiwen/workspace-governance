@@ -511,3 +511,133 @@ finding, which is the defect ruling D18 exists to prevent.
 - **WHEN** a run covers a mix of fully resolved, partially resolved and
   fully unresolved repositories
 - **THEN** the summary reports all three counts
+
+### Requirement: A new change waits on the debt already recorded for its repository
+
+A repository that carries unresolved gate debt MUST NOT open a new OpenSpec
+change, and `scripts/workspace_check.py` MUST enforce that rather than only
+advising it in `.ai-rules/completion.md`. The rule MUST report the code
+`QUALITY_NEW_CHANGE_WITH_GATE_DEBT` at level `ERROR` when BOTH of the
+following hold for one repository:
+
+- it has at least one required check the gate reports as `UNBOUND`; and
+- it has at least one unarchived OpenSpec change which is neither the change
+  that closes that debt nor a `(project, change)` pair already recorded in
+  `gate-debt-baseline.json`.
+
+The baseline is a one-time grandfathering of the work that predates the rule,
+in the shape of `rules-drift-baseline.json` and written from disk by
+`scripts/gate_debt_baseline.py`. It is what makes the rule a ratchet instead of
+a deadlock: without it, failing the 22 repositories that already carry open
+changes fails the legacy fleet for the state the rule exists to stop growing,
+and no action available to those repositories can clear it, because an open
+change can only be closed by finishing it. A baseline entry is not an
+exemption either — a repository that discharges its debt leaves
+`gate-debt.json` and is never consulted — so a stale entry is dead weight
+rather than a live hole, and the list only shrinks. The baseline is a
+committed list a reviewer reads, not a switch: there is no environment variable
+and no flag.
+
+Debt MUST be read from `gate-debt.json` and MUST NOT be re-derived by a second
+parser, because `GateOracleTest` already pins that record set-equal to the
+gate's own unbound set. A repository absent from the record has no debt and
+MUST NOT be reported. An archived change MUST NOT count as a new change. The
+trigger set MUST be the same set of directories `validate_change_names`
+validates, so the rule cannot count a directory the naming rule ignores.
+
+The rule MUST NOT fire when the only unarchived change is the debt-closing
+change itself, because a repository that may not start the work which fixes
+its debt can never fix it, and the rule would be a dead end.
+
+The finding MUST name the repository, the unbound concerns, the unarchived
+change that triggered it, and the change that records the fix. A finding that
+does not say what to do next is not actionable, and an unactionable blocking
+finding is ignored within a week.
+
+The code MUST be listed in `GOVERNANCE_QUALITY_DECLARED_CODES` in
+`driftwatchdog`. A code outside that list is filtered out of the concern's
+verdict, so the concern would report `PASS` while this checker exits 1 — the
+rule would be a report line no gate reads.
+
+#### Scenario: Debt plus a new change is an error
+
+- **WHEN** a repository in `gate-debt.json` carries an unarchived change that
+  is neither `close-unbound-gate-checks` nor a pair in `gate-debt-baseline.json`
+- **THEN** the checker reports `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` at `ERROR`
+  for that repository, naming the unbound concerns and the new change
+
+#### Scenario: Work that predates the rule is not new work
+
+- **WHEN** a repository in `gate-debt.json` carries only unarchived changes
+  whose `(project, change)` pairs are all in `gate-debt-baseline.json`
+- **THEN** no finding is reported, so the legacy fleet is not failed for the
+  state the rule was written to stop growing
+
+#### Scenario: Only the debt-closing change is open
+
+- **WHEN** a repository in `gate-debt.json` has `close-unbound-gate-checks` as
+  its only unarchived change
+- **THEN** no finding is reported, and the debt itself is still named by the
+  generator's own record rather than by this rule
+
+#### Scenario: A repository with no debt is never reported
+
+- **WHEN** a repository is absent from `gate-debt.json` and has several
+  unarchived changes
+- **THEN** no finding is reported for it
+
+#### Scenario: The debt record cannot be read
+
+- **WHEN** `gate-debt.json` is missing or malformed
+- **THEN** the run reports one `ERROR` naming the file and the reason, and no
+  repository is reported as debt-free on the strength of a record that was
+  never read
+
+### Requirement: The precondition has a declared exit, recorded as evidence
+
+A fail-closed rule with no way to record a deliberate decision trains people to
+ignore it, so the exit MUST be declared. It MUST be a committed record,
+`gate-debt-exceptions.json` in the governance root, keyed by `(project,
+change)` and carrying a non-empty `reason`. It MUST NOT be an environment
+variable, a skip flag, or an in-memory override: a check that can be switched
+off is not a check.
+
+Both records MUST be read fail-closed, in the same shape and with the same
+refusals as `rules-drift-baseline.json`: a missing file, an unreadable file, a
+root that is not an object, a missing or non-list `exceptions` key, an entry
+that is not an object, an entry missing a key, a non-string or empty value, or
+an unknown key are each an `ERROR` naming the file and the reason. An unknown
+key is refused rather than ignored, so a typo in a hand edit fails loudly
+instead of silently dropping a recorded decision. An empty `exceptions` array
+is valid and is the normal state.
+
+A ratchet that could not be read MUST grandfather nothing: the already-open
+work it failed to list is reported again, because a baseline that was never
+read is not a baseline. The run still fails, naming the file, as every other
+loader failure in this checker does.
+
+A `(project, change)` pair present in `gate-debt-exceptions.json` MUST satisfy
+the rule, and MUST still be reported, at level `WARNING`, with the recorded `reason` quoted
+and the record named. The decision stays review-visible in the run's own output
+instead of becoming an invisible pass. Only `ERROR` affects the exit code, so
+a recorded exception never blocks and never disappears.
+
+#### Scenario: A recorded exception satisfies the precondition and stays visible
+
+- **WHEN** a repository carries debt, has an unarchived change, and that
+  `(project, change)` pair is in `gate-debt-exceptions.json`
+- **THEN** the finding is reported at `WARNING` quoting the recorded reason,
+  and the run's error count is unchanged
+
+#### Scenario: An exception does not cover a change nobody recorded
+
+- **WHEN** a repository carries debt and records an exception for one
+  unarchived change while another unarchived change is unrecorded
+- **THEN** the unrecorded change is reported at `ERROR`
+
+#### Scenario: A typo in the record fails loudly
+
+- **WHEN** an entry in `gate-debt-exceptions.json` carries a key other than
+  `project`, `change` or `reason`
+- **THEN** the run reports an `ERROR` naming the file, the entry and the
+  unknown key, and honours no exception at all

@@ -560,3 +560,89 @@ here instead, as a spec correction with its reasoning and its numbers in
   this change is scoped to the Rust branch.
 - [ ] **The change is not archived.** Archiving needs separate authorization.
 
+## 9. The record is read: a new change waits on the debt
+
+- [x] **`QUALITY_NEW_CHANGE_WITH_GATE_DEBT` (ERROR) is emitted** by
+  `scripts/workspace_check.py` for a repository in `gate-debt.json` that opens
+  an unarchived change which is neither `close-unbound-gate-checks` nor a
+  grandfathered pair. Both halves are read: debt from `gate-debt.json` (never
+  re-derived), new work from `unarchived_changes`, the same walk
+  `validate_change_names` uses.
+- [x] **The rule has no fence**, unlike the three earlier drift rules, because
+  it is *supposed* to be red while debt is open (`design.md` §12.1).
+- [x] **The grandfathering ratchet is generated, not hand-written.**
+  `scripts/gate_debt_baseline.py` writes `gate-debt-baseline.json` from
+  `gate-debt.json` and the repositories' own `openspec/changes`: **39 pairs
+  across 22 repositories**. `--check` reports drift and writes nothing.
+- [x] **The generator refuses a root that holds none of the debted
+  repositories.** A mistyped root would write an empty ratchet, and an empty
+  ratchet grandfathers nothing, so the whole legacy fleet would go red from a
+  typo in a path.
+- [x] **The exit is a committed record**, `gate-debt-exceptions.json`, in the
+  shape of `rules-drift-baseline.json`: `(project, change, reason)`, no
+  environment variable, no flag, unknown key refused rather than ignored. A
+  satisfied pair is reported at `WARNING` with its reason quoted, so a
+  deliberate decision stays visible in the run.
+- [x] **All three records fail closed.** A missing, corrupt or mistyped record
+  is one run-level `ERROR` naming the file; a ratchet that could not be read
+  grandfathers nothing, because a baseline that was never read is not one.
+- [x] **`QUALITY_NEW_CHANGE_WITH_GATE_DEBT` is declared** in
+  `driftwatchdog`'s `GOVERNANCE_QUALITY_DECLARED_CODES`
+  (`src/gate/governance/mod.rs`), with one Rust test beside it. A cross-repo
+  step in a repository this change does not own, and measured rather than
+  assumed: the false green was reproduced first (§9.1).
+- [x] **`.ai-rules/completion.md` gains one line** naming the precondition and
+  pointing at the checker. The prose does not restate the rule, because a
+  document does not block anything.
+- [x] **36 new tests, 17 subtests** in `tests/test_gate_debt_precondition.py`:
+  the trigger controls, the ratchet, the exemption, the exception, the
+  fail-closed refusals, the generator, a test that the checker writes nothing,
+  and a real `driftwatchdog gate` run.
+- [x] **Negative control, measured.** Weakening the trigger to grandfather every
+  change (`if baseline is not None: continue`) turns **9 of the 36 tests red**,
+  including the end-to-end gate acceptance. Restored: **36 passed**.
+- [x] **`tests/test_promote_project.py`'s sandbox copies all three records**,
+  for the same reason it copies `rules-drift-baseline.json`: a missing record
+  fails closed and would mask what those tests assert.
+- [x] **No sibling repository is written** except the one line in
+  `driftwatchdog` this rule cannot gate without, and the one test beside it.
+- [x] **No `rm`.** Fixtures use `tempfile.TemporaryDirectory()` and
+  `Path.unlink(missing_ok=True)`.
+
+### 9.1 Measured evidence
+
+| Measurement | Value |
+|---|---|
+| Grandfathered pairs generated | 39 across 22 repositories |
+| `gate_debt_baseline.py --check` | up to date, exit 0 |
+| `workspace_check.py --self-check` | `errors=0 warnings=0`, exit 0 |
+| Fleet audit | 279 errors / 20 warnings, **0 of them this rule's** |
+| The checker alone on the gate fixture | 1 finding of the new code, 91 errors / 2 warnings, exit 1 |
+| `driftwatchdog gate` on the fixture, **before** the declaration | `governance-quality` `PASS`, "0 of 93 governance findings matched this concern's scope", gate exit 0 |
+| `driftwatchdog gate` on the fixture, **after** the declaration | `governance-quality` `FAIL`, "1 of 93", rule `QUALITY_NEW_CHANGE_WITH_GATE_DEBT`, gate `FAIL`, `blocked: true`, exit 1 |
+| `driftwatchdog` suite | **909 passed, 0 failed** (908 before, +1 new test) |
+| `python3 -m unittest discover -s tests` | **Ran 800 tests, OK** |
+| `python3 -m pytest tests -q` | **800 passed, 175 subtests passed** |
+| Suite before this change | 760 passed, 175 subtests, 1 failed |
+
+### 9.2 The pre-existing failure, and who fixed it
+
+The session's first baseline run failed
+`SequencingGateTests::test_the_gate_is_open_and_the_fleet_corpus_is_clean` on
+`lileililiwen-site`. It is a live-fleet assertion, not a stable identity: later
+runs failed `test_the_thirty_disagreements_resolve_to_the_decided_table`, and
+with this change stashed the suite still failed
+`test_ruling_four_keeps_the_lileililiwen_id_and_path`. It was fixed by the
+owner's own concurrent commits (`f192771`, `57dd605`), not here, and nothing in
+this change narrows what those tests check.
+
+### 9.3 Deliberately not done
+
+- [ ] **The 39 grandfathered pairs are never pruned automatically.** The
+  checker reads these files and never writes them. A `--check` pass reports
+  drift; removing an entry is a human edit, or a re-run of the generator once
+  the fleet has moved.
+- [ ] **The fleet-wide red is not addressed here.** 279 errors / 20 warnings
+  predate this rule and none of them are its finding.
+- [ ] **The change is not archived.** Archiving needs separate authorization.
+

@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/gate_debt_baseline.py",
+  "recorded_at": "generated",
+  "note": "The OpenSpec changes that were already open on the repositories in gate-debt.json when QUALITY_NEW_CHANGE_WITH_GATE_DEBT landed. A pair listed here is pre-existing legacy work and is not new work, so the precondition stays silent for it; every change opened after this snapshot is reported. The list only shrinks: as a change is archived its entry becomes dead weight, and as a repository discharges its debt it leaves gate-debt.json and is not consulted at all.",
+  "findings": [
+    {
+      "project": "actoria",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "aegify",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "alethefy",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "alltools-platform",
+      "change": "business-data-model-truth-audit"
+    },
+    {
+      "project": "alltools-platform",
+      "change": "content-service-consolidation"
+    },
+    {
+      "project": "alltools-platform",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "ariadex",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "catchen",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "citylens",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "crossify",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "hestiaLab",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "forge-jenkins-provider"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "install-integrity-and-registry-serialization"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "jenkins-evidence-publication"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "manifest-driven-deployment-eligibility"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "rollback-and-machine-status"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "scheduled-fleet-reconcile"
+    },
+    {
+      "project": "jenkins-local",
+      "change": "verify-before-deploy"
+    },
+    {
+      "project": "linglitch",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "mewo",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "opendockify",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "orphevia",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "platform-contracts",
+      "change": "contract-consumption-enforcement"
+    },
+    {
+      "project": "platform-contracts",
+      "change": "idea-graduation-contract"
+    },
+    {
+      "project": "reelio",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "retakeKit",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "rust-ecommerce",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "sisyphusfy",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "smotoox",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "trailCrew",
+      "change": "post-mvp-readiness"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "bind-declared-gate-checks"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "bind-declared-verification"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "capability-adoption-gate"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "cross-repo-adoption-grant"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "derived-kind-canonical-form"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "identity-and-taxonomy-axis-split"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "readme-claim-verification"
+    },
+    {
+      "project": "workspace-governance",
+      "change": "spec-purpose-backfill-gate"
+    }
+  ]
+}

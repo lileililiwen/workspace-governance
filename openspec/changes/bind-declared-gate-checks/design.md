@@ -317,3 +317,114 @@ whose single declared command was already bound by an earlier tool.
 | Unresolved checks recorded in `gate-debt.json` | — | `tasks.md` §1.1 |
 | Test suite | 615 | `tasks.md` §3.4 |
 | `openspec validate --changes --strict` | pass | pass |
+
+## 12. Paying the debt as work starts, rather than in a cleanup push
+
+§8 writes the record. Nothing read it, so 22 repositories could carry an
+unbound required check indefinitely and start the next feature the same
+afternoon. The record is the honest description of the debt; the precondition
+below is what makes it shrink on its own.
+
+### 12.1 Why the rule lives in the checker and not in `.ai-rules`
+
+`completion.md` is prose an agent reads before it works. A document does not
+block anything: it is read when read, and a skipped document is silent. The
+only surface in this repository that a run can fail on is
+`scripts/workspace_check.py`, which already emits `RULES_DRIFT_NEW` against a
+committed ratchet and runs inside the `governance-quality` gate. So the
+precondition is a finding there, and `completion.md` gains one line naming it.
+
+The rule is **fail-closed, and grandfathered exactly once**. The three earlier
+drift rules (`TAXONOMY_AUDIT_ENABLED`, `SPEC_PURPOSE_AUDIT_ENABLED`,
+`VERIFICATION_BINDING_AUDIT_ENABLED`) ship `False` because each would otherwise
+be red for a reason the fleet has not accepted yet. A precondition has the
+opposite shape: it is *supposed* to be red while debt is open, and a flag that
+turns it off is the switch a rule must not have.
+
+What it must not do is fail the work that predates it. The first cut keyed on
+"has any unarchived change" and turned all 22 debted repositories red on
+arrival — `jenkins-local` on 8 open changes, this repository on 8 of its own,
+including its own `--self-check`. That is a deadlock, not a ratchet: an open
+change can only be closed by finishing it, so the rule forbade the only action
+that could satisfy it, and the fleet could never come back. The trigger is
+therefore *new* work, and the work that was already open when the rule landed is
+recorded once in `gate-debt-baseline.json` (§12.4), generated from disk.
+
+That is a committed list, not a switch: no environment variable, no flag, no
+in-memory override, and a reviewer can read every entry. The same argument
+applies to the exception record. What it is not is an exemption with a life of
+its own — a repository that discharges its debt leaves `gate-debt.json` and is
+never consulted again, so a stale baseline entry is dead weight rather than a
+permanent hole.
+
+### 12.2 The trigger, read from the record rather than re-derived
+
+Both halves of the trigger are read, not recomputed:
+
+- the unbound half comes from `gate-debt.json`, which `GateOracleTest` pins
+  **set-equal** to `driftwatchdog gate --dry-run`'s own unbound set. A second
+  parser over manifests would be a second source of truth for the same fact,
+  and would drift the first time a profile scheduled a check `checks:` never
+  listed — which is the bug §5.1 already found once;
+- the new-work half comes from the repository's own `openspec/changes`
+  directories, which `validate_change_names` already walks. The new rule reads
+  the same helper, so the two cannot count different sets.
+
+### 12.3 The debt-closing change is not a trigger
+
+`close-unbound-gate-checks` is excluded from the trigger set. Without that
+exclusion the rule forbids the only work that can discharge the debt, and every
+repository with debt becomes permanently red — a dead end that teaches agents
+to disable the rule.
+
+### 12.4 The two committed records, in the shape of the drift baseline
+
+The codebase already has two answers to "how does an owner record that this
+is deliberate", and this rule uses the one that is evidence:
+
+- `discovery.unregistered_policy` in `projects.json` is a **policy** — a
+  fleet-wide default in a machine-read registry. It suits a choice about
+  discovery, which is a portfolio-wide decision;
+- `rules-drift-baseline.json` is a **ratchet** — a committed list of
+  `(project, file, label)` keys a reviewer can read and tighten. It suits a
+  choice about one repository's finding.
+
+A deliberate exception to a per-repository precondition is the second kind, so
+it is `gate-debt-exceptions.json`: a list of `(project, change, reason)` in
+the governance root, loaded with the same fail-closed refusals as the drift
+baseline, an unknown key refused rather than ignored, and no environment
+variable and no flag.
+
+The grandfathering list is the same kind of thing one step earlier in time, and
+so is the same shape: `gate-debt-baseline.json`, a list of `(project, change)`
+with no `reason` because the reason for each is "it was already open".
+`scripts/gate_debt_baseline.py` writes it from `gate-debt.json` and the
+repositories' own `openspec/changes` directories, through the same two helpers
+the rule reads, so the ratchet and the rule cannot disagree. It also refuses a
+root that holds none of the debted repositories, because a mistyped root would
+write an empty ratchet and an empty ratchet grandfathers nothing — the whole
+fleet red again, from a typo. `--check` reports drift and writes nothing; the
+checker never writes these files at all.
+
+A satisfied pair is reported at `WARNING`, not dropped. The reason is quoted
+and the record is named, so the exception is visible in the same run's output
+that a reader of the change would want to see, and the finding stays
+reviewable as the fleet shrinks. Only `ERROR` moves the exit code.
+
+The three records differ in exactly one respect, and it is deliberate: the
+drift baseline requires a non-empty `findings` array because an empty one would
+mean every known drift had been fixed, which is a claim worth making loudly.
+An empty ratchet here means only that no debted repository has opened a change
+since the last snapshot, and an empty exception list is the normal state, so
+both accept `[]`.
+
+### 12.5 The one cross-repo step, and why it is not optional
+
+`GOVERNANCE_QUALITY_DECLARED_CODES` is a closed allow-list: the concern drops
+any finding whose code is not in it *before* computing the status, and treats
+the checker's exit 1 as an expected exit. An undeclared code therefore yields
+`PASS` while the checker exits 1 — green gate, red checker, no finding
+anywhere. That is the trap this workspace has already fallen into once
+(`HANDOFF.md` on `spec-purpose-backfill-gate`). The new code is declared there
+in the same change, and the acceptance test is a real `driftwatchdog gate` run
+over a fixture, not a unit test of the list.

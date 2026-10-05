@@ -7,6 +7,9 @@ A governance change is complete only when:
 - required scenarios have tests;
 - missing or invalid projects fail closed;
 - `python3 -m unittest discover -s tests -v` passes;
+- a repository carrying unresolved gate debt opens no new OpenSpec change until
+  the debt is bound or an exception is recorded — enforced by
+  `scripts/workspace_check.py`, not by this file;
 - `python3 scripts/workspace_check.py --self-check` passes;
 - `python3 scripts/auto_gate.py --self-check --no-deployment` passes
   (the unattended entry point — also runs the Jenkins manifest when a

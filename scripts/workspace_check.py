@@ -118,6 +118,180 @@ def load_rules_drift_baseline(governance_root: Path | None = None) -> frozenset[
     return frozenset(keys)
 
 
+# The debt record `scripts/bind_gate_commands.py` writes, the ratchet of
+# already-open work that predates the precondition, and the deliberate
+# exceptions to it. All three are read here, never re-derived: a second parser
+# over manifests would be a second source of truth for a fact `GateOracleTest`
+# already pins set-equal to the gate's own unbound set, and would drift the
+# first time a profile scheduled a check `checks:` never listed.
+#
+# The ratchet is a ratchet, not a policy: `projects.json`'s
+# `discovery.unregistered_policy` is the codebase's answer for a fleet-wide
+# default, and `rules-drift-baseline.json` is the answer for a recorded
+# per-repository finding. Without it the rule is not a ratchet at all but a
+# deadlock: 22 repositories already carry open changes, and failing work that
+# predates the rule is failing the fleet for the state the rule was written to
+# stop growing. So the pairs that were open when the rule landed are
+# grandfathered once, in a committed list, and every pair after it is new work.
+#
+# The exceptions record is the same shape one step further on: a deliberate
+# decision to let a specific new change through while the debt is still open.
+GATE_DEBT_BASELINE_FILE = "gate-debt-baseline.json"
+GATE_DEBT_BASELINE_KEYS = ("project", "change")
+GATE_DEBT_EXCEPTIONS_FILE = "gate-debt-exceptions.json"
+GATE_DEBT_EXCEPTIONS_KEYS = ("project", "change", "reason")
+
+
+class GateDebtRecordError(ValueError):
+    """The debt record is unusable. Fail closed; never fall back to empty."""
+
+
+class GateDebtBaselineError(ValueError):
+    """The grandfathered-work ratchet is unusable. Fail closed."""
+
+
+class GateDebtExceptionsError(ValueError):
+    """The deliberate-exception record is unusable. Fail closed."""
+
+
+def _load_string_entries(
+    path: Path, label: str, list_key: str, keys: tuple[str, ...], error: type[ValueError]
+) -> list[dict[str, str]]:
+    """Read `list_key`'s entries from a governance record, fail closed.
+
+    Shared by both records so their shape rules cannot drift apart. Every one
+    of these conditions raises `error` naming the file, the entry and the
+    reason, and the caller then honours no entry from the file at all:
+
+    - the file is missing, unreadable, or is not valid JSON;
+    - the root is not an object, or `list_key` is absent or not a list;
+    - an entry is not an object, carries a non-string or empty value, is
+      missing a key, or carries a key this record does not define.
+
+    An unknown key is refused rather than ignored, so a typo in a hand edit
+    fails loudly instead of silently dropping a recorded entry. Whether an
+    *empty* list is valid is the caller's rule, not this function's: the drift
+    baseline requires one entry, the exception record's normal state is none.
+    """
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise error(f"unreadable {label} {path}: {exc}") from exc
+    if not isinstance(document, dict):
+        raise error(f"{label} {path} is not a JSON object")
+    entries = document.get(list_key)
+    if not isinstance(entries, list):
+        raise error(f"{label} {path} has no {list_key!r} array")
+    validated: list[dict[str, str]] = []
+    for index, entry in enumerate(entries):
+        where = f"{label} {path} entry {index}"
+        if not isinstance(entry, dict):
+            raise error(f"{where} is not a JSON object")
+        unknown = sorted(set(entry) - set(keys))
+        if unknown:
+            raise error(f"{where} has unknown key(s): {', '.join(unknown)}")
+        missing = [name for name in keys if name not in entry]
+        if missing:
+            raise error(f"{where} is missing key(s): {', '.join(missing)}")
+        if not all(isinstance(entry[name], str) and entry[name] for name in keys):
+            raise error(f"{where} has a non-string or empty value")
+        validated.append({name: entry[name] for name in keys})
+    return validated
+
+
+def load_gate_debt_record(governance_root: Path | None = None) -> dict[str, tuple[str, ...]]:
+    """The unbound required checks `gate-debt.json` records, by repository.
+
+    This reads the record the generator writes; it does not re-derive it. The
+    file name comes from the generator's own `DEBT_FILE`, so the two cannot
+    disagree about where the record lives.
+
+    A repository absent from the returned mapping has no recorded debt, and is
+    not reported by the precondition. `GateDebtRecordError` means the record
+    could not be read at all, which the caller reports once for the whole run
+    rather than reading as "no repository has debt".
+    """
+    from bind_gate_commands import DEBT_FILE  # local import keeps this module standalone
+
+    root = Path(governance_root) if governance_root is not None else _default_governance_root()
+    path = root / DEBT_FILE
+    if not path.is_file():
+        raise GateDebtRecordError(f"missing gate debt record: {path}")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise GateDebtRecordError(f"unreadable gate debt record {path}: {exc}") from exc
+    if not isinstance(document, dict):
+        raise GateDebtRecordError(f"gate debt record {path} is not a JSON object")
+    repositories = document.get("repositories")
+    if not isinstance(repositories, list):
+        raise GateDebtRecordError(f"gate debt record {path} has no 'repositories' array")
+
+    debt: dict[str, tuple[str, ...]] = {}
+    for index, entry in enumerate(repositories):
+        where = f"gate debt record {path} entry {index}"
+        if not isinstance(entry, dict):
+            raise GateDebtRecordError(f"{where} is not a JSON object")
+        repo = entry.get("repo")
+        unresolved = entry.get("unresolved")
+        if not isinstance(repo, str) or not repo:
+            raise GateDebtRecordError(f"{where} has no non-string 'repo'")
+        if not isinstance(unresolved, list):
+            raise GateDebtRecordError(f"{where} has no 'unresolved' array")
+        concerns: list[str] = []
+        for item in unresolved:
+            if not isinstance(item, dict) or not isinstance(item.get("concern"), str) or not item["concern"]:
+                raise GateDebtRecordError(f"{where} has an unresolved entry with no non-string 'concern'")
+            concerns.append(item["concern"])
+        if concerns:
+            debt[repo] = tuple(concerns)
+    return debt
+
+
+def load_gate_debt_baseline(governance_root: Path | None = None) -> frozenset[tuple[str, str]]:
+    """The `(project, change)` pairs that were already open when the rule landed.
+
+    The ratchet, in the same shape and with the same refusals as
+    `load_rules_drift_baseline`: missing, unreadable, not an object, no
+    `findings` array, an entry that is not an object, a missing key, a
+    non-string or empty value, or an unknown key each raise, and the caller then
+    honours no entry at all. An empty `findings` array is valid and means every
+    open change is new work.
+
+    Written from disk by `scripts/gate_debt_baseline.py`, never by hand and
+    never by a checker run: the checker reads, it does not write. The file only
+    shrinks as repositories close changes and discharge debt, which is what
+    makes a stale entry harmless rather than a permanent exemption.
+    """
+    root = Path(governance_root) if governance_root is not None else _default_governance_root()
+    path = root / GATE_DEBT_BASELINE_FILE
+    if not path.is_file():
+        raise GateDebtBaselineError(f"missing gate debt baseline: {path}")
+    entries = _load_string_entries(
+        path, "gate debt baseline", "findings", GATE_DEBT_BASELINE_KEYS, GateDebtBaselineError
+    )
+    return frozenset((entry["project"], entry["change"]) for entry in entries)
+
+
+def load_gate_debt_exceptions(governance_root: Path | None = None) -> dict[tuple[str, str], str]:
+    """The recorded deliberate exceptions, keyed by `(project, change)`.
+
+    An empty `exceptions` array is valid and is the normal state; every other
+    malformed shape raises `GateDebtExceptionsError` naming the file, the entry
+    and the reason, and the caller then honours no exception at all. There is
+    no environment variable and no flag: an exception is a reviewable line in
+    a committed file, which is the only exit a blocking rule may have.
+    """
+    root = Path(governance_root) if governance_root is not None else _default_governance_root()
+    path = root / GATE_DEBT_EXCEPTIONS_FILE
+    if not path.is_file():
+        raise GateDebtExceptionsError(f"missing gate debt exceptions record: {path}")
+    entries = _load_string_entries(
+        path, "gate debt exceptions record", "exceptions", GATE_DEBT_EXCEPTIONS_KEYS, GateDebtExceptionsError
+    )
+    return {(entry["project"], entry["change"]): entry["reason"] for entry in entries}
+
+
 def canonical_profiles_for(governance_root: Path | None = None) -> frozenset[str]:
     return _vocabulary_for(governance_root)["profiles"]
 
@@ -400,6 +574,29 @@ VERIFICATION_BINDING_AUDIT_ENABLED = False
 # on these names or the generator binds something the rule calls unbound.
 GATE_MANIFEST_RELATIVE = ".ai-gate/gate.yaml"
 DECLARED_VERIFICATION_CONCERN = "declared-verification"
+
+# A repository carrying unresolved gate debt may not open a new OpenSpec
+# change, so the debt is paid as work starts instead of in a cleanup push that
+# never finishes. The rule ships with **no fence**, unlike the three above: it is
+# supposed to be red while debt is open, and a constant that turns it off is the
+# switch a blocking rule must not have. Its exit is a recorded decision in
+# `gate-debt-exceptions.json`, not a flag.
+#
+# Like every code here, this one gates nothing unless `driftwatchdog`'s
+# `governance-quality` concern declares it in `GOVERNANCE_QUALITY_DECLARED_CODES`.
+# An undeclared code is filtered out of the verdict, so the concern would report
+# PASS while this checker exits 1.
+QUALITY_NEW_CHANGE_WITH_GATE_DEBT = "QUALITY_NEW_CHANGE_WITH_GATE_DEBT"
+QUALITY_NEW_CHANGE_WITH_GATE_DEBT_LEVEL = "ERROR"
+# A satisfied precondition is still reported. `WARNING` is the only other level
+# the concern defines, and only `ERROR` moves the exit code, so a recorded
+# exception is visible in the run without blocking it.
+QUALITY_NEW_CHANGE_WITH_GATE_DEBT_SATISFIED_LEVEL = "WARNING"
+
+# The changes that close the debt, and are therefore never themselves a
+# trigger. A repository that may not start the work which fixes its debt can
+# never fix it, and the rule would be a dead end.
+GATE_DEBT_CLOSING_CHANGES = frozenset({"close-unbound-gate-checks"})
 
 
 def taxonomy_audit_enabled(explicit: bool | None = None) -> bool:
@@ -2851,15 +3048,109 @@ def _yaml_entry(block: list[str], key: str) -> str | None:
     return None
 
 
-def validate_change_names(project_path: Path, findings: list[Finding], project_id: str) -> None:
+def unarchived_changes(project_path: Path) -> list[str]:
+    """The repository's active OpenSpec change names, sorted.
+
+    One walk, two rules: `validate_change_names` names the directories here
+    that are not valid change ids, and `validate_new_change_with_gate_debt`
+    counts the same set as new work in progress. A trigger the naming rule
+    ignores would be a trigger nobody can fix by renaming a directory.
+
+    `archive/` is excluded because an archived change is finished work, and a
+    dot-prefixed directory because OpenSpec keeps its own state there.
+    """
     changes = project_path / "openspec" / "changes"
     if not changes.is_dir():
+        return []
+    return [
+        child.name
+        for child in sorted(changes.iterdir())
+        if child.is_dir() and child.name != "archive" and not child.name.startswith(".")
+    ]
+
+
+def validate_change_names(project_path: Path, findings: list[Finding], project_id: str) -> None:
+    for name in unarchived_changes(project_path):
+        if not CHANGE_ID.fullmatch(name):
+            finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {name}", project_id)
+
+
+def validate_new_change_with_gate_debt(
+    project_path: Path,
+    findings: list[Finding],
+    project_id: str,
+    *,
+    debt: dict[str, tuple[str, ...]] | None,
+    baseline: frozenset[tuple[str, str]] | None,
+    exceptions: dict[tuple[str, str], str] | None,
+) -> None:
+    """Block new work on a repository that still carries gate debt.
+
+    22 repositories record at least one required check the gate reports as
+    `UNBOUND`. The record says so; nothing acted on it, so the debt sits still
+    while the next feature starts on top of it. This rule is the acting.
+
+    Both halves are read rather than recomputed. The unbound half comes from
+    `gate-debt.json`, which `GateOracleTest` pins set-equal to the gate's own
+    unbound set, so a repository absent from it has no debt and is not
+    reported. The new-work half comes from `unarchived_changes`, the same walk
+    `validate_change_names` uses.
+
+    Three ways to *not* be new work, and the second is what keeps the rule a
+    ratchet rather than a deadlock:
+
+    - a change named in `GATE_DEBT_CLOSING_CHANGES` is not new work at all: it
+      *is* the work that clears the debt, and a rule that blocked it would make
+      the debt permanent;
+    - a `(project, change)` pair in `GATE_DEBT_BASELINE_FILE` was already open
+      when the rule landed. Failing it fails the legacy fleet for the state the
+      rule exists to stop growing, and cannot be discharged by any action
+      available to the repository. The baseline is a committed list, so this is
+      a reviewable one-time grandfathering and not a switch;
+    - a pair in `GATE_DEBT_EXCEPTIONS_FILE` is a deliberate decision about new
+      work, reported at `WARNING` with its reason quoted so the decision stays
+      visible in the run.
+
+    `debt=None` means the debt record could not be read, and `baseline=None`
+    that the ratchet could not. The caller has already reported each once as a
+    run-level `ERROR`, which is what fails the run; `baseline=None` grandfathers
+    nothing, because a ratchet that could not be read grandfathers nothing.
+    """
+    changes = unarchived_changes(project_path)
+    if not changes or debt is None:
         return
-    for child in sorted(changes.iterdir()):
-        if child.name == "archive" or child.name.startswith("."):
+
+    concerns = debt.get(project_id)
+    if not concerns:
+        return
+
+    closing = ", ".join(sorted(GATE_DEBT_CLOSING_CHANGES))
+    unbound = ", ".join(concerns)
+    for change in changes:
+        if change in GATE_DEBT_CLOSING_CHANGES:
             continue
-        if child.is_dir() and not CHANGE_ID.fullmatch(child.name):
-            finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {child.name}", project_id)
+        if baseline is not None and (project_id, change) in baseline:
+            continue
+        reason = (exceptions or {}).get((project_id, change))
+        if reason is not None:
+            finding(
+                findings,
+                QUALITY_NEW_CHANGE_WITH_GATE_DEBT_SATISFIED_LEVEL,
+                QUALITY_NEW_CHANGE_WITH_GATE_DEBT,
+                f"opens change {change!r} while required check(s) {unbound} are unbound; "
+                f"satisfied by a recorded exception in {GATE_DEBT_EXCEPTIONS_FILE}: {reason}",
+                project_id,
+            )
+            continue
+        finding(
+            findings,
+            QUALITY_NEW_CHANGE_WITH_GATE_DEBT_LEVEL,
+            QUALITY_NEW_CHANGE_WITH_GATE_DEBT,
+            f"opens change {change!r} while required check(s) {unbound} are unbound; "
+            f"bind them under {closing} first, or record a deliberate exception "
+            f"in {GATE_DEBT_EXCEPTIONS_FILE} before starting new work",
+            project_id,
+        )
 
 
 def validate_handoff_quality(
@@ -2937,6 +3228,9 @@ def validate_project(
     verification_binding_enabled: bool | None = None,
     readme_claim_coverage: list[tuple[str, str, int, str, str]] | None = None,
     promoted_projects: set[str] | None = None,
+    gate_debt: dict[str, tuple[str, ...]] | None = None,
+    gate_debt_baseline: frozenset[tuple[str, str]] | None = None,
+    gate_debt_exceptions: dict[tuple[str, str], str] | None = None,
 ) -> None:
     project_id = str(entry.get("id"))
     project_path = workspace_root / str(entry.get("path"))
@@ -2981,6 +3275,31 @@ def validate_project(
         finding(findings, "ERROR", "OPENSPEC_MISSING", "OpenSpec directory is required by this profile", project_id)
     if requires_openspec:
         validate_change_names(project_path, findings, project_id)
+    # Unconditional, unlike the rules above: a repository on any profile that
+    # carries gate debt may not open a new change, and `inventory` is the
+    # profile most of the debted repositories are on. `None` means the caller
+    # did not load the records, so read them from `governance_root` here.
+    if gate_debt is None or gate_debt_baseline is None or gate_debt_exceptions is None:
+        try:
+            gate_debt = load_gate_debt_record(governance_root)
+        except GateDebtRecordError:
+            gate_debt = None
+        try:
+            gate_debt_baseline = load_gate_debt_baseline(governance_root)
+        except GateDebtBaselineError:
+            gate_debt_baseline = None
+        try:
+            gate_debt_exceptions = load_gate_debt_exceptions(governance_root)
+        except GateDebtExceptionsError:
+            gate_debt_exceptions = None
+    validate_new_change_with_gate_debt(
+        project_path,
+        findings,
+        project_id,
+        debt=gate_debt,
+        baseline=gate_debt_baseline,
+        exceptions=gate_debt_exceptions,
+    )
     deployment = declaration.get("deployment")
     if not isinstance(deployment, dict) or not isinstance(deployment.get("deployable"), bool):
         finding(findings, "ERROR", "DEPLOYMENT_DECLARATION", "deployment.deployable must be boolean", project_id)
@@ -3126,6 +3445,26 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
         rules_drift_baseline = None
     observed_drift_keys: set[tuple[str, str, str]] = set()
     scanned_projects: set[str] = set()
+    # The gate-debt precondition, read fail-closed in the same shape as the
+    # ratchet above. Both records are loaded once for the whole run. A load
+    # failure emits one ERROR and closes the rule: no repository is reported as
+    # debt-free on the strength of a record that was never read, and the ERROR
+    # already fails the run.
+    try:
+        gate_debt: dict[str, tuple[str, ...]] | None = load_gate_debt_record(governance_root)
+    except GateDebtRecordError as exc:
+        finding(findings, "ERROR", QUALITY_NEW_CHANGE_WITH_GATE_DEBT, str(exc))
+        gate_debt = None
+    try:
+        gate_debt_baseline: frozenset[tuple[str, str]] | None = load_gate_debt_baseline(governance_root)
+    except GateDebtBaselineError as exc:
+        finding(findings, "ERROR", QUALITY_NEW_CHANGE_WITH_GATE_DEBT, str(exc))
+        gate_debt_baseline = None
+    try:
+        gate_debt_exceptions: dict[tuple[str, str], str] | None = load_gate_debt_exceptions(governance_root)
+    except GateDebtExceptionsError as exc:
+        finding(findings, "ERROR", QUALITY_NEW_CHANGE_WITH_GATE_DEBT, str(exc))
+        gate_debt_exceptions = None
     # CHECKER-COVERAGE accumulator for the README claim rule. The unscoped
     # metric is emitted ONCE for the whole run, not per repository, because the
     # information it carries is about this checker's coverage and not about a
@@ -3183,6 +3522,9 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
                 scanned_projects=scanned_projects,
                 readme_claim_coverage=readme_claim_coverage,
                 promoted_projects=promoted_project_ids(governance_root),
+                gate_debt=gate_debt,
+                gate_debt_baseline=gate_debt_baseline,
+                gate_debt_exceptions=gate_debt_exceptions,
             )
     else:
         selected = effective_projects
@@ -3208,6 +3550,9 @@ def run(args: argparse.Namespace) -> tuple[list[Finding], dict[str, int]]:
                     scanned_projects=scanned_projects,
                     readme_claim_coverage=readme_claim_coverage,
                     promoted_projects=promoted_project_ids(governance_root),
+                    gate_debt=gate_debt,
+                    gate_debt_baseline=gate_debt_baseline,
+                    gate_debt_exceptions=gate_debt_exceptions,
                 )
             else:
                 finding(findings, "WARNING", "ADOPTION_PENDING", "project is registered but not yet adopted", str(entry.get("id")))
