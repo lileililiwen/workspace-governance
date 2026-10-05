@@ -9,6 +9,7 @@ checks:
   security: true
   product_quality: true
   declared-verification: true
+  governance-quality: true
 blocking:
   - FAIL
   - REVIEW_REQUIRED
@@ -30,3 +31,4 @@ commands:
   tests: 'python3 -m unittest discover -s tests -v'
   product_quality: 'python3 scripts/product_code_quality.py .'
   security: 'pip-audit'
+  governance-quality: 'python3 ../workspace-governance/scripts/workspace_check.py --root .. --project workspace-governance --json'

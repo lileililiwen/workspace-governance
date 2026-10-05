@@ -111,7 +111,19 @@ class RuleCase(RecordsCase):
     def setUp(self):
         super().setUp()
         self.project = self.gov / "actoria"
+        self.write_gate_manifest({"accessibility": "python3 scripts/check-accessibility.py", "privacy": "python3 scripts/check-privacy.py"})
         self.findings: list[workspace_check.Finding] = []
+
+    def write_gate_manifest(self, checks: dict[str, str | None]) -> None:
+        gate = self.project / ".ai-gate" / "gate.yaml"
+        gate.parent.mkdir(parents=True, exist_ok=True)
+        lines = ["profile: minimal", "checks:"]
+        lines.extend(f"  {concern}: true" for concern in checks)
+        commands = {concern: command for concern, command in checks.items() if command}
+        if commands:
+            lines.append("commands:")
+            lines.extend(f"  {concern}: {command}" for concern, command in commands.items())
+        gate.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def open_changes(self, *names: str) -> None:
         for name in names:
@@ -139,8 +151,84 @@ class RuleCase(RecordsCase):
 class RuleTests(RuleCase):
     def test_a_repository_with_no_debt_is_silent_however_many_changes_it_has(self):
         self.write_debt({"aegify": ["build"]})
+        self.write_gate_manifest({"accessibility": "python3 scripts/check-accessibility.py"})
         self.open_changes("post-mvp-readiness", "close-unbound-gate-checks", "another-feature")
         self.assertEqual(self.codes(), [])
+
+    def test_a_new_live_unbound_check_blocks_when_the_snapshot_says_clean(self):
+        self.write_debt({})
+        self.write_gate_manifest({
+            "accessibility": "python3 scripts/check-accessibility.py",
+            "privacy": "python3 scripts/check-privacy.py",
+            "performance": None,
+        })
+        self.open_changes("billing-seam")
+        findings = self.audit()
+        self.assertEqual([item.code for item in findings], ["QUALITY_NEW_CHANGE_WITH_GATE_DEBT"])
+        self.assertEqual(findings[0].level, "ERROR")
+        self.assertIn("performance", findings[0].message)
+        self.assertIn("billing-seam", findings[0].message)
+
+    def test_a_new_live_bound_check_does_not_increase_debt(self):
+        self.write_debt({})
+        self.write_gate_manifest({
+            "accessibility": "python3 scripts/check-accessibility.py",
+            "privacy": "python3 scripts/check-privacy.py",
+            "performance": "python3 scripts/check-performance.py",
+        })
+        self.open_changes("billing-seam")
+        self.assertEqual(self.codes(), [])
+
+    def test_unreadable_live_gate_state_fails_closed_for_new_work(self):
+        (self.project / ".ai-gate" / "gate.yaml").unlink()
+        self.write_debt({})
+        self.open_changes("billing-seam")
+        findings = self.audit()
+        self.assertEqual([item.code for item in findings], ["QUALITY_NEW_CHANGE_WITH_GATE_DEBT"])
+        self.assertIn("could not establish", findings[0].message)
+
+    def test_unknown_live_gate_profile_fails_closed_for_new_work(self):
+        (self.project / ".ai-gate" / "gate.yaml").write_text(
+            "profile: typo-profile\nchecks:\n  build: true\n", encoding="utf-8"
+        )
+        self.write_debt({})
+        self.open_changes("billing-seam")
+        findings = self.audit()
+        self.assertEqual([item.code for item in findings], ["QUALITY_NEW_CHANGE_WITH_GATE_DEBT"])
+        self.assertIn("typo-profile", findings[0].message)
+
+    def test_malformed_live_checks_mapping_fails_closed_for_new_work(self):
+        (self.project / ".ai-gate" / "gate.yaml").write_text(
+            "profile: minimal\nchecks:\n    performance: true\n", encoding="utf-8"
+        )
+        self.write_debt({})
+        self.open_changes("billing-seam")
+        findings = self.audit()
+        self.assertEqual([item.code for item in findings], ["QUALITY_NEW_CHANGE_WITH_GATE_DEBT"])
+        self.assertIn("malformed", findings[0].message)
+
+    def test_yaml_comment_in_command_value_is_treated_as_unbound(self):
+        (self.project / ".ai-gate" / "gate.yaml").write_text(
+            "profile: minimal\nchecks:\n  performance: true\ncommands:\n  performance: # no command\n",
+            encoding="utf-8",
+        )
+        self.write_debt({})
+        self.open_changes("billing-seam")
+        findings = self.audit()
+        self.assertEqual([item.code for item in findings], ["QUALITY_NEW_CHANGE_WITH_GATE_DEBT"])
+        self.assertIn("performance", findings[0].message)
+
+    def test_empty_not_applicable_reason_cannot_hide_live_debt(self):
+        (self.project / ".ai-gate" / "gate.yaml").write_text(
+            "profile: minimal\nchecks:\n  performance: true\n"
+            "not_applicable:\n  performance:\n",
+            encoding="utf-8",
+        )
+        self.write_debt({})
+        self.open_changes("billing-seam")
+        findings = self.audit()
+        self.assertEqual([item.code for item in findings], ["QUALITY_NEW_CHANGE_WITH_GATE_DEBT"])
+        self.assertIn("malformed `not_applicable:`", findings[0].message)
 
     def test_a_new_change_on_a_debted_repository_is_an_error_naming_what_to_do(self):
         self.open_changes("post-mvp-readiness", "billing-seam")
@@ -451,6 +539,12 @@ class RunCase(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        gate = self.project / ".ai-gate" / "gate.yaml"
+        gate.parent.mkdir(parents=True)
+        gate.write_text(
+            "profile: minimal\nchecks:\n  accessibility: true\n  privacy: true\n",
+            encoding="utf-8",
+        )
         registry = json.loads((REPO_ROOT / "projects.json").read_text(encoding="utf-8"))
         registry["projects"] = [
             {"id": "actoria", "path": "actoria", "profile": "inventory", "lifecycle": "inventory", "adoption": "adopted"}
@@ -495,6 +589,25 @@ class RunTests(RunCase):
         self.assertEqual(found[0]["level"], "ERROR")
         self.assertEqual(found[0]["project"], "actoria")
         self.assertIn("accessibility", found[0]["message"])
+
+    def test_live_unbound_check_added_after_clean_snapshot_fails_next_new_change(self):
+        (self.gov / "gate-debt.json").write_text(
+            json.dumps(debt_record({}), indent=2), encoding="utf-8"
+        )
+        (self.project / ".ai-gate" / "gate.yaml").write_text(
+            "profile: minimal\nchecks:\n"
+            "  accessibility: true\n  privacy: true\n  late-check: true\n"
+            "commands:\n  accessibility: python3 check-a11y.py\n  privacy: python3 check-privacy.py\n",
+            encoding="utf-8",
+        )
+        (self.project / "openspec" / "changes" / "billing-seam").mkdir()
+        code, document = self.run_checker()
+        found = self.new_code(document)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["level"], "ERROR")
+        self.assertIn("late-check", found[0]["message"])
+        self.assertIn("billing-seam", found[0]["message"])
 
     def test_a_missing_debt_record_fails_the_run_and_claims_nothing(self):
         # Fail-closed: the record was never read, so no repository may be
@@ -549,9 +662,15 @@ class RunTests(RunCase):
             name: digest(self.gov / name)
             for name in ("gate-debt.json", GATE_DEBT_BASELINE_FILE, GATE_DEBT_EXCEPTIONS_FILE)
         }
+        before[".ai-gate/gate.yaml"] = digest(self.project / ".ai-gate" / "gate.yaml")
         (self.project / "openspec" / "changes" / "billing-seam").mkdir(parents=True)
         self.run_checker()
-        self.assertEqual({name: digest(self.gov / name) for name in before}, before)
+        after = {
+            name: digest(self.gov / name)
+            for name in ("gate-debt.json", GATE_DEBT_BASELINE_FILE, GATE_DEBT_EXCEPTIONS_FILE)
+        }
+        after[".ai-gate/gate.yaml"] = digest(self.project / ".ai-gate" / "gate.yaml")
+        self.assertEqual(after, before)
 
 
 def gate_binary() -> Path | None:

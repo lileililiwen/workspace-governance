@@ -2,7 +2,31 @@
 
 ## Current state
 
-current_spec: scaffold-binds-governance-gate
+current_spec: ratchet-live-gate-debt
+
+## Current package: live gate debt ratchet
+
+`validate_new_change_with_gate_debt` now resolves current required checks and
+commands using the binder's profile/manifest mirror whenever a repository has
+unarchived OpenSpec work. A live unbound concern missing from `gate-debt.json`
+blocks new work immediately; unreadable, malformed, or unsupported-profile
+manifests fail closed. The check reads only and preserves baseline pairs,
+explicit exceptions, and the named debt-closing change. A bound command does
+not count as an increase, and existing snapshot debt remains sticky until the
+binder regenerates its record.
+
+The workspace-governance manifest's mandatory `governance-quality` check was
+also unbound after the Driftwatchdog catch-all landed. The binder derived and
+applied `python3 ../workspace-governance/scripts/workspace_check.py --root ..
+--project workspace-governance --json`; the local checker and auto-gate then
+passed without errors or warnings.
+
+Verification: 44 focused debt-precondition tests passed; the complete suite ran
+847 tests, 0 failures, 1 skipped. Strict OpenSpec validation passed 13/13;
+workspace self-check and auto-gate passed with 0 errors and 0 warnings; change
+names and `git diff --check` passed. The live-clean/live-unbound integration
+fixture confirms the next new change fails and names `late-check`. The change
+remains active and is not archived.
 
 ## Current package: new-project gate binding
 
@@ -54,9 +78,10 @@ does not provide it. Python dependency audits could not upgrade pip because
 the index/network failed, so the existing `pip-audit` declarations remain bound
 but runtime audit success is unverified.
 
-The next independent change is a live debt ratchet that compares current gate
-state to the recorded state. It requires its own OpenSpec package before
-implementation.
+The debt driver still records five unresolved checks in three repositories;
+two are owner decisions, two are withheld because HestiaLab's manifest is
+dirty, and one lacks Jenkins-local package metadata. Do not fabricate bindings
+or edit those repositories to force a zero count.
 Commit 1: `af095e8` (`feat(governance): drive legacy gate debt repairs`). Commit 2 records this handoff update. The change remains unarchived; archiving needs separate authorization.
 
 **A cross-cutting shared capability is now declarable in every profile.**

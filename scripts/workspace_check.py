@@ -3075,6 +3075,94 @@ def validate_change_names(project_path: Path, findings: list[Finding], project_i
             finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {name}", project_id)
 
 
+def live_unbound_gate_checks(project_path: Path) -> tuple[tuple[str, ...] | None, str | None]:
+    """Read current unbound concerns with the binder's required-check rules.
+
+    This reads manifest declarations only: it does not derive or run commands,
+    write the manifest, or update the workspace debt snapshot.
+    """
+    manifest_path = project_path / ".ai-gate" / "gate.yaml"
+    try:
+        text = manifest_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, f"cannot read {manifest_path.relative_to(project_path)}: {exc}"
+
+    try:
+        from bind_gate_commands import (
+            PROFILE_DEFAULTS,
+            block_entries,
+            gate_required,
+            read_gate_policy,
+            read_manifest,
+            top_level_block_bounds,
+            unquote_scalar,
+        )
+
+        selected, commands, problem = read_manifest(text)
+        if problem:
+            return None, problem
+        policy = read_gate_policy(text)
+        if policy.profile not in PROFILE_DEFAULTS:
+            return None, f"unsupported gate profile {policy.profile!r}"
+        lines = text.splitlines()
+        for top_level_key in ("profile", "checks", "commands", "not_applicable"):
+            if sum(line.startswith(f"{top_level_key}:") for line in lines) > 1:
+                return None, f"duplicate top-level `{top_level_key}:` declaration"
+        for block_name in ("checks", "commands", "not_applicable"):
+            bounds = top_level_block_bounds(lines, block_name)
+            if bounds is None:
+                continue
+            start, end = bounds
+            for line in lines[start + 1:end]:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if (
+                    not line.startswith("  ")
+                    or line.startswith("   ")
+                    or stripped.startswith("-")
+                    or ":" not in stripped
+                ):
+                    return None, f"malformed `{block_name}:` mapping entry: {stripped!r}"
+                key, value = stripped.split(":", 1)
+                if not key or key != key.strip() or not value.strip():
+                    return None, f"malformed `{block_name}:` mapping entry: {stripped!r}"
+            entries = block_entries(lines, block_name)
+            names = [name for name, _value in entries]
+            if len(names) != len(set(names)):
+                return None, f"duplicate entry in `{block_name}:` mapping"
+            if block_name == "checks" and any(
+                value not in {"true", "false", "optional"}
+                for _name, value in entries
+            ):
+                return None, "invalid value in `checks:` mapping"
+            if block_name == "not_applicable" and any(
+                not unquote_scalar(value).strip() or value.lstrip().startswith("#")
+                for _name, value in entries
+            ):
+                return None, "empty reason in `not_applicable:` mapping"
+        if top_level_block_bounds(lines, "checks") is None:
+            # Inline empty checks are valid; every other absent checks block
+            # is rejected by read_manifest above.
+            if not any(line.strip() == "checks: {}" for line in lines):
+                return None, "missing `checks:` mapping"
+        required = gate_required(selected, policy)
+
+        def has_command(concern: str) -> bool:
+            raw = commands.get(concern, "").strip()
+            value = unquote_scalar(raw).strip()
+            if not raw or raw.startswith("#") or not value:
+                return False
+            if raw[0] not in {"'", '"'} and value.lower() in {"null", "~"}:
+                return False
+            return True
+
+        unbound = tuple(sorted(concern for concern in required if not has_command(concern)))
+        return unbound, None
+    except Exception as exc:  # noqa: BLE001 - unresolved policy must fail closed
+        return None, f"cannot resolve the gate manifest: {exc}"
+
+
 def validate_new_change_with_gate_debt(
     project_path: Path,
     findings: list[Finding],
@@ -3090,11 +3178,10 @@ def validate_new_change_with_gate_debt(
     `UNBOUND`. The record says so; nothing acted on it, so the debt sits still
     while the next feature starts on top of it. This rule is the acting.
 
-    Both halves are read rather than recomputed. The unbound half comes from
-    `gate-debt.json`, which `GateOracleTest` pins set-equal to the gate's own
-    unbound set, so a repository absent from it has no debt and is not
-    reported. The new-work half comes from `unarchived_changes`, the same walk
-    `validate_change_names` uses.
+    The record remains the source for already-known debt. For a repository
+    with active work, the current manifest is also read through the binder's
+    required-check parser; an unbound concern missing from the snapshot is a
+    live increase and blocks the new change immediately.
 
     Three ways to *not* be new work, and the second is what keeps the rule a
     ratchet rather than a deadlock:
@@ -3120,8 +3207,15 @@ def validate_new_change_with_gate_debt(
     if not changes or debt is None:
         return
 
-    concerns = debt.get(project_id)
-    if not concerns:
+    recorded = debt.get(project_id, ())
+    current, current_error = live_unbound_gate_checks(project_path)
+    increased = (
+        tuple(sorted(set(current or ()) - set(recorded)))
+        if current_error is None
+        else ()
+    )
+    concerns = tuple(dict.fromkeys((*recorded, *increased)))
+    if not concerns and current_error is None:
         return
 
     closing = ", ".join(sorted(GATE_DEBT_CLOSING_CHANGES))
@@ -3139,6 +3233,26 @@ def validate_new_change_with_gate_debt(
                 QUALITY_NEW_CHANGE_WITH_GATE_DEBT,
                 f"opens change {change!r} while required check(s) {unbound} are unbound; "
                 f"satisfied by a recorded exception in {GATE_DEBT_EXCEPTIONS_FILE}: {reason}",
+                project_id,
+            )
+            continue
+        if current_error is not None:
+            finding(
+                findings,
+                QUALITY_NEW_CHANGE_WITH_GATE_DEBT_LEVEL,
+                QUALITY_NEW_CHANGE_WITH_GATE_DEBT,
+                f"opens change {change!r} but the checker could not establish live gate state: {current_error}; "
+                f"resolve the manifest before starting new work",
+                project_id,
+            )
+            continue
+        if increased:
+            finding(
+                findings,
+                QUALITY_NEW_CHANGE_WITH_GATE_DEBT_LEVEL,
+                QUALITY_NEW_CHANGE_WITH_GATE_DEBT,
+                f"opens change {change!r} while live required check(s) {', '.join(increased)} are unbound "
+                f"and absent from gate-debt.json; bind them and regenerate the debt snapshot before starting new work",
                 project_id,
             )
             continue
