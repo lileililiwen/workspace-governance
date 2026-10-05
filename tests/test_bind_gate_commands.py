@@ -53,6 +53,7 @@ from bind_gate_commands import (  # noqa: E402
     build_debt,
     derive,
     derive_quality_block,
+    debt_concerns,
     detect_shape,
     format_detail,
     gate_required,
@@ -104,8 +105,7 @@ blocking:
 # The exact reason the tool gives for a pure-Python `build`. Quoted rather
 # than re-derived, so a change in the wording is a visible test diff.
 PURE_PYTHON_BUILD = (
-    "a pure-Python package has no build step; a packaging build is an owner "
-    "decision, not a derivation"
+    "pyproject.toml does not declare a [build-system] table"
 )
 
 UNITTEST_RUNNER = "python3 -m unittest discover -s tests -v"
@@ -314,6 +314,46 @@ class DetectionTests(RepoCase):
 
 
 class DerivationTests(RepoCase):
+    def test_a_python_build_requires_backend_and_declared_build_frontend(self):
+        self.write(
+            "pyproject.toml",
+            "[build-system]\nrequires = ['setuptools']\nbuild-backend = 'setuptools.build_meta'\n"
+            "\n[project]\nname = 'p'\n",
+        )
+        self.write("requirements-dev.txt", "build>=1\n")
+        self.assertEqual(self.bound_command("build"), "python -m build")
+
+    def test_a_python_build_backend_without_frontend_stays_unresolved(self):
+        self.write(
+            "pyproject.toml",
+            "[build-system]\nrequires = ['setuptools']\nbuild-backend = 'setuptools.build_meta'\n"
+            "\n[project]\nname = 'p'\n",
+        )
+        got = self.concern(self.bind(), "build")
+        self.assertEqual(got.status, UNRESOLVED)
+        self.assertIn("frontend is not declared", got.reason)
+
+    def test_python_build_requires_distribution_metadata(self):
+        self.write(
+            "pyproject.toml",
+            "[build-system]\nrequires = ['setuptools']\nbuild-backend = 'setuptools.build_meta'\n"
+            "\n[tool.ruff]\nexclude = ['build']\n",
+        )
+        self.write("requirements-dev.txt", "build>=1\n")
+        got = self.concern(self.bind(), "build")
+        self.assertEqual(got.status, UNRESOLVED)
+        self.assertIn("distribution metadata", got.reason)
+
+    def test_a_build_word_in_tool_configuration_is_not_a_frontend_dependency(self):
+        self.write(
+            "pyproject.toml",
+            "[build-system]\nrequires = ['hatchling']\nbuild-backend = 'hatchling.build'\n"
+            "\n[project]\nname = 'p'\n\n[tool.ruff]\nexclude = ['build']\n",
+        )
+        got = self.concern(self.bind(), "build")
+        self.assertEqual(got.status, UNRESOLVED)
+        self.assertIn("frontend is not declared", got.reason)
+
     def test_a_sln_yields_a_dotnet_build_naming_the_solution(self):
         self.write("App.sln", A_SOLUTION)
         self.write("App/App.csproj", A_CSPROJ)
@@ -1213,6 +1253,19 @@ class DebtRecordTests(GitRepoCase):
             len(report.unresolved()),
         )
         self.assertEqual(debt["totals"]["unresolved_checks"], len(report.unresolved()))
+
+    def test_dirty_manifest_debt_includes_commands_that_cannot_be_written(self):
+        root = self.workspace()
+        manifest = root / "argoset" / ".ai-gate" / "gate.yaml"
+        manifest.write_text(manifest.read_text(encoding="utf-8") + "# owner edit in flight\n", encoding="utf-8")
+        report = run(root, apply=False)
+        debt = build_debt(report, root)
+        recorded = {
+            (item["repo"], gap["concern"])
+            for item in debt["repositories"]
+            for gap in item["unresolved"]
+        }
+        self.assertTrue({("argoset", "build"), ("argoset", "tests")} <= recorded)
 
     def test_the_debt_record_is_sorted_everywhere(self):
         root = self.workspace()
@@ -2132,8 +2185,7 @@ class GateOracleTest(unittest.TestCase):
         produced = {
             (outcome.repo, concern.concern)
             for outcome in report.outcomes
-            for concern in outcome.concerns
-            if concern.status == UNRESOLVED
+            for concern in debt_concerns(outcome)
         }
         self.assertEqual(
             sorted(produced - self.unbound),

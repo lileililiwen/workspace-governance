@@ -2,91 +2,10 @@
   "generator": "scripts/bind_gate_commands.py",
   "note": "Every check listed here is one the gate would report as UNBOUND: a check this repository's .ai-gate/gate.yaml selects under `checks:`, or one its `profile:` schedules by default, with no command bound under `commands:`. The gate reports UNBOUND for these and fails the project. A wrong command is worse than a listed gap: resolve these by hand, then re-run the generator.",
   "totals": {
-    "repositories_with_debt": 12,
-    "unresolved_checks": 24
+    "repositories_with_debt": 3,
+    "unresolved_checks": 5
   },
   "by_reason": [
-    {
-      "reason": "2 .csproj files and no solution",
-      "checks": 4,
-      "repositories": [
-        "aegify",
-        "hestiaLab"
-      ],
-      "entries": [
-        "aegify:build",
-        "aegify:security",
-        "hestiaLab:build",
-        "hestiaLab:security"
-      ]
-    },
-    {
-      "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run",
-      "checks": 4,
-      "repositories": [
-        "actoria",
-        "citylens",
-        "mewo",
-        "trailCrew"
-      ],
-      "entries": [
-        "actoria:accessibility",
-        "citylens:accessibility",
-        "mewo:accessibility",
-        "trailCrew:accessibility"
-      ]
-    },
-    {
-      "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation",
-      "checks": 3,
-      "repositories": [
-        "alethefy",
-        "ariadex",
-        "jenkins-local"
-      ],
-      "entries": [
-        "alethefy:build",
-        "ariadex:build",
-        "jenkins-local:build"
-      ]
-    },
-    {
-      "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run",
-      "checks": 3,
-      "repositories": [
-        "actoria",
-        "mewo",
-        "trailCrew"
-      ],
-      "entries": [
-        "actoria:privacy",
-        "mewo:privacy",
-        "trailCrew:privacy"
-      ]
-    },
-    {
-      "reason": "4 .csproj files and no solution",
-      "checks": 2,
-      "repositories": [
-        "smotoox"
-      ],
-      "entries": [
-        "smotoox:build",
-        "smotoox:security"
-      ]
-    },
-    {
-      "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library",
-      "checks": 2,
-      "repositories": [
-        "jenkins-local",
-        "platform-contracts"
-      ],
-      "entries": [
-        "jenkins-local:security",
-        "platform-contracts:security"
-      ]
-    },
     {
       "reason": "2 equally plausible entry points: cd .opencode && npm audit --audit-level=high (.opencode/package.json has no security script, so this is the npm dependency audit); cd npm && npm audit --audit-level=high (npm/package.json has no security script, so this is the npm dependency audit)",
       "checks": 1,
@@ -98,13 +17,23 @@
       ]
     },
     {
-      "reason": "2 test projects and no solution (tests/BuDing.Api.Tests/BuDing.Api.Tests.csproj, tests/BuDing.Landing.Tests/BuDing.Landing.Tests.csproj)",
+      "reason": "gate manifest is dirty; binding remains unbound: dotnet build App.slnx",
       "checks": 1,
       "repositories": [
-        "smotoox"
+        "hestiaLab"
       ],
       "entries": [
-        "smotoox:tests"
+        "hestiaLab:build"
+      ]
+    },
+    {
+      "reason": "gate manifest is dirty; binding remains unbound: dotnet list App.slnx package --vulnerable --include-transitive --no-restore",
+      "checks": 1,
+      "repositories": [
+        "hestiaLab"
+      ],
+      "entries": [
+        "hestiaLab:security"
       ]
     },
     {
@@ -118,120 +47,30 @@
       ]
     },
     {
-      "reason": "no rule derives a fixtures command and this repository has no scripts/check-fixtures.* to run",
+      "reason": "no readable pyproject.toml declares a Python build backend",
       "checks": 1,
       "repositories": [
-        "platform-contracts"
+        "jenkins-local"
       ],
       "entries": [
-        "platform-contracts:fixtures"
-      ]
-    },
-    {
-      "reason": "no rule derives a provenance command and this repository has no scripts/check-provenance.* to run",
-      "checks": 1,
-      "repositories": [
-        "citylens"
-      ],
-      "entries": [
-        "citylens:provenance"
-      ]
-    },
-    {
-      "reason": "no rule derives a schemas command and this repository has no scripts/check-schemas.* to run",
-      "checks": 1,
-      "repositories": [
-        "platform-contracts"
-      ],
-      "entries": [
-        "platform-contracts:schemas"
+        "jenkins-local:build"
       ]
     }
   ],
   "repositories": [
-    {
-      "repo": "actoria",
-      "shape": "node",
-      "unresolved": [
-        {
-          "concern": "accessibility",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
-        },
-        {
-          "concern": "privacy",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run"
-        }
-      ]
-    },
-    {
-      "repo": "aegify",
-      "shape": "dotnet",
-      "unresolved": [
-        {
-          "concern": "build",
-          "status": "UNRESOLVED",
-          "reason": "2 .csproj files and no solution"
-        },
-        {
-          "concern": "security",
-          "status": "UNRESOLVED",
-          "reason": "2 .csproj files and no solution"
-        }
-      ]
-    },
-    {
-      "repo": "alethefy",
-      "shape": "python",
-      "unresolved": [
-        {
-          "concern": "build",
-          "status": "UNRESOLVED",
-          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
-        }
-      ]
-    },
-    {
-      "repo": "ariadex",
-      "shape": "python",
-      "unresolved": [
-        {
-          "concern": "build",
-          "status": "UNRESOLVED",
-          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
-        }
-      ]
-    },
-    {
-      "repo": "citylens",
-      "shape": "dotnet",
-      "unresolved": [
-        {
-          "concern": "accessibility",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
-        },
-        {
-          "concern": "provenance",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a provenance command and this repository has no scripts/check-provenance.* to run"
-        }
-      ]
-    },
     {
       "repo": "hestiaLab",
       "shape": "dotnet",
       "unresolved": [
         {
           "concern": "build",
-          "status": "UNRESOLVED",
-          "reason": "2 .csproj files and no solution"
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: dotnet build App.slnx"
         },
         {
           "concern": "security",
-          "status": "UNRESOLVED",
-          "reason": "2 .csproj files and no solution"
+          "status": "BOUND",
+          "reason": "gate manifest is dirty; binding remains unbound: dotnet list App.slnx package --vulnerable --include-transitive --no-restore"
         }
       ]
     },
@@ -242,49 +81,7 @@
         {
           "concern": "build",
           "status": "UNRESOLVED",
-          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
-        },
-        {
-          "concern": "security",
-          "status": "UNRESOLVED",
-          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
-        }
-      ]
-    },
-    {
-      "repo": "mewo",
-      "shape": "dotnet",
-      "unresolved": [
-        {
-          "concern": "accessibility",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
-        },
-        {
-          "concern": "privacy",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run"
-        }
-      ]
-    },
-    {
-      "repo": "platform-contracts",
-      "shape": "python",
-      "unresolved": [
-        {
-          "concern": "fixtures",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a fixtures command and this repository has no scripts/check-fixtures.* to run"
-        },
-        {
-          "concern": "schemas",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a schemas command and this repository has no scripts/check-schemas.* to run"
-        },
-        {
-          "concern": "security",
-          "status": "UNRESOLVED",
-          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
+          "reason": "no readable pyproject.toml declares a Python build backend"
         }
       ]
     },
@@ -301,43 +98,6 @@
           "concern": "security",
           "status": "UNRESOLVED",
           "reason": "2 equally plausible entry points: cd .opencode && npm audit --audit-level=high (.opencode/package.json has no security script, so this is the npm dependency audit); cd npm && npm audit --audit-level=high (npm/package.json has no security script, so this is the npm dependency audit)"
-        }
-      ]
-    },
-    {
-      "repo": "smotoox",
-      "shape": "dotnet",
-      "unresolved": [
-        {
-          "concern": "build",
-          "status": "UNRESOLVED",
-          "reason": "4 .csproj files and no solution"
-        },
-        {
-          "concern": "security",
-          "status": "UNRESOLVED",
-          "reason": "4 .csproj files and no solution"
-        },
-        {
-          "concern": "tests",
-          "status": "UNRESOLVED",
-          "reason": "2 test projects and no solution (tests/BuDing.Api.Tests/BuDing.Api.Tests.csproj, tests/BuDing.Landing.Tests/BuDing.Landing.Tests.csproj)"
-        }
-      ]
-    },
-    {
-      "repo": "trailCrew",
-      "shape": "rust",
-      "unresolved": [
-        {
-          "concern": "accessibility",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run"
-        },
-        {
-          "concern": "privacy",
-          "status": "UNRESOLVED",
-          "reason": "no rule derives a privacy command and this repository has no scripts/check-privacy.* to run"
         }
       ]
     }

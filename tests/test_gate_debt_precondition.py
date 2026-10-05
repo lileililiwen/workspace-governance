@@ -414,6 +414,12 @@ class RunCase(unittest.TestCase):
             shutil.copytree(child, target) if child.is_dir() else shutil.copy2(child, target)
         for name in ("vocabulary.json", "capabilities.json", "rules-drift-baseline.json", "gate-debt.json"):
             shutil.copy2(REPO_ROOT / name, self.gov / name)
+        # This unit suite owns its debt fixture. Do not let a refreshed live
+        # fleet snapshot silently change the behavior under test.
+        (self.gov / "gate-debt.json").write_text(
+            json.dumps(debt_record({"actoria": ["accessibility", "privacy"]}), indent=2),
+            encoding="utf-8",
+        )
         shutil.copytree(REPO_ROOT / "profiles", self.gov / "profiles")
         shutil.copy2(REPO_ROOT / GATE_DEBT_EXCEPTIONS_FILE, self.gov / GATE_DEBT_EXCEPTIONS_FILE)
         (self.gov / GATE_DEBT_BASELINE_FILE).write_text(
@@ -583,7 +589,37 @@ class GateAcceptanceTests(unittest.TestCase):
                 "to prove the concern accepts the new code"
             )
         cls._tmp = tempfile.TemporaryDirectory()
-        cls.workspace = Path(cls._tmp.name)
+        root = Path(cls._tmp.name)
+        cls.gov = root / "governance"
+        (cls.gov / "scripts").mkdir(parents=True)
+        for child in (REPO_ROOT / "scripts").iterdir():
+            if child.name == "__pycache__":
+                continue
+            target = cls.gov / "scripts" / child.name
+            shutil.copytree(child, target) if child.is_dir() else shutil.copy2(child, target)
+        for name in (
+            "vocabulary.json", "capabilities.json", "rules-drift-baseline.json",
+            "gate-debt.json", GATE_DEBT_BASELINE_FILE, GATE_DEBT_EXCEPTIONS_FILE,
+        ):
+            shutil.copy2(REPO_ROOT / name, cls.gov / name)
+        (cls.gov / "gate-debt.json").write_text(
+            json.dumps(debt_record({"actoria": ["accessibility", "privacy"]}), indent=2),
+            encoding="utf-8",
+        )
+        (cls.gov / GATE_DEBT_BASELINE_FILE).write_text(
+            json.dumps({"schema_version": 1, "generator": "tests", "findings": [
+                {"project": "actoria", "change": "post-mvp-readiness"}
+            ]}),
+            encoding="utf-8",
+        )
+        shutil.copytree(REPO_ROOT / "profiles", cls.gov / "profiles")
+        registry = json.loads((REPO_ROOT / "projects.json").read_text(encoding="utf-8"))
+        registry["projects"] = [{
+            "id": "actoria", "path": "actoria", "profile": "inventory",
+            "lifecycle": "inventory", "adoption": "adopted",
+        }]
+        (cls.gov / "projects.json").write_text(json.dumps(registry, indent=2), encoding="utf-8")
+        cls.workspace = root / "workspace"
         cls.repo = cls.workspace / "actoria"
         # `post-mvp-readiness` is the grandfathered pair, `close-unbound-gate-checks`
         # is exempt, and `billing-seam` is new work: exactly one trigger.
@@ -615,7 +651,7 @@ class GateAcceptanceTests(unittest.TestCase):
             "blocking:\n"
             "  - FAIL\n"
             "commands:\n"
-            f"  governance-quality: 'python3 {REPO_ROOT / 'scripts' / 'workspace_check.py'} "
+            f"  governance-quality: 'python3 {cls.gov / 'scripts' / 'workspace_check.py'} "
             f"--root {cls.workspace} --project actoria --json'\n",
             encoding="utf-8",
         )
@@ -639,7 +675,7 @@ class GateAcceptanceTests(unittest.TestCase):
         # Without this, the gate test below could pass for the wrong reason: a
         # clean fixture would also produce a PASS.
         completed = subprocess.run(
-            [sys.executable, str(REPO_ROOT / "scripts" / "workspace_check.py"),
+            [sys.executable, str(self.gov / "scripts" / "workspace_check.py"),
              "--root", str(self.workspace), "--project", "actoria", "--json"],
             capture_output=True, text=True, timeout=300, check=False,
         )

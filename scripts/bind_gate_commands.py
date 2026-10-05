@@ -141,6 +141,7 @@ import json
 import os
 import re
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -896,6 +897,64 @@ def python_candidates(repo: Path, shape: Shape, concern: str) -> tuple[list[Cand
     return candidates, ""
 
 
+def python_build_available(repo: Path) -> tuple[bool, str]:
+    """Return whether Python packaging metadata and the build frontend exist.
+
+    A backend alone is not an executable command: `python -m build` is
+    provided by the separate `build` frontend. Require both declarations so
+    the binder does not turn an unbound concern into a predictable missing
+    module failure.
+    """
+    pyproject = repo / "pyproject.toml"
+    try:
+        metadata = pyproject.read_text(encoding="utf-8")
+    except OSError:
+        return False, "no readable pyproject.toml declares a Python build backend"
+    try:
+        document = tomllib.loads(metadata)
+    except tomllib.TOMLDecodeError as exc:
+        return False, f"pyproject.toml is invalid TOML: {exc}"
+    if not isinstance(document.get("project"), dict):
+        return False, "pyproject.toml does not declare [project] distribution metadata"
+    if not isinstance(document.get("build-system"), dict):
+        return False, "pyproject.toml does not declare a [build-system] table"
+
+    declared: list[str] = []
+    project = document.get("project")
+    if isinstance(project, dict):
+        if isinstance(project.get("dependencies"), list):
+            declared.extend(project["dependencies"])
+        optional = project.get("optional-dependencies")
+        if isinstance(optional, dict):
+            for dependencies in optional.values():
+                if isinstance(dependencies, list):
+                    declared.extend(dependencies)
+    groups = document.get("dependency-groups")
+    if isinstance(groups, dict):
+        for dependencies in groups.values():
+            if isinstance(dependencies, list):
+                declared.extend(dependencies)
+    if any(
+        isinstance(value, str)
+        and re.match(r"(?i)^\s*build(?:\[[^]]+\])?\s*(?:$|[<=>!~;])", value)
+        for value in declared
+    ):
+        return True, "pyproject.toml declares a build backend and the `build` frontend"
+    for name in DEPENDENCY_FILES:
+        path = repo / name
+        if not path.is_file():
+            continue
+        try:
+            body = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for line in body.splitlines():
+            requirement = line.split("#", 1)[0].strip()
+            if re.match(r"(?i)^build(?:\[[^]]+\])?\s*(?:$|[<=>!~;])", requirement):
+                return True, "pyproject.toml declares a build backend and a requirements file declares `build`"
+    return False, "the build-system exists but the `build` frontend is not declared"
+
+
 def flutter_candidates(shape: Shape, concern: str) -> list[Candidate]:
     candidates = []
     for manifest in shape.pubspecs:
@@ -1409,12 +1468,10 @@ def derive(concern: str, shape: Shape, repo: Path) -> tuple[str, str, str]:
     )
 
     if concern == "build" and only_python:
-        return (
-            "",
-            "",
-            "a pure-Python package has no build step; a packaging build is an owner "
-            "decision, not a derivation",
-        )
+        available, evidence = python_build_available(repo)
+        if available:
+            return "python -m build", evidence, ""
+        return "", "", evidence
     if concern == "build" and shape.pubspecs and not (has_dotnet or shape.crates or shape.node_manifests):
         return (
             "",
@@ -1526,6 +1583,29 @@ class Outcome:
     shape: str = ""
 
 
+def debt_concerns(outcome: Outcome) -> list[ConcernOutcome]:
+    """Return actual debt, including writes intentionally blocked by dirty state.
+
+    A `BOUND` concern in a clean dry-run is a proposed command, but a `BOUND`
+    concern in a DIRTY repository remains unbound on disk: the write guard
+    refused it. Record that live gate state so the snapshot cannot silently
+    drop a project merely because its manifest has unrelated work in flight.
+    """
+    dirty_bindings = [
+        concern
+        for concern in outcome.concerns
+        if outcome.status == DIRTY and concern.status == BOUND
+    ]
+    for concern in dirty_bindings:
+        concern.reason = f"gate manifest is dirty; binding remains unbound: {concern.command}"
+    return [
+        concern
+        for concern in outcome.concerns
+        if concern.status in NOT_RESOLVED
+        or concern in dirty_bindings
+    ]
+
+
 @dataclass
 class Report:
     """The whole run, in a form a caller can assert on and a human can read."""
@@ -1542,7 +1622,7 @@ class Report:
         return [o.repo for o in self.outcomes if o.status == status]
 
     def unresolved(self) -> list[ConcernOutcome]:
-        return [c for o in self.outcomes for c in o.concerns if c.status in NOT_RESOLVED]
+        return [c for outcome in self.outcomes for c in debt_concerns(outcome)]
 
     def debt_total(self) -> int:
         return len(self.unresolved())
@@ -1736,7 +1816,7 @@ def build_debt(report: Report, root: Path) -> dict:
     repositories = []
     by_reason: dict[str, list[str]] = {}
     for outcome in sorted(report.outcomes, key=lambda o: o.repo):
-        gaps = [c for c in outcome.concerns if c.status in NOT_RESOLVED]
+        gaps = debt_concerns(outcome)
         if not gaps:
             continue
         repositories.append(

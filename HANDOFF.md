@@ -2,7 +2,41 @@
 
 ## Current state
 
-current_spec: admit-cross-cutting-capabilities
+current_spec: drive-legacy-gate-debt-to-zero
+
+**Legacy debt repair is implemented and verified, but not archived.** The
+original 24-entry snapshot classified A=10, B=7, C=3, D=2, E=1, F=1 with no
+unknown reasons. The driver and binder fixes now verify both `.sln` and `.slnx`
+project membership, derive Python builds only from `[project]`, `[build-system]`
+and an explicit `build` frontend, and preserve debt when a dirty manifest
+blocks a write. The current measured debt record has 5 checks in 3 repositories:
+`jenkins-local/build` (no package metadata), `sisyphusfy/build` and
+`sisyphusfy/security` (owner decisions), and `hestiaLab/build` plus
+`hestiaLab/security` (manifest is dirty; derived commands remain unbound).
+
+Verification: `python3 -m unittest discover -s tests -q` ran 838 tests, all
+passed; `openspec validate --changes --strict` passed 11/11; workspace
+self-check passed with 0 errors and 0 warnings; auto-gate passed; OpenSpec
+change names and `git diff --check` passed. The three existing solution files
+contain all projects: aegify 2/2, hestiaLab 2/2, smotoox 4/4.
+
+Live checker results: Mewo accessibility fails at
+`apps/mewo_mobile/web/index.html:1` because `<html>` has no `lang`; Actoria and
+trailCrew provenance fail because there is no `THIRD-PARTY-NOTICES`; sampled
+privacy checkers pass; platform-contracts fixtures and schemas pass. No product
+documentation was edited to suppress findings. Alethefy produced an sdist and
+wheel successfully with `uv run --with build python -m build` (artifacts were
+written under `/tmp`). Its exact gate command assumes the Python build frontend
+is installed in the gate execution environment; the host's system `python3`
+does not provide it. Python dependency audits could not upgrade pip because
+the index/network failed, so the existing `pip-audit` declarations remain bound
+but runtime audit success is unverified.
+
+Next independent changes remain: mandatory `governance-quality` scheduling for
+every profile in Driftwatchdog; new-project scaffold profile validation and
+binder execution; and a live debt ratchet that compares current gate state to
+the recorded state. Each needs its own OpenSpec package in its owning project.
+Do not archive this change without authorization.
 
 **A cross-cutting shared capability is now declarable in every profile.**
 `capability-adoption-gate` measures adoption as a three-way join and expects a
