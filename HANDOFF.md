@@ -1165,3 +1165,62 @@ The `748 passed, 0 failed` figure quoted above was true when it was measured.
   resolve. A README finding for that repository's owner, surfaced only now
   because the block made the check run.
 - The change is **not archived**. Archiving needs separate authorization.
+
+## A new change now waits on the gate debt
+
+`QUALITY_NEW_CHANGE_WITH_GATE_DEBT` is a new `ERROR` in
+`scripts/workspace_check.py`: a repository listed in `gate-debt.json` that opens
+an OpenSpec change which is neither `close-unbound-gate-checks` nor already
+recorded in `gate-debt-baseline.json`. It has no fence, because a precondition
+is *supposed* to be red while debt is open, and it is fail-closed: all three
+records — the debt, the ratchet, the exceptions — are refused rather than
+defaulted when missing, corrupt or mistyped.
+
+**It is a ratchet, not a latch, and that took one correction.** The first cut
+keyed on "has any unarchived change" and failed all 22 debted repositories on
+arrival, `workspace-governance` included on its own `--self-check`. That is a
+deadlock: an open change can only be closed by finishing it, so the rule forbade
+the only action that could satisfy it. The trigger is now *new* work, and the
+work that predates the rule is recorded once —
+`scripts/gate_debt_baseline.py` generated **39 pairs across 22 repositories**
+into `gate-debt-baseline.json` from the repositories' own directories. That is a
+committed list a reviewer reads, not a switch: no environment variable, no flag.
+And a stale entry is dead weight rather than a live hole, because a repository
+that discharges its debt leaves `gate-debt.json` and is never consulted again.
+
+The exit is a second committed record, `gate-debt-exceptions.json`:
+`(project, change, reason)`, in the shape of `rules-drift-baseline.json`. A
+satisfied pair is reported at `WARNING` with its reason quoted, so a deliberate
+decision stays visible in the run instead of becoming an invisible pass.
+
+**The code was declared in `driftwatchdog` in the same change, after the false
+green was reproduced rather than assumed.** On a fixture, before the
+declaration:
+
+```
+governance-quality -> PASS   "0 of 93 governance findings matched this concern's scope"
+```
+
+— a checker that emitted the finding and exited 1, behind a green gate. After
+adding it to `GOVERNANCE_QUALITY_DECLARED_CODES` and rebuilding:
+
+```
+governance-quality -> FAIL   "1 of 93"   rule QUALITY_NEW_CHANGE_WITH_GATE_DEBT
+gate status FAIL, blocked: true, exit 1
+```
+
+Measured: `python3 -m unittest discover -s tests` **Ran 800 tests, OK**;
+`pytest -q` **800 passed, 175 subtests**; `driftwatchdog` **909 passed, 0
+failed** (908 before, +1 new test); `--self-check` **0 errors / 0 warnings**,
+exit 0; the fleet audit is **279 errors / 20 warnings, none of them this rule's**.
+The negative control is a test, not a claim: weakening the trigger to
+grandfather every change turns 9 of the 36 new tests red, including the gate
+acceptance, and restoring it turns them green.
+
+The pre-existing failure this session started with,
+`test_the_gate_is_open_and_the_fleet_corpus_is_clean`, was fixed by the owner's
+concurrent commits `f192771` and `57dd605`, not here. Nothing in this change
+narrows what that test checks. `openspec validate --changes --strict`: 8 passed,
+1 failed — `bind-declared-verification`, an untracked directory from an earlier
+session that has no `specs/` deltas. Not this change's, not fixed here. The
+change is **not archived**; archiving needs separate authorization.
