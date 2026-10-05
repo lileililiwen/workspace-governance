@@ -2,10 +2,58 @@
 
 ## Current state
 
-current_spec: derive-composite-gate-command
+current_spec: anchor-typescript-test-code-match
 
-**A polyglot repository no longer gets refused for having two halves.** 24
-required checks across 11 repositories were unbound for one reason: the binder
+**The TypeScript test-code rule was matching a name and ignoring the
+qualifier.** Measured against the real repositories: **15 findings in 4
+repositories, and every one was a false positive.**
+
+| Repository | Findings | What they actually were |
+|---|---|---|
+| `argoset` | 2 | a regex literal; a doc comment naming a `*.test.ts` file |
+| `crossify` | 1 | `/attestation/i.test(err.message)` |
+| `fotofy` | 6 | regex literals matched against a user-agent string |
+| `transitfy` | 6 | compiled-regex `.test()`, a scheme regex, a whitespace regex |
+
+A rule that reports 15 false positives and no true ones is not protecting
+anything; it is only making four repositories red.
+
+The information needed to be correct was in the line and was discarded. The
+discriminator is the character before the name:
+
+| Line | Before the name | What it is |
+|---|---|---|
+| `test('x', ...)` | start, or whitespace | the framework global |
+| `/re/.test(v)` | `.` | a regular expression |
+| `PATTERN.test(v)` | `.` | a compiled `RegExp` |
+| `"s".test(v)` | `.` | a `String` method |
+| `contest(1)` | a word character | a different identifier entirely |
+
+So the match now rejects a preceding dot or word character, and strips member
+calls *before* the final decision — which is what makes a line carrying both a
+member call and a bare call still report, because the bare call is the test. A
+comment line is excluded before matching: a comment cannot call anything, and
+the remediation this rule exists to give makes no sense for prose.
+
+| Measurement | Before | After |
+|---|---|---|
+| `product-test-code` in the 4 repositories | 15 | **0** |
+| `product-test-code` fleet-wide | 15 | **1** |
+| `unittest discover -s tests` | 813 passed | **813 passed, 0 failed** |
+
+The one remaining finding is a genuine `#[test]` in `alltools-platform`'s Rust
+source — not a TypeScript artefact, and not fixed here.
+
+**No exclude list. No filename list. No language turned off. No threshold.** The
+same approach the Rust module-tree fix used, and the same refusal: an exclude
+list encodes today's false positives and silently accepts tomorrow's. The
+negative control is what keeps the rule alive — if the qualifier anchor were
+dropped to silence these, `test_a_bare_global_call_is_still_reported` goes red
+instead of the rule dying quietly.
+
+### A polyglot repository no longer gets refused for having two halves
+
+24 required checks across 11 repositories were unbound for one reason: the binder
 found two equally plausible entry points and, having only two answers — bind
 one, or refuse — refused. The rule behind that is sound (*a wrong command is
 worse than a listed gap*) and it stays. What changed is that there is now a
