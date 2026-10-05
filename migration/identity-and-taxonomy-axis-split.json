@@ -533,9 +533,9 @@
       "declaration": "lileililiwen.github.io/.project.json",
       "declared_kind": "product",
       "role": "deployment",
-      "stack": "python",
-      "rule": "§5.2 rule 4: 4 — decided, §10 ruling 4; census: 12 `.py`",
-      "source": "design.md §5.2 rule 4: 4 — decided, §10 ruling 4; census: 12 `.py`"
+      "stack": "none",
+      "rule": "§5.2 rule 4: 4 — decided, §10 rulings 4 and 9; the census counts build-time validators, not shipped code, so `stack` is `none`",
+      "source": "design.md §5.2 rule 4: 4 — decided, §10 rulings 4 and 9; the census counts build-time validators, not shipped code, so `stack` is `none`"
     },
     {
       "directory": "linglitch",
@@ -1403,9 +1403,9 @@
       "path": "lileililiwen.github.io",
       "action": "axes",
       "role": "deployment",
-      "stack": "python",
-      "rule": "§5.2 rule 4: 4 — decided, §10 ruling 4; census: 12 `.py`",
-      "source": "design.md §5.2 rule 4: 4 — decided, §10 ruling 4; census: 12 `.py`"
+      "stack": "none",
+      "rule": "§5.2 rule 4: 4 — decided, §10 rulings 4 and 9; the census counts build-time validators, not shipped code, so `stack` is `none`",
+      "source": "design.md §5.2 rule 4: 4 — decided, §10 rulings 4 and 9; the census counts build-time validators, not shipped code, so `stack` is `none`"
     },
     {
       "id": "linglitch",

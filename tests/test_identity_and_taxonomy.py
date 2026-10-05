@@ -546,7 +546,11 @@ class MigrationPlanTests(unittest.TestCase):
         row = self.registry["lileililiwen-site"]
         self.assertEqual(row["path"], "lileililiwen.github.io")
         self.assertEqual(row["role"], "deployment")
-        self.assertEqual(row["stack"], "python")
+        # Ruling 9 supersedes ruling 4's stack half: the census counted
+        # build-time content validators, so the stack is `none` and the
+        # derived `kind` is the bare role. The pin stays exact, so a later
+        # drift off `none` still fails here.
+        self.assertEqual(row["stack"], "none")
         self.assertIn("lileililiwen-site", {item["id"] for item in self.live_registry})
 
     def test_id_immutability_holds_across_the_plan(self):
@@ -748,6 +752,72 @@ class MigrationToolTests(unittest.TestCase):
         ])
         self.assertEqual(axis_migration.main(["--root", str(workspace), "--governance-root", str(governance), "--apply"]), 1)
         self.assertNotIn("role", json.loads((workspace / "transitfy" / ".project.json").read_text(encoding="utf-8")))
+
+    def amended_row(self, kind):
+        """A repository whose decided row carries `stack: none` (ruling 9).
+
+        `role: deployment` and `stack: none` derive the bare `deployment`, so
+        this is the shape the guard has to accept on the second run without
+        reporting the tool's own output — or the owner's later correction — as
+        drift. `DECLARATION` needs the alias `id` set explicitly because the
+        decided row is keyed on the dotted directory.
+        """
+        declaration = dict(DECLARATION, id="lileililiwen-site", kind=kind, profile="deployment")
+        return {"lileililiwen.github.io": declaration}, [
+            {"id": "lileililiwen-site", "path": "lileililiwen.github.io", "profile": "deployment",
+             "lifecycle": "active", "adoption": "adopted", "role": "deployment", "stack": "none"},
+        ]
+
+    def test_a_stack_none_row_accepts_the_bare_derived_role(self):
+        """Ruling 9: the derived bare role is the accepted value, not the
+        hand-authored one the row recorded when it was decided.
+
+        Exit 1 is the refusal and exit 3 is "not applied yet", so the accept
+        case is pinned as an `--apply` that writes — a refused row never gets
+        that far. The second `--check` is ruling 7: the tool must not report
+        its own output as drift.
+        """
+        workspace, governance = self.stage(*self.amended_row("deployment"))
+        base = ["--root", str(workspace), "--governance-root", str(governance)]
+        self.assertEqual(axis_migration.main(base + ["--apply"]), 0)
+        self.assertEqual(axis_migration.main(base + ["--check"]), 0)
+        self.assertEqual(axis_migration.main(base + ["--apply"]), 0)
+        self.assertEqual(axis_migration.main(base + ["--check"]), 0)
+        declaration = json.loads(
+            (workspace / "lileililiwen.github.io" / ".project.json").read_text(encoding="utf-8"))
+        self.assertEqual((declaration["role"], declaration["stack"], declaration["kind"]),
+                         ("deployment", "none", "deployment"))
+
+    def test_a_stack_none_row_still_refuses_a_third_kind(self):
+        """Ruling 9 must not become a blanket pass. `inventory` is neither the
+        decided kind nor any value the row's role/stack can derive, so it is
+        drift and is still refused."""
+        workspace, governance = self.stage(*self.amended_row("inventory"))
+        self.assertEqual(
+            axis_migration.main(["--root", str(workspace), "--governance-root", str(governance), "--apply"]), 1)
+        self.assertNotIn("role", json.loads(
+            (workspace / "lileililiwen.github.io" / ".project.json").read_text(encoding="utf-8")))
+
+    def test_the_decided_table_agrees_with_the_live_fleet_on_both_axes(self):
+        """The table is the authority the drift guard checks the fleet against,
+        so it must not be left describing a superseded decision. This is the
+        invariant whose break left the gate refusing on a clean corpus."""
+        decided = axis_migration.parse_decided_rows(DESIGN)
+        disagreements = []
+        for entry in json.loads(REGISTRY.read_text(encoding="utf-8"))["projects"]:
+            row = decided.get(entry["path"]) or decided.get(entry["id"])
+            if row is None:
+                continue
+            declaration_path = REPO_ROOT.parent / entry["path"] / ".project.json"
+            if not declaration_path.is_file():
+                continue
+            declaration = json.loads(declaration_path.read_text(encoding="utf-8"))
+            for axis, decided_value in (("role", row.roles[0]), ("stack", row.stacks[0])):
+                for surface, actual in (("registry", entry.get(axis)), ("declaration", declaration.get(axis))):
+                    if actual != decided_value:
+                        disagreements.append(
+                            f"{entry['id']}: {surface} {axis} {actual!r} against decided {decided_value!r}")
+        self.assertEqual(disagreements, [])
 
     def test_an_id_rename_is_refused(self):
         repositories = {"campusMesh": dict(DECLARATION, id="campus-mesh", kind="product", profile="product")}

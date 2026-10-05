@@ -352,3 +352,72 @@ flip the flag in the same commit, and that is what was done.
    manifest would silently skip them. Recorded as a gap in the rollback safety
    net, not repaired here: the manifest is untracked, and reconstructing the
    three pairs is the parent's call, not a side effect of a test-fix commit.
+
+## 6. Amendment — ruling 9, the `lileililiwen-site` stack
+
+The fleet moved and the decided table did not. On 2026-10-05 the owner corrected
+`lileililiwen-site` to `stack: none` on two surfaces — the sibling declaration
+(`e9cc5df`, "a static site ships no implementation language", "Python runs only
+at build time for the content validators") and this repository's registry
+(`9bab1b7`, clearing `TAXONOMY_MISMATCH`) — but §5.2 still recorded
+`stack: python`, so the table no longer described the repository it was decided
+for. The §5.2 drift guard was right to refuse, and
+`test_the_gate_is_open_and_the_fleet_corpus_is_clean` failed on it.
+
+- [x] 6.1 Measure the full extent before editing one cell, because
+  `_assert_row_matches_fleet` raises on the first refusal and hides the rest: a
+  read-only probe of every decided row against the live declaration and registry
+  axes found **2** divergences, both the `lileililiwen-site` `stack`, and no
+  other row.
+- [x] 6.2 Amend the §5.2 row's `stack` cell to `none` and record ruling 9 in §10,
+  superseding only the stack half of ruling 4. Ruling 4's role (`deployment`) is
+  unchanged, no other row moves, and no vocabulary value is added.
+- [x] 6.3 Update the two `lileililiwen-site` rows in
+  `migration/identity-and-taxonomy-axis-split.json` (`stack`, `rule`, `source`)
+  so the committed plan agrees with the amended table.
+  `declared_kind` stays `product`: `--write-plan` would rewrite it to the
+  post-migration `deployment` on all 81 rows and destroy the pre-migration
+  measurement that ruling 6 exists to preserve, so the four changed fields were
+  edited directly instead of regenerating the file.
+- [x] 6.4 Re-pin `test_ruling_four_keeps_the_lileililiwen_id_and_path` to
+  `stack == "none"`. The assertion stays exact, so a later drift off `none`
+  still fails; what moved is the decision it pins, not its strength.
+- [x] 6.5 Add the missing coverage, which is why the break had no cheap guard:
+  `test_a_stack_none_row_accepts_the_bare_derived_role` (the derived bare role is
+  accepted and the check is re-runnable) and
+  `test_a_stack_none_row_still_refuses_a_third_kind` (`kind: inventory` is
+  still refused, so ruling 9 is not a blanket pass).
+- [x] 6.6 Add `test_the_decided_table_agrees_with_the_live_fleet_on_both_axes`,
+  which asserts the invariant whose absence let a clean corpus fail: every
+  decided row agrees with the live registry **and** declaration on both axes.
+- [x] 6.7 **Negative control, run rather than asserted.** Reverting only the
+  §5.2 `stack` cell to `python` and re-running the module turned **4** tests red —
+  the new 6.6 test, the new 6.5 test,
+  `test_the_thirty_disagreements_resolve_to_the_decided_table`, and
+  `test_the_gate_is_open_and_the_fleet_corpus_is_clean`. `design.md` was then
+  restored and verified byte-identical by `sha256sum -c`.
+- [x] 6.8 Add the two scenarios to
+  `specs/identity-and-taxonomy/spec.md` under "The portfolio classification is
+  resolved": the amended-row refusal, and `stack: none` accepting the bare
+  derived role while a third `kind` stays refused.
+- [x] 6.9 Verification after the amendment. This change's own scope is green:
+  `python3 -m unittest tests.test_identity_and_taxonomy` **70 passed, 0
+  failures** (67 before, +3 new), and both originally reported failures —
+  `test_the_gate_is_open_and_the_fleet_corpus_is_clean` and
+  `test_the_record_names_nothing_the_gate_calls_bound` — pass.
+  `python3 scripts/axis_migration.py --root /home/paul/code --governance-root
+  . --check` exits **0** over the live 81-project fleet;
+  `workspace_check.py --self-check` reports **errors=0 warnings=0**;
+  `node scripts/check-openspec-change-names.mjs` passes;
+  `openspec validate identity-and-taxonomy-axis-split --strict` reports the
+  change valid; `git diff --check` is clean. No sibling repository was written.
+  A whole-suite `Ran 800 tests, FAILED (failures=8)` is **not** a result of this
+  change: all 8 are in `test_promote_project` and
+  `test_gate_debt_precondition`, they come from the in-flight
+  `QUALITY_NEW_CHANGE_WITH_GATE_DEBT` precondition, and they reproduce with this
+  commit's changes stashed. Recorded in `HANDOFF.md` rather than fixed here.
+- [x] 6.10 The `--audit` finding counts over `/home/paul/code` are unchanged by
+  this amendment: **errors=279, warnings=20** measured on a clean tree before it
+  and no `TAXONOMY_MISMATCH` among them, which is the same evidence that the
+  corpus agrees with itself and only the table was stale. Those 81 repositories
+  were read, never written.

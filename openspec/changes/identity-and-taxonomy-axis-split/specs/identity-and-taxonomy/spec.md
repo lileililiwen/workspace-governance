@@ -161,6 +161,24 @@ file tree SHALL produce or correct an axis.
 - **THEN** the audit reports no finding, because a census is a migration aid
   and the declared value is the authority
 
+#### Scenario: A decided row amended after the fleet moved
+
+- **WHEN** the declaration and the registry both carry a corrected `stack`, and
+  the decided row still records the superseded value
+- **THEN** `axis_migration.py --check` refuses and names the row's rule, because
+  the decided row is the authority the fleet is checked against
+- **AND** the check is clean only once the decided row records the corrected
+  `stack`, and the committed plan row agrees with it
+
+#### Scenario: A stack of none accepts the bare derived role
+
+- **WHEN** a decided row carries `stack: none` and the declaration carries the
+  derived bare `role` that `stack: none` produces
+- **THEN** the drift guard accepts it, and re-running the check does not report
+  the tool's own output as drift
+- **AND** a `kind` that is neither the decided value nor any value the row's own
+  `role` and `stack` derive is still refused
+
 ## MODIFIED Requirements
 
 ### Requirement: One machine-readable vocabulary source
