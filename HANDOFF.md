@@ -22,8 +22,9 @@ skipped. Strict OpenSpec validation passed 12/12; workspace self-check reported
 names and `git diff --check` passed. A real temporary scaffold invocation
 bound the repository command, reported four unresolved checks, exited 0 for
 the completed bind operation, and did not write a partial workspace debt file.
-The change stays active and must not be archived without authorization. Commit 1
-and HANDOFF-only commit 2 are recorded after creation below.
+The change stays active and must not be archived without authorization. Commit 1:
+`e17615d` (`feat(governance): bind gate checks during project scaffold`).
+Commit 2 records this HANDOFF update only.
 
 **Legacy debt repair is implemented and verified, but not archived.** The
 original 24-entry snapshot classified A=10, B=7, C=3, D=2, E=1, F=1 with no
