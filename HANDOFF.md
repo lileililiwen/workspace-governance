@@ -39,7 +39,7 @@ the remediation this rule exists to give makes no sense for prose.
 |---|---|---|
 | `product-test-code` in the 4 repositories | 15 | **0** |
 | `product-test-code` fleet-wide | 15 | **1** |
-| `unittest discover -s tests` | 813 passed | **813 passed, 0 failed** |
+| `unittest discover -s tests` | 810 passed | **812 passed, 0 failed** |
 
 The one remaining finding is a genuine `#[test]` in `alltools-platform`'s Rust
 source — not a TypeScript artefact, and not fixed here.
@@ -76,7 +76,7 @@ still refuses, naming both, and `AmbiguityTests` now proves both halves of that.
 |---|---|---|
 | Unbound checks | 44 | **24** |
 | Repositories carrying debt | 22 | **12** |
-| `unittest discover -s tests` | 810 passed | **813 passed, 0 failed** |
+| `unittest discover -s tests` | 810 passed | **812 passed, 0 failed** |
 | `workspace_check.py --self-check` | exit 0 | **exit 0** |
 | `openspec validate --all --strict` | 23 passed | **24 passed, 0 failed** |
 
