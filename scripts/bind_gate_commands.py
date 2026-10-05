@@ -1953,6 +1953,16 @@ def main(argv: list[str] | None = None) -> int:
         help="write the bindings and the debt record; without this the run is a dry run",
     )
     parser.add_argument(
+        "--debt-only",
+        action="store_true",
+        help=(
+            "write only the debt record, from a run that cannot write a manifest. "
+            "Regenerating the record must never be the thing that writes the "
+            "fleet, so this forces the run itself dry while still persisting the "
+            "record; --apply is ignored and this cannot be combined with it"
+        ),
+    )
+    parser.add_argument(
         "--debt-out",
         type=Path,
         default=None,
@@ -1971,12 +1981,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.debt_only and args.apply:
+        print(
+            "--debt-only cannot be combined with --apply: --debt-only exists "
+            "precisely so a record is regenerated without writing the fleet",
+            file=sys.stderr,
+        )
+        return 2
+
     root = args.root.resolve()
     if not root.is_dir():
         print(f"workspace root is not a directory: {root}", file=sys.stderr)
         return 2
 
-    report = run(root, apply=args.apply, only=args.only)
+    # `--debt-only` threads `apply=False` all the way into `run`, so no code
+    # path in the run can reach a manifest write. Only the record is persisted.
+    report = run(root, apply=args.apply and not args.debt_only, only=args.only)
     for outcome in report.outcomes:
         marker = "wrote" if outcome.wrote else outcome.status.lower()
         detail = format_detail(outcome, args.verbose)
@@ -1986,20 +2006,22 @@ def main(argv: list[str] | None = None) -> int:
 
     debt = build_debt(report, root)
     debt_path = args.debt_out or (root / DEBT_FILE)
-    if args.apply:
+    writing_debt = args.apply or args.debt_only
+    if writing_debt:
         write_debt_record(debt, debt_path)
 
     unresolved = report.unresolved()
     conflicts = report.conflicts()
     print()
-    print(f"mode:            {'APPLY' if args.apply else 'DRY RUN'}")
+    mode = "DEBT RECORD ONLY (manifest run is dry)" if args.debt_only else ("APPLY" if args.apply else "DRY RUN")
+    print(f"mode:            {mode}")
     print(f"repositories:    {len(report.outcomes)}")
     for status in (RESOLVED, PARTIAL, UNRESOLVED, NO_MANIFEST, DIRTY, REFUSED):
         names = report.names(status)
         print(f"{status + ':':18}{len(names):<5}{' '.join(names[:6])}{' ...' if len(names) > 6 else ''}")
     print(f"{'unresolved checks:':18}{len(unresolved)}  (declared, unbound, and underivable)")
     print(f"{'left in place:':18}{len(conflicts)}  (a person wrote a different command; not clobbered)")
-    print(f"{'debt record:':18}{debt_path}{' (written)' if args.apply else ' (not written; dry run)'}")
+    print(f"{'debt record:':18}{debt_path}{' (written)' if writing_debt else ' (not written; dry run)'}")
     if unresolved:
         print()
         print("Unresolved concerns, by reason:")

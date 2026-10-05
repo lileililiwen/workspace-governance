@@ -117,10 +117,21 @@ class VocabularyLoadTests(unittest.TestCase):
         self.assertEqual(set(vocab["kinds"]), CANONICAL_KINDS)
         self.assertEqual(vocab["schema_version"], 1)
 
-    def test_placeholder_markers_unchanged(self):
+    def test_placeholder_markers_are_unambiguous_debt_tokens(self):
+        """The marker vocabulary carries code debt, not English.
+
+        `placeholder` and `stub` were dropped: measured over
+        `driftwatchdog/src/`, `placeholder` matched 26 times and none of
+        the 26 was real debt -- every one was prose describing the word
+        or the gate's own `placeholder-threshold` concern identifier. A
+        check that cries wolf is ignored. See the spec delta in
+        `openspec/changes/bind-declared-gate-checks`.
+        """
         vocab = vocabulary.load_vocabulary_for_governance_root(Path(__file__).parents[1])
         self.assertEqual(tuple(vocab["placeholder_markers"]),
-                         ("todo", "fixme", "xxx", "hack", "placeholder", "stub", "unimplemented!", "todo!"))
+                         ("todo", "fixme", "xxx", "hack", "unimplemented!", "todo!"))
+        for ordinary_english_word in ("placeholder", "stub"):
+            self.assertNotIn(ordinary_english_word, vocab["placeholder_markers"])
 
     def test_secret_list_is_superset(self):
         vocab = vocabulary.load_vocabulary_for_governance_root(Path(__file__).parents[1])

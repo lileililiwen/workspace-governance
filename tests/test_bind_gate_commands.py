@@ -889,6 +889,78 @@ class WorkspaceWriteTests(GitRepoCase):
 # --- the debt record ------------------------------------------
 
 
+class DebtOnlyTests(GitRepoCase):
+    """`--debt-only` regenerates the record from a run that cannot write.
+
+    Regenerating the record has twice been the thing that wrote the fleet,
+    because `--apply` is the only mode that persists the record and it also
+    writes every manifest it can bind. These tests pin that the record can be
+    regenerated on its own.
+    """
+
+    def workspace(self) -> Path:
+        root = self.tmp / "ws"
+        repo = root / "argoset"
+        (repo / ".ai-gate").mkdir(parents=True)
+        (repo / ".ai-gate" / "gate.yaml").write_text(
+            MANIFEST.format(checks=BUILD_AND_TESTS), encoding="utf-8"
+        )
+        (repo / "Cargo.toml").write_text("[workspace]\nmembers = []\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "base"],
+            cwd=repo, check=True,
+        )
+        return root
+
+    def run_main(self, argv: list[str]) -> tuple[int, str]:
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            code = main(argv)
+        return code, buffer.getvalue()
+
+    def test_debt_only_writes_the_record_and_no_manifest(self):
+        root = self.workspace()
+        manifest = root / "argoset" / ".ai-gate" / "gate.yaml"
+        before = manifest.read_bytes()
+        record = root / DEBT_FILE
+        with redirect_stdout(io.StringIO()):
+            code = main(["--root", str(root), "--debt-only"])
+        self.assertIn(code, (0, 3), "the debt exit code is about debt, not about the mode")
+        self.assertTrue(record.is_file(), "--debt-only did not write the record")
+        self.assertEqual(manifest.read_bytes(), before, "--debt-only wrote a manifest")
+
+    def test_debt_only_says_the_manifest_run_is_dry(self):
+        root = self.workspace()
+        _, output = self.run_main(["--root", str(root), "--debt-only"])
+        self.assertIn("DEBT RECORD ONLY (manifest run is dry)", output)
+
+    def test_debt_only_is_refused_alongside_apply(self):
+        root = self.workspace()
+        buffer = io.StringIO()
+        stderr = io.StringIO()
+        original = sys.stderr
+        sys.stderr = stderr
+        try:
+            with redirect_stdout(buffer):
+                code = main(["--root", str(root), "--debt-only", "--apply"])
+        finally:
+            sys.stderr = original
+        self.assertEqual(code, 2)
+        self.assertIn("cannot be combined with --apply", stderr.getvalue())
+        self.assertFalse((root / "argoset" / ".ai-gate" / "gate.yaml").read_text()
+                         .count(GENERATED_MARKER), "the refused run still wrote a manifest")
+
+    def test_the_record_from_debt_only_matches_a_plain_dry_run(self):
+        root = self.workspace()
+        with redirect_stdout(io.StringIO()):
+            main(["--root", str(root), "--debt-only"])
+            written = json.loads((root / DEBT_FILE).read_text(encoding="utf-8"))
+            dry_report = run(root, apply=False)
+        self.assertEqual(written, build_debt(dry_report, root))
+
+
 class DebtRecordTests(GitRepoCase):
     def workspace(self) -> Path:
         root = self.tmp / "ws"

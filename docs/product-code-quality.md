@@ -44,7 +44,7 @@ Add a `quality` block to the project's `.project.json`:
 | `languages`            | yes      | One or more of `rust`, `python`, `typescript`, `javascript`, `csharp`, `go`, `generic`.                  |
 | `exclude`              | no       | Repository-relative paths under any product root to exclude. Must not escape the project root.            |
 | `placeholder_threshold`| no       | Integer count of tolerated markers across product files. Default `0`.                                    |
-| `placeholder_markers`  | no       | Override the default marker vocabulary. Words are matched case-insensitively with word boundaries.        |
+| `placeholder_markers`  | no       | Override the default marker vocabulary (`todo`, `fixme`, `xxx`, `hack`, `unimplemented!`, `todo!`). Words are matched case-insensitively with word boundaries. |
 
 ## Running the checker directly
 
@@ -293,6 +293,20 @@ subtree in `exclude`.
 | `product_roots`, `languages`, threshold  | Project owner, declared locally.                     |
 | Gate execution                           | Driftwatchdog, via the existing Gate binding.        |
 | Audit translation to `Finding`           | Workspace Governance audit (`workspace_check.py`).   |
+
+## Known limits
+
+**The Rust scan is lexical and single-file, so `#[cfg(test)]` modules are
+reported as product test code.** The scanner reads each file in isolation and
+cannot see that `src/gate/governance/tests.rs` is only compiled under
+`#[cfg(test)] mod tests;` (`mod.rs:627`), so it counts that file's contents
+against `product-code-boundary`. `driftwatchdog` reports 24 such findings and
+none of them is a real boundary violation. The same shape produces a false
+finding in every Rust repository that keeps tests behind a `#[cfg(test)] mod`
+declaration. The fix is a module graph, not a word list and not an `exclude`,
+so it is recorded for the checker's owner rather than worked around here.
+Until it is fixed, treat a `product-test-code` finding in a `tests.rs` reached
+by a `#[cfg(test)] mod` declaration as unverified.
 
 ## Non-goals
 

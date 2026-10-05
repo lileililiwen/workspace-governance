@@ -379,6 +379,12 @@ repository proof and the measurement are the deliverable; applying it to 39
 more repositories is a separate authorisation, taken after the marker
 vocabulary is settled.
 
+> **Superseded by §7.** The vocabulary was settled — `placeholder` and `stub`
+> dropped — and the write is applied to the 39. With the corrected vocabulary
+> the red count is 13 of 39, not 29 of 40, and the debt is 47 checks across 24
+> repositories, down from 125 across 53. The measurement above stands as the
+> record of why the write was withheld; §7 is the record of what it cost.
+
 ## Follow-up: three fleet assertions were vacuous after the fleet was applied
 
 The three `FleetTest` assertions filtered concerns on `status == BOUND`, which
@@ -400,3 +406,117 @@ Verified by negative control: forcing every derived `dotnet build` to name a
 non-existent file turns 5 tests red, and forcing a bare `dotnet build` turns
 this one red with `aegify/build: dotnet build names no build file, no project
 directory, and the root holds 0 build entry points rather than exactly one`.
+
+## 7. The marker vocabulary is corrected, and the fleet write is done
+
+The ruling on the vocabulary was made outside this change: **drop the bare
+words `placeholder` and `stub`** from `vocabulary.json`, keep `todo`, `fixme`,
+`xxx`, `hack`, `unimplemented!`, `todo!`. §6b's measurement said exactly what
+was wrong — of 498 findings, 338 were the word `placeholder` and 120 were
+`stub`, ordinary vocabulary in prose and in identifiers, against 40 real
+`todo`/`fixme`/`xxx`/`hack` — and it refused to make the call because the
+vocabulary belongs to the `portfolio-vocabulary` capability. It has been made
+here instead, as a spec correction with its reasoning and its numbers in
+`specs/portfolio-vocabulary/spec.md`.
+
+- [x] 7.1 **The vocabulary is corrected at its one source.**
+  `vocabulary.json` drops `placeholder` and `stub`. `product_code_quality.py`
+  resolves its markers from that file at use time (`default_placeholder_markers`
+  → `vocabulary.load_vocabulary_for_governance_root`), so no code change was
+  needed and none was made: the marker pattern, the severity mapping and the
+  threshold comparison are untouched.
+- [x] 7.2 **The premise about `forge` did not hold, and was checked rather
+  than assumed.** Every `.project.json` in the fleet was grepped for an inline
+  `placeholder_markers`. Exactly one carries one: `forge`. Its list is
+  `todo, fixme, xxx, hack, unimplemented!, todo!` — already the corrected set,
+  with neither `placeholder` nor `stub` in it. So there was no hand-written
+  stricter list to protect and no conflict to resolve. It is left alone
+  regardless, per the spec: a project that states a stricter vocabulary on
+  purpose has made a deliberate local decision, and it is the only one.
+- [x] 7.3 **Re-measured before the fleet write, on the same 39.** With the
+  corrected vocabulary the authorised set reports **13 red of 39**
+  (was 29 of 40). The 13 split by cause, which matters more than the total:
+  7 are red on real markers (`alltools-platform` 11, `openlearning` 18,
+  `hookit`/`openaccounting`/`orphevia`/`stylify` 2 each, `lexora` 1), 5 are
+  red on `product-test-code` alone with zero markers, and `opendockify` is
+  `REVIEW_REQUIRED` on a `readme-claim-unscoped` finding in its own README.
+  Only the first 7 are marker findings at all.
+- [x] 7.4 **The fleet write is applied to exactly the authorised 39.**
+  `--apply` wrote 39 `.project.json` and 39 `.ai-gate/gate.yaml`, nothing
+  else. Verified by hashing both files in all 81 repositories before and
+  after: 78 files changed, 39 repositories, and the set difference against the
+  authorised list is empty.
+- [x] 7.5 **The debt record was regenerated in a mode that cannot write a
+  sibling.** §6's mistake — `--apply` fleet-wide while regenerating the
+  record, writing 40 files the change was told not to write — is now
+  structurally impossible for this operation: `--debt-only` threads
+  `apply=False` into `run()` and persists only the record, and it refuses to
+  combine with `--apply` (exit 2). `DebtOnlyTests` (4) pins that it writes the
+  record, writes no manifest, says the manifest run is dry, refuses the
+  combination, and produces a record identical to a plain dry run's.
+  The `--apply` run's default `--debt-out` was `root/gate-debt.json`, which
+  put a stray record at the workspace root; it was removed with
+  `Path.unlink(missing_ok=True)` and the record regenerated to
+  `workspace-governance/gate-debt.json`.
+- [x] 7.6 **Debt and the gate are set-equal, before and after.**
+
+  | Measurement | Before | After |
+  |---|---|---|
+  | Gate unbound checks | 125 | **47** |
+  | Gate repositories with an unbound check | 53 | **24** |
+  | `gate-debt.json` `unresolved_checks` | 125 | **47** |
+  | `gate-debt.json` `repositories_with_debt` | 53 | **24** |
+  | Set-equal? | yes | yes |
+  | `placeholder-threshold` unbound | 39 | **0** |
+  | `product-code-boundary` unbound | 39 | **0** |
+
+  Set equality, never a count, against
+  `driftwatchdog/target/debug/driftwatchdog`. The `driftwatchdog` on `PATH` is
+  a 2026-10-01 build that predates unbound reporting and answers 0 for the
+  whole fleet; it is not an oracle and was not used.
+- [x] 7.7 **Confirmed on real gate runs, not only on the checker.** Both
+  directions exist in the fleet: `openlearning` reports
+  `placeholder-threshold FAIL — placeholder marker count 18 exceeds threshold
+  0` with `unbound: ['tests']`, and `pangoman` reports
+  `placeholder-threshold PASS — placeholder marker count 0 at or below
+  threshold 0` with `unbound: []`. The two checks are executing and producing
+  verdicts in both directions, which is the whole point of binding them.
+- [x] 7.8 **Tests.** `741 passed, 158 subtests` before;
+  **`748 passed, 158 subtests, 0 failed`** after. 7 added: 3 in
+  `PlaceholderTests` (the word `placeholder` in prose is not a finding; the
+  word in an identifier is not a finding; `TODO` and `FIXME` still are), 4 in
+  `DebtOnlyTests`. One existing test asserted the old list and was updated to
+  the new contract, as the spec delta now requires:
+  `tests/test_vocabulary.py::test_placeholder_markers_unchanged` became
+  `test_placeholder_markers_are_unambiguous_debt_tokens`, which pins the
+  retained set and asserts `placeholder` and `stub` are absent. No test was
+  weakened, skipped, filtered or given an `exclude`.
+- [x] 7.9 **Negative control, run and reverted.** Putting `placeholder` and
+  `stub` back into `vocabulary.json` and re-measuring the same 39 with their
+  own on-disk blocks: marker findings **38 → 468** (`placeholder` 310,
+  `stub` 120), repositories reporting `FAIL` **13 → 28**. The file was then
+  restored byte-identically (`git diff --stat` shows only the 2 intended
+  deletions) and the suite returned to 748.
+
+## 8. Recorded, not fixed — findings for their owners
+
+- [ ] **The Rust scan in `product_code_quality.py` is lexical and
+  single-file, so it reports 24 false `product-test-code` findings in
+  `driftwatchdog`.** `src/gate/governance/tests.rs` is declared
+  `#[cfg(test)] mod tests;` from `mod.rs:627`, and the scanner reads each file
+  in isolation, so it cannot see that the module is compiled only under
+  `cfg(test)` and counts its contents as product test code. The same shape
+  will produce false findings in every Rust repository that uses
+  `#[cfg(test)] mod tests;`; it is why 5 of the 13 red repositories in §7.3
+  are red with **zero** markers. This is a defect in the checker, not in the
+  vocabulary, and the fix is a module graph rather than a word list. **Not
+  fixed here** — it is the checker's owner's call, and a
+  `cfg(test)`-aware scan is a change to detection logic, not a
+  specification correction. Recorded, not worked around: no `exclude` was
+  added to make any repository pass.
+- [ ] **`opendockify` is `REVIEW_REQUIRED` on `readme-claim-unscoped`.** Its
+  README line 52 makes a negative status statement naming no surface the
+  checker can resolve. A README finding for the repository's owner, surfaced
+  only now because the block made the check run.
+- [ ] **The change is not archived.** Archiving needs separate authorization.
+

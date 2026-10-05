@@ -137,7 +137,17 @@ value its own canonical `role`/`stack` derive is WARNING `KIND_UNKNOWN`; a
 `PROFILE_DOC_UNKNOWN`) and scans secrets with the vocabulary substrings, while
 `product_code_quality.py` defaults its placeholder markers from the same file.
 A missing, unparseable, duplicate-bearing, or empty-list vocabulary makes each
-consumer exit non-zero; there is no empty-list fallback. Kind is descriptive
+consumer exit non-zero; there is no empty-list fallback.
+
+`placeholder_markers` holds only unambiguous code-debt tokens: `todo`,
+`fixme`, `xxx`, `hack`, `unimplemented!`, `todo!`. An ordinary English word is
+not a marker, because the scan matches case-insensitively on word boundaries
+over every product line — prose describing the word, a doc comment naming it,
+and the gate's own `placeholder-threshold` identifier all match it. Measured
+over `driftwatchdog/src/`, `placeholder` matched 26 times and none of the 26
+was unfinished work. A per-project `placeholder_markers` override is still
+honoured, and is left exactly as its author wrote it.
+ Kind is descriptive
 and never drives profile requirements. The canonical spec is
 `openspec/specs/portfolio-vocabulary/spec.md`.
 

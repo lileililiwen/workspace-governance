@@ -223,6 +223,38 @@ class PlaceholderTests(unittest.TestCase):
         finally:
             tmp.cleanup()
 
+    def test_the_english_word_placeholder_in_prose_is_not_a_finding(self):
+        """The marker vocabulary carries debt tokens, not English.
+
+        `placeholder` and `stub` were removed from `vocabulary.json`
+        because on real source they match prose describing the word, not
+        unfinished work. `TODO` and `FIXME` still do.
+        """
+        _write(self.root / "src/lib.rs",
+               "//! This module extends this placeholder with a real implementation.\n")
+        report = pcq.evaluate(pcq.load_policy(json.loads((self.root / ".project.json").read_text())).with_root(self.root))
+        self.assertEqual(report.summary["placeholder"], 0)
+        self.assertEqual(report.status, "PASS", report.notes)
+
+    def test_the_english_word_placeholder_in_an_identifier_is_not_a_finding(self):
+        """A concern named `placeholder-threshold` is the gate's own id."""
+        _write(self.root / "src/gate.rs",
+               "const PLACEHOLDER_THRESHOLD: usize = 0;\n"
+               "/// Ordered, comma-separated placeholder names.\n"
+               "pub fn stub_names() -> usize { 0 }\n")
+        report = pcq.evaluate(pcq.load_policy(json.loads((self.root / ".project.json").read_text())).with_root(self.root))
+        self.assertEqual(report.summary["placeholder"], 0)
+        self.assertEqual(report.status, "PASS", report.notes)
+
+    def test_todo_and_fixme_are_still_findings(self):
+        _write(self.root / "src/lib.rs",
+               "// TODO: finish this\n"
+               "pub fn x() { /* FIXME: and this */ }\n")
+        report = pcq.evaluate(pcq.load_policy(json.loads((self.root / ".project.json").read_text())).with_root(self.root))
+        self.assertEqual(report.summary["placeholder"], 2)
+        self.assertEqual(report.status, "FAIL", report.notes)
+        self.assertEqual({f.marker.lower() for f in report.findings}, {"todo", "fixme"})
+
     def test_excluded_fixture_does_not_count(self):
         tmp, root = _make_project(["src"], ["rust"], threshold=0, exclude=["src/fixtures"])
         try:

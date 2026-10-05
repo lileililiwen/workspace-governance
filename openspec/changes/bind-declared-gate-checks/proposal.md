@@ -126,14 +126,26 @@ reported as a conflict and left exactly as it is.
 
 | Surface | Before | After |
 |---|---|---|
-| Required checks with no command | 283 | the number in `gate-debt.json` |
-| Repositories with an unbound check | 69 | the number in `gate-debt.json` |
-| Repositories fully wired | 7 | measured in `tasks.md` §1.1 |
-| Sibling repositories written | — | 0 in this change; dry run only |
-| Manifests hand-edited | — | 0 |
-| Fleet audit `errors` / `warnings` | unchanged | unchanged |
-| Test suite | `Ran 615 tests … OK` | see `tasks.md` §3.4 |
+| Required checks the gate calls unbound | 125 | **47** |
+| Repositories with an unbound check | 53 | **24** |
+| Repositories fully wired (of 76 with a manifest) | 23 | **52** |
+| `placeholder-threshold` / `product-code-boundary` unbound | 39 / 39 | **0 / 0** |
+| Sibling repositories written | 0 | **39** — the authorised set, `.project.json` and `.ai-gate/gate.yaml` only |
+| Manifests hand-edited | 0 | 0 |
+| Marker vocabulary | 8 tokens, 2 of them ordinary English | 6 tokens, all unambiguous |
+| Test suite | `Ran 615 tests … OK` | `748 passed, 158 subtests passed` (see `tasks.md` §3.4, §7.8) |
 
-The fleet audit counts are unchanged by design: this change writes no
-`.project.json`, no `projects.json`, and no sibling manifest. What it
-adds is a generator, a debt record, and a spec.
+The original measurement in *Why* put the figure at 283 unbound across 69
+repositories. That count read `checks:` alone and missed the checks a
+`profile:` schedules; §5.1 corrected it against the real binary to 125 across
+53, and the numbers above are on the binary's footing throughout.
+
+
+The final write is the one this change is authorised for and no more: 39
+repositories, two files each, verified by hashing both files across all 81
+repositories before and after. The 47 that remain unbound are reported in
+`gate-debt.json`, and the record and the gate's own unbound set are set-equal
+against the repository build of `driftwatchdog` — not by count. The
+`driftwatchdog` on `PATH` is a stale 2026-10-01 build that answers 0 for the
+whole fleet and is not an oracle.
+
