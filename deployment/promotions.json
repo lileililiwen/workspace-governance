@@ -99,6 +99,17 @@
       "kind": "promote",
       "compose_file": "docker-compose.yml",
       "jenkins_job": "argoscope"
+    },
+    {
+      "project_id": "argoscope",
+      "decided_at": "2026-10-05T14:35:46.322752+00:00",
+      "actor": "paul",
+      "revision": "4198e3a9db116607b05d2c213683b7ebf3a30669",
+      "evidence_ref": "local:HEAD:4198e3a9db116607b05d2c213683b7ebf3a30669",
+      "manifest_generated": true,
+      "kind": "promote",
+      "compose_file": "docker-compose.yml",
+      "jenkins_job": "argoscope"
     }
   ]
 }
