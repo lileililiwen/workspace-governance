@@ -19,7 +19,11 @@
     "billing",
     "jobs",
     "storage",
-    "release"
+    "release",
+    "telemetry",
+    "rate-limiting",
+    "idempotency",
+    "feature-flags"
   ],
   "required_release_evidence_fields_for_deployment": [
     "revision",

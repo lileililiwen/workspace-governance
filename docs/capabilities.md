@@ -51,11 +51,20 @@ portable form.
 | `blocked`    | The capability is intentionally not provided. Record the non-goal in the project handbook.    | WARNING (`CAPABILITY_BLOCKED`).                                          |
 
 The standard capability names are `identity`, `admin`, `tenancy`, `billing`,
-`jobs`, `storage`, and `release`. Projects may declare additional capability
-names following the same `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$` pattern. Declaring
-a capability outside the project profile's `supported_capabilities` list is
-surfaced as `CAPABILITY_UNSUPPORTED` (WARNING) so profile owners can keep the
-supported set intentional.
+`jobs`, `storage`, and `release`, plus the **cross-cutting shared
+capabilities** `telemetry`, `rate-limiting`, `idempotency`, and
+`feature-flags`. A cross-cutting shared capability applies to a provider, a
+product, a library, and a tool alike, and its id is bound by the capability
+registry; every profile that declares a `supported_capabilities` list includes
+these four so a consumer can record a lawful `consumes[]` adoption without a
+spurious warning. The registry's role-shaped ids (`persistence-postgres`,
+`health-checks`, `web-application-factory`, `postgres-test-fixture`) are
+admitted to a profile on demand, when a consumer of that role records an
+adoption. Projects may declare additional capability names following the same
+`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$` pattern. Declaring a capability outside the
+project profile's `supported_capabilities` list is surfaced as
+`CAPABILITY_UNSUPPORTED` (WARNING) so profile owners can keep the supported set
+intentional.
 
 ## Release evidence fields
 

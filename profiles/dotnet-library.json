@@ -5,5 +5,5 @@
   "requires_openspec": true,
   "requires_verification_command": true,
   "architecture": "framework-neutral contracts must not depend on product code",
-  "supported_capabilities": ["identity", "tenancy", "storage", "release"]
+  "supported_capabilities": ["identity", "tenancy", "storage", "release", "telemetry", "rate-limiting", "idempotency", "feature-flags"]
 }

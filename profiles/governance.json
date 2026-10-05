@@ -4,5 +4,5 @@
   "requires_ci": true,
   "requires_openspec": false,
   "requires_verification_command": true,
-  "supported_capabilities": ["registry", "policy", "evidence", "release"]
+  "supported_capabilities": ["registry", "policy", "evidence", "release", "telemetry", "rate-limiting", "idempotency", "feature-flags"]
 }

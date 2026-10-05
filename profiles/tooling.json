@@ -17,6 +17,10 @@
     "release",
     "registry",
     "policy",
-    "evidence"
+    "evidence",
+    "telemetry",
+    "rate-limiting",
+    "idempotency",
+    "feature-flags"
   ]
 }
