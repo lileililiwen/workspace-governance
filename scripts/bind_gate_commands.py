@@ -45,10 +45,46 @@ The table is a copy of `profile_defaults` in
 `driftwatchdog/src/gate/manifest.rs`; the test is what keeps the copy honest,
 and it skips rather than fails when the binary has not been built.
 
-A check only the profile scheduled is recorded, never written. The gate's
+A check only the profile scheduled is **derived first**. The gate's
 `.ai-gate` reader refuses a manifest whose `commands:` names a check the
-manifest does not select, so a binding written for one would trade a
-reported gap for an unparseable manifest.
+manifest does not select (`aigate.rs:213`), so this tool used to record such
+a check as debt and write nothing. That was the right refusal guarding the
+wrong boundary: a repository naming `profile: product` has already committed
+to the concerns that profile schedules, and the gate already fails it for not
+binding them, so the correct write is **both** a `checks: <id>: true` entry
+and a `commands: <id>` entry. It is done in one operation, and only when a
+checker is genuinely reachable — see `governance_concern`. Where none is, the
+concern stays in the debt record, because a selection with no command behind
+it is a worse state than the gap it replaced.
+
+## The gate protocol, and which checkers can satisfy it
+
+`driftwatchdog/src/commands/gate.rs:206-208` builds
+`AdapterInput { program: "sh", args: ["-c", cmd], working_dir: proj.root }`
+and `checker/runner.rs:103` gives the child `Stdio::null()`. **A bound command
+gets no stdin.** The environment is not cleared (`runner.rs:99`), so it
+inherits this process's. A command must therefore work from argv and the
+inherited environment and report through stdout and its exit code.
+
+That protocol is what decides the producers:
+
+* `workspace_check.py --json` emits `{findings: [{code, level, message,
+  project}], summary}` — exactly `parse_report`'s shape at
+  `governance/mod.rs:141`, with exit 0/1 expected. **Bound.**
+* `product_code_quality.py` is fail-closed on a `quality` block and exits 2
+  without one. It emits `schema_version`, not the `version` `parse_envelope`
+  requires (`adapters.rs:1040`), so it always takes the text-mode exit-code
+  path. **Bound only where the repository already declares that policy.**
+* `forge_governance_adapter.py` reads `sys.stdin.read()` and emits an
+  observation (`status`/`detail`/`evidence`), not a findings report. With no
+  stdin it reads an empty input, and the report parser would not recognise the
+  output. **Never bound** — it is a one-input adapter, not a checker.
+
+`workspace_check.py --root ..` passes the workspace root explicitly on
+purpose. Its default is the directory holding `projects.json`, which is this
+repository, and from a sibling that default makes all 81 registered projects
+report `PROJECT_MISSING` against the sibling's own subdirectories. 81 false
+findings is not a pass.
 
 ## What it refuses to do
 
@@ -56,9 +92,15 @@ reported gap for an unparseable manifest.
   script the concern needs, an undetectable test runner, a pure-Python
   `build`, and two equally plausible entry points are all *unresolved*, with
   the reason and the evidence. A wrong command is worse than an honest gap.
-* **Never binds a concern the repository did not declare.** Only a concern
-  already `true` under `checks:` is ever considered, and no `checks:` value is
-  changed.
+* **Never invents a policy.** `placeholder-threshold` and
+  `product-code-boundary` need a `quality` block in the repository's own
+  `.project.json`. Which directories are product, which languages, and what
+  threshold are owner decisions, so the block is named in the debt record and
+  left unwritten.
+* **Never binds a concern the gate does not require.** Only a check the
+  manifest selected, or one its `profile:` scheduled and it did not disable,
+  exempt, or already bind. A disabled, exempted, `"optional"`, or
+  unselected check is left alone whether or not a command could be derived.
 * **Never overwrites an operator's binding.** An existing `commands.<concern>`
   that differs from the derived one is a `CONFLICT` and is left exactly as it
   is. An identical one is `ALREADY_BOUND`.
@@ -873,6 +915,160 @@ class ConcernOutcome:
     command: str = ""
     evidence: str = ""
     reason: str = ""
+    # True when this concern is a `BOUND` that the profile scheduled rather
+    # than the manifest, so the write must add a `checks: <id>: true` entry
+    # beside the `commands:` entry. The gate refuses a `commands:` entry for
+    # an unselected check, so the two are written together or not at all.
+    selects: bool = False
+
+
+# --- concerns this workspace's own checkers answer -------------
+
+# The two checkers in *this* repository that answer a gate concern. Both are
+# reached from a sibling repository by a relative path, which is why the
+# reachability test below is a file check rather than an assumption: the gate
+# runs the bound command with the repository root as the working directory
+# (`gate.rs` `AdapterInput { working_dir: proj.root }`), so `../<repo>/…`
+# resolves for every repository that is a sibling of this one, and resolves
+# to nothing for one that is not.
+#
+# `workspace_check.py --root .. --project <this repository>` is passed the
+# workspace root *and* this repository's own name, both explicitly, and both
+# omissions are defects rather than defaults:
+#
+# * without `--root`, the checker's default is the directory holding
+#   `projects.json` — this repository — and run from a sibling that default
+#   makes all 81 registered projects report `PROJECT_MISSING` against the
+#   sibling's own subdirectories. 81 false findings is not a pass.
+# * without `--project`, the checker audits the **whole workspace**, and the
+#   gate's concern filters findings by *code*, not by project
+#   (`governance/mod.rs`: `if !scope.contains(finding.code.as_str())`), so
+#   every repository's gate would be failed by every *other* repository's
+#   findings. Measured on this fleet: the workspace audit reports 12
+#   in-scope findings and not one of them belongs to `bargora` — 4 come from
+#   `chronicleaf`, 3 from `metiscope`, 3 from `openlearning`, 1 from
+#   `dotnet-platform-libs`. Scoping to one project is what makes the verdict
+#   this repository's own rather than the workspace's.
+#
+# `--project` matches a registry `id` **or** a registry `path`, and the
+# `path` of all 81 registered projects is its directory name, so a
+# repository's own directory name resolves for every repository here.
+GOVERNANCE_CHECKER = "scripts/workspace_check.py"
+GOVERNANCE_COMMAND = (
+    "python3 ../workspace-governance/scripts/workspace_check.py "
+    "--root .. --project {project} --json"
+)
+GOVERNANCE_EVIDENCE = "the portfolio checker at ../workspace-governance/scripts/workspace_check.py"
+
+PRODUCT_QUALITY_CHECKER = "scripts/product_code_quality.py"
+PRODUCT_QUALITY_COMMAND = "python3 ../workspace-governance/scripts/product_code_quality.py ."
+PRODUCT_QUALITY_EVIDENCE = "the product-quality checker at ../workspace-governance/scripts/product_code_quality.py"
+
+# Concern -> the checker that answers it, in this workspace.
+#
+# `placeholder-threshold` and `product-code-boundary` are answered by the
+# same script; they are two gates over one scan, and the scan is a single
+# policy read.
+GOVERNANCE_CHECKERS: dict[str, tuple[str, str, str]] = {
+    "governance-quality": (GOVERNANCE_CHECKER, GOVERNANCE_COMMAND, GOVERNANCE_EVIDENCE),
+    "placeholder-threshold": (
+        PRODUCT_QUALITY_CHECKER,
+        PRODUCT_QUALITY_COMMAND,
+        PRODUCT_QUALITY_EVIDENCE,
+    ),
+    "product-code-boundary": (
+        PRODUCT_QUALITY_CHECKER,
+        PRODUCT_QUALITY_COMMAND,
+        PRODUCT_QUALITY_EVIDENCE,
+    ),
+}
+
+# The concerns whose checker reads a `quality` block out of the repository's
+# own `.project.json` and is fail-closed without it. `product_code_quality.py`
+# raises `ConfigError("project declaration is missing the 'quality' block")`
+# and exits 2 — a configuration error — rather than scanning, so a repository
+# without one has no policy to run and the checker cannot answer the concern
+# at all. The threshold and the product roots are an owner decision about
+# which directories are product and how many placeholders are tolerable, so
+# this tool writes none of them: it names the missing block and leaves the
+# concern in the debt record.
+QUALITY_POLICY_FILE = ".project.json"
+QUALITY_POLICY_KEY = "quality"
+
+
+def has_quality_policy(repo: Path) -> bool:
+    """True when the repository's own `.project.json` declares `quality`.
+
+    Read-only and fail-closed in the same direction as the checker: a
+    `.project.json` that is absent, unparseable, or holds no `quality` block
+    all answer `False`, because all three make the checker exit 2.
+    """
+    data = read_json(repo / QUALITY_POLICY_FILE)
+    return isinstance(data, dict) and isinstance(data.get(QUALITY_POLICY_KEY), dict)
+
+
+def governance_concern(repo: Path, concern: str) -> tuple[str, str, str]:
+    """Derive one of this workspace's own concerns, or refuse by name.
+
+    A repository's **own** `scripts/check-<concern>.*` wins over the
+    workspace default, for the same reason it wins everywhere else here: it
+    is more specific than the fallback, and a repository that wrote a script
+    for this check meant that script. The workspace checker is consulted only
+    when the repository wrote none.
+
+    The gate protocol decides what is possible here. `gate.rs:206-208` runs a
+    bound command as `sh -c <cmd>` with the repository root as the working
+    directory and **no stdin** (`runner.rs:103`, `Stdio::null()`), so a bound
+    command has to work from its argument vector and the inherited
+    environment and report through stdout and its exit code. Both commands
+    below satisfy that: they take a path, print a report on stdout, and exit
+    0/1 (and 2 for a configuration error).
+
+    `forge_governance_adapter.py` does **not** satisfy it and is deliberately
+    not bound: it reads `sys.stdin.read()` and emits an observation
+    (`status`/`detail`/`evidence`) rather than a findings report, so with no
+    stdin it sees an empty input and the gate's report parser would not
+    recognise the output. It is a one-input adapter, not a checker.
+    """
+    entry = GOVERNANCE_CHECKERS.get(concern)
+    if entry is None:
+        return "", "", f"{concern} is not answered by a checker in this workspace"
+
+    own_command, own_evidence, own_reason = script_concern(repo, concern)
+    if own_command:
+        return own_command, own_evidence, own_reason
+
+    relative, command, evidence = entry
+
+    if not (repo.parent / "workspace-governance" / relative).is_file():
+        return (
+            "",
+            "",
+            f"this repository is not a sibling of a workspace-governance checkout, so "
+            f"../workspace-governance/{relative} does not exist and the {concern} "
+            f"checker cannot be reached from it; {own_reason}",
+        )
+
+    if concern in ("placeholder-threshold", "product-code-boundary"):
+        if not has_quality_policy(repo):
+            return (
+                "",
+                "",
+                f"{relative} reads a `{QUALITY_POLICY_KEY}` block out of this "
+                f"repository's {QUALITY_POLICY_FILE} and is fail-closed without one: "
+                f"it exits 2 with `project declaration is missing the "
+                f"'{QUALITY_POLICY_KEY}' block` and never scans. The block's "
+                f"product_roots, languages and placeholder_threshold are an owner "
+                f"decision this tool does not invent; add the block to "
+                f"{QUALITY_POLICY_FILE}, or exempt the concern under "
+                f"`not_applicable:` with a reason",
+            )
+
+    # `{project}` is this repository's own directory name, which is also its
+    # `path` in the registry for all 81 registered projects. It is read from
+    # the path, not from `.project.json`, on the same rule as everything else
+    # here: the label is not an input.
+    return command.format(project=repo.name), evidence, ""
 
 
 def derive(concern: str, shape: Shape, repo: Path) -> tuple[str, str, str]:
@@ -894,6 +1090,9 @@ def derive(concern: str, shape: Shape, repo: Path) -> tuple[str, str, str]:
         if (repo / relative).is_file():
             return command, relative, ""
         return "", "", f"no {relative} in this repository"
+
+    if concern in GOVERNANCE_CHECKERS:
+        return governance_concern(repo, concern)
 
     if concern not in SHAPE_CONCERNS:
         return script_concern(repo, concern)
@@ -1050,6 +1249,36 @@ class Report:
 # --- writing, reusing the sibling's comment-preserving editor ---
 
 
+def render_checks(text: str, selections: list[str]) -> str:
+    """Add `checks: <concern>: true` for each name in `selections`.
+
+    The gate's `.ai-gate` reader refuses a document whose `commands:` names a
+    check the manifest does not select (`aigate.rs:213`), so a command for a
+    profile-scheduled concern needs this entry to exist. It is written with
+    the value `true` and never over an existing key: a repository that
+    already lists the concern — as `true`, `false`, or `"optional"` — is
+    left exactly as it is, because every one of those is a decision the
+    repository made about its own selection.
+    """
+    if not selections:
+        return text
+    lines = text.splitlines(keepends=True)
+    present = {entry for entry, _value in block_entries(lines, "checks")}
+    additions = [name for name in selections if name not in present]
+    if not additions:
+        return text
+    block = top_level_block_bounds(lines, "checks")
+    if block is None:
+        # `read_manifest` refuses a manifest with no `checks:` block, so this
+        # is unreachable from `bind_repo`. It is refused rather than guessed
+        # at, because inventing the block would invent the whole selection.
+        raise ValueError("manifest has no `checks:` block to add a selection to")
+    _start, end = block
+    for offset, name in enumerate(additions):
+        lines.insert(end + offset, f"  {name}: true\n")
+    return "".join(lines)
+
+
 def render_manifest(text: str, bindings: list[tuple[str, str]]) -> str:
     """Insert `bindings` into the manifest's `commands:` block.
 
@@ -1095,22 +1324,49 @@ def classify_repo(repo_path: Path, selected: list[str], bound: dict[str, str],
 
     `selected` is the gate's required set, which is a superset of the
     manifest's own `checks:` — see [`gate_required`]. `profile_only` names
-    the ones only the profile scheduled. Those are recorded and never
-    bound: the gate's manifest reader rejects a `commands:` entry for a
-    check the manifest does not select, so writing one would replace a
-    reported gap with an unparseable manifest.
+    the ones only the profile scheduled.
+
+    A profile-only concern is **derived first** rather than refused outright.
+    The gate's manifest reader rejects a `commands:` entry for a check the
+    manifest does not select, so the old answer was to refuse and record the
+    gap. But a repository that names `profile: product` has already committed
+    to the three concerns that profile schedules, and the gate already fails
+    it for not binding them — so where a checker is genuinely reachable, the
+    correct write is **both** a `checks:` entry and a `commands:` entry, and
+    [`bind_repo`] performs them as one operation.
+
+    Where no checker is reachable, the concern is recorded and neither entry
+    is written. That is the case that matters for honesty: a `checks:` entry
+    with no command behind it is a worse state than the gap, because it
+    makes a declared check one the gate now fails on while still running
+    nothing.
     """
     outcomes = []
     for concern in selected:
         if concern in profile_only:
-            outcomes.append(
-                ConcernOutcome(
-                    repo_path.name,
-                    concern,
-                    UNRESOLVED,
-                    reason=profile_only_reason(concern, profile),
+            command, evidence, reason = derive(concern, shape, repo_path)
+            if command:
+                # Reachable: bound, and `bind_repo` writes the matching
+                # `checks:` entry with it.
+                outcomes.append(
+                    ConcernOutcome(
+                        repo_path.name,
+                        concern,
+                        BOUND,
+                        command,
+                        evidence,
+                        selects=True,
+                    )
                 )
-            )
+            else:
+                outcomes.append(
+                    ConcernOutcome(
+                        repo_path.name,
+                        concern,
+                        UNRESOLVED,
+                        reason=reason or profile_only_reason(concern, profile),
+                    )
+                )
             continue
         if concern in bound:
             command, evidence, _reason = derive(concern, shape, repo_path)
@@ -1298,6 +1554,13 @@ def bind_repo(repo_path: Path, apply: bool = False, check_clean: bool = True) ->
 
     try:
         after = render_manifest(before, [(c.concern, c.command) for c in pending])
+        # The `checks:` entry goes in **after** the `commands:` entry and
+        # before the single write, so the file on disk never carries a
+        # selection with no command behind it at any point. Both land in
+        # `after`, which is the only text this function writes.
+        selects = [c.concern for c in pending if c.selects]
+        if selects:
+            after = render_checks(after, selects)
     except Exception as exc:  # noqa: BLE001
         return Outcome(
             name, REFUSED, f"{GATE_YAML} could not be updated: {exc}", concerns=concerns,

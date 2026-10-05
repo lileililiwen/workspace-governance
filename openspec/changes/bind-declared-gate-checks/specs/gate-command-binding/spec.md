@@ -150,30 +150,40 @@ it does not have.
 - **THEN** the nested workspace provides the `tests` command, and no
   ambiguity is reported
 
-### Requirement: Only a concern the repository declared is bound
+### Requirement: A binding is only written for a concern the gate already requires
 
-A command MUST be written only for a concern the repository's own manifest
-selected, whether by listing it under `checks:` or by naming a `profile:`
-whose default selection includes it. The tool MUST NOT add a concern, MUST
-NOT remove a concern, MUST NOT change a `checks:` value, and MUST NOT turn a
-disabled concern on. A concern that is disabled or absent from `checks:`
-MUST be left alone whether or not a command could be derived for it. A
-command already present for a declared concern MUST be left byte-for-byte
-alone when it equals the derived command, and MUST be reported as a
-conflict and left untouched when it differs, because an existing binding is
-a decision somebody made by hand.
+A command MUST be written only for a concern the gate would report as an
+unbound required check for that repository — one the manifest listed under
+`checks:`, or one its `profile:` schedules and the manifest did not disable,
+exempt, or already bind. The tool MUST NOT remove a concern, MUST NOT change
+an existing `checks:` value, and MUST NOT turn a disabled concern on. A
+concern that is disabled under `checks: <id>: false`, exempted under
+`not_applicable:`, marked `"optional"`, or absent from both `checks:` and the
+profile's defaults MUST be left alone whether or not a command could be
+derived for it. A command already present for a required concern MUST be left
+byte-for-byte alone when it equals the derived command, and MUST be reported
+as a conflict and left untouched when it differs, because an existing binding
+is a decision somebody made by hand.
 
-A concern that only a `profile:` selected, and that the manifest does not
-also list under `checks:`, MUST NOT be written. The gate's manifest reader
-refuses a document whose `commands:` names a check the manifest does not
-select, so such a binding would replace a reported gap with a manifest the
-gate cannot parse.
+**Amended.** This requirement previously read "Only a concern the repository
+declared is bound", and forbade the tool from touching `checks:` at all. That
+forbade the correct action for a check the repository had already committed to
+by naming a profile, and it guarded the wrong boundary: the boundary the gate
+actually enforces is *`commands:` must not name a check that is not selected*,
+not *`checks:` must never be written*. A manifest that selected a check only
+through `profile:` and carried a `commands:` entry for it was unparseable, and
+the tool's answer was to leave the gap open — which is what the fleet
+measured. The narrower invariant is the one below, and the change to the
+`checks:` block is permitted **only** under the conditions in the next
+requirement.
 
 #### Scenario: A concern nobody asked for stays unbound
 
-- **WHEN** a repository's manifest does not select `format` and its
-  `Cargo.toml` would allow a `format` command to be derived
-- **THEN** no `commands.format` entry is written
+- **WHEN** a repository's manifest does not select `format`, does not disable
+  it, and its `profile:` does not schedule it, and its `Cargo.toml` would
+  allow a `format` command to be derived
+- **THEN** no `commands.format` entry is written and no `checks.format` entry
+  is written
 
 #### Scenario: A disabled concern stays disabled
 
@@ -187,14 +197,74 @@ gate cannot parse.
 - **THEN** the concern is reported as a conflict, the existing command is
   left exactly as it is, and the file is not written
 
-#### Scenario: A profile-scheduled check is recorded, not written
+### Requirement: A profile-scheduled check is selected explicitly only when its command is really written
 
-- **WHEN** a repository's manifest says `profile: product` and does not list
-  `placeholder-threshold` under `checks:`
-- **THEN** `placeholder-threshold` is recorded as unresolved with a reason
-  naming the profile and the way to bind it, and no
-  `commands.placeholder-threshold` entry is written, because the gate would
-  refuse to parse a manifest that carried one
+The gate's `.ai-gate` reader refuses a document whose `commands:` names a
+check the manifest does not select
+(`commands.<id> references a check that is not selected`,
+`driftwatchdog/src/gate/aigate.rs:213`), so a `commands:` entry for a check
+only a `profile:` selected cannot be written on its own. The tool MAY close
+that gap by writing **both** a `checks: <concern>: true` entry and a
+`commands: <concern>` entry in the same write, but only when every one of the
+following holds. Failing any one of them, the concern MUST stay unbound and
+MUST land in the debt record exactly as it does today.
+
+1. The concern is a **required** check for this repository under the gate's
+   own resolution — scheduled by the profile and not disabled, exempted, or
+   already bound.
+2. A command is **actually derivable** for it. Reachability is measured
+   against files on disk, not assumed: the checker script exists at the path
+   the command names, relative to the repository root.
+3. The `commands:` entry **is written** in the same operation. A `checks:`
+   entry with no matching command is a strictly worse state than the gap it
+   replaced, because it makes a declared check the gate now fails on while
+   still running nothing.
+
+The `checks:` entry MUST be written with the value `true`, MUST be inserted
+into the existing `checks:` block in the position the profile schedules it,
+and MUST NOT be written twice when the repository already lists the concern.
+
+**A `quality` policy is not invented.** `placeholder-threshold` and
+`product-code-boundary` are answered by `product_code_quality.py`, which is
+fail-closed: without a `quality` block in the repository's own
+`.project.json` it exits `2` (configuration error) and never scans. Writing
+one would be inventing per-repository policy — which product directories
+count as product, which languages, what threshold — so for those two
+concerns condition 2 fails for every repository that has not written one, and
+they stay in the debt record.
+
+#### Scenario: A profile-scheduled check with a reachable checker is bound in both blocks
+
+- **WHEN** a repository's manifest says `profile: product`, does not list
+  `governance-quality` under `checks:`, and the governance checker script
+  exists on disk at the path the derived command names
+- **THEN** both a `checks: governance-quality: true` entry and a
+  `commands: governance-quality` entry are written, and the concern is no
+  longer in the debt record
+
+#### Scenario: A profile-scheduled check with no reachable checker stays in debt
+
+- **WHEN** a repository's manifest says `profile: product`, does not list
+  `placeholder-threshold` under `checks:`, and no `quality` block exists in
+  its `.project.json`
+- **THEN** `placeholder-threshold` is recorded as unresolved naming the
+  missing `quality` block in `.project.json`, and **neither** a
+  `checks.placeholder-threshold` entry **nor** a `commands.placeholder-threshold`
+  entry is written
+
+#### Scenario: A concern the repository already declares is not duplicated
+
+- **WHEN** a repository's manifest already lists `governance-quality: true`
+  under `checks:`
+- **THEN** no second `governance-quality` entry is added to `checks:`, and
+  only the `commands:` entry is written
+
+#### Scenario: A checks entry is never written without its command
+
+- **WHEN** the tool writes a `checks: <concern>: true` entry
+- **THEN** a `commands: <concern>` entry for the same concern is written in
+  the same operation, so no manifest the tool produces can carry a selection
+  with no command for it
 
 ### Requirement: The debt record is complete against the gate's own unbound set
 
@@ -297,6 +367,27 @@ names.
 - **WHEN** the record is read
 - **THEN** the grouped reasons and their check counts appear before the
   per-repository entries
+
+### Requirement: An unresolved check names the specific missing configuration
+
+A reason recorded for an unresolved concern MUST name the file and the key
+whose absence causes the refusal, not merely the class of the problem. A
+reason that says a check "needs configuration" tells the next reader nothing
+they can act on; a reason that names `quality` in `.project.json` tells them
+the file to open and the block to add.
+
+Where the missing input is a declaration in a specific file, the reason MUST
+name that file and that block or key. This applies in particular to
+`placeholder-threshold` and `product-code-boundary`, whose checker is
+fail-closed on a `quality` block in the repository's `.project.json` and exits
+`2` — a configuration error — without one.
+
+#### Scenario: The reason names the file and the block
+
+- **WHEN** a repository has no `quality` block in its `.project.json` and its
+  profile schedules `placeholder-threshold`
+- **THEN** the recorded reason names `.project.json`, names the `quality`
+  block, and says the checker exits 2 without it
 
 ### Requirement: The run reports per repository and refuses to exit clean on debt
 

@@ -147,6 +147,26 @@ class RepoCase(unittest.TestCase):
     def manifest_text(self) -> str:
         return (self.repo / ".ai-gate" / "gate.yaml").read_text(encoding="utf-8")
 
+    def write_sibling(self) -> Path:
+        """A `workspace-governance` checkout beside the fixture repository.
+
+        Every repository in this fleet has the workspace checkers at
+        `../workspace-governance/scripts/…`, and that reachability is what
+        makes a concern bindable, so the fixture reproduces the real layout
+        rather than assuming it. Empty files: the binder checks that the path
+        exists, and no test here runs the checker.
+        """
+        sibling = self.repo.parent / "workspace-governance"
+        for relative in ("workspace_check.py", "product_code_quality.py"):
+            target = sibling / "scripts" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("# fixture\n", encoding="utf-8")
+        return sibling
+
+    def forget_sibling(self) -> None:
+        """Remove the sibling checkout, so no workspace checker is reachable."""
+        shutil.rmtree(self.repo.parent / "workspace-governance", ignore_errors=True)
+
     # --- running the tool -----------------------------------------
 
     def bind(self, apply: bool = False):
@@ -1234,14 +1254,23 @@ checks:
   - FAIL
 """
 
-# The three checks `profile: product` schedules and no repository in this
-# fleet binds. `source-file-size` is the fourth: the gate runs it in
-# process, so it is never unbound and must never appear in the record.
+# The three checks `profile: product` schedules. `source-file-size` is the
+# fourth: the gate runs it in process, so it is never unbound and must never
+# appear in the record.
+#
+# `governance-quality` binds wherever the workspace checker is reachable, so
+# it leaves this tuple on a repository that has one. The two product-quality
+# concerns do not: their checker is fail-closed on a `quality` block the
+# repository has not written, and this tool invents no policy.
 PRODUCT_PROFILE_DEBT = (
     "governance-quality",
     "placeholder-threshold",
     "product-code-boundary",
 )
+
+# The concerns a bare fixture leaves in debt, and the one it closes. A test
+# that wants all three unresolved removes the sibling checkout first.
+UNREACHABLE_PROFILE_DEBT = PRODUCT_PROFILE_DEBT
 
 
 class ProfileSelectionTests(RepoCase):
@@ -1252,10 +1281,19 @@ class ProfileSelectionTests(RepoCase):
     only unbound checks came from its profile had no unresolved concerns,
     and therefore no entry in the debt record at all. Across this fleet
     that was 30 repositories and 122 checks the gate was failing on.
+
+    The fixture is a **sibling** of a `workspace-governance` checkout, which
+    is the shape every repository in this fleet has. Reachability is
+    therefore true by default here, and the tests that need it false remove
+    the sibling with [`forget_sibling`]. Modelling the real layout is the
+    point: a fixture that cannot reach a checker could not tell "refused
+    because the checker is missing" apart from "refused for another reason",
+    which is the whole distinction this pass turns on.
     """
 
     def setUp(self):
         super().setUp()
+        self.write_sibling()
         self.write_manifest(checks=BUILD_AND_TESTS, text=PRODUCT_MANIFEST.format(
             checks=BUILD_AND_TESTS
         ))
@@ -1281,9 +1319,14 @@ class ProfileSelectionTests(RepoCase):
     def test_a_profile_scheduled_check_is_recorded_as_debt(self):
         self.write("App.sln", A_SOLUTION)
         self.write("App/App.csproj", A_CSPROJ)
-        # `build` and `tests` bind, so the profile's three are the only debt
-        # left, and they are the three the gate reports for this manifest.
-        self.assertEqual(set(self.unresolved(self.debt())), set(PRODUCT_PROFILE_DEBT))
+        # `build` and `tests` bind. Of the profile's three, `governance-quality`
+        # binds too — the workspace checker is reachable — so only the two
+        # product-quality concerns are left, and they are the two the gate
+        # still reports for this manifest.
+        self.assertEqual(
+            set(self.unresolved(self.debt())),
+            {"placeholder-threshold", "product-code-boundary"},
+        )
 
     def test_a_repository_whose_only_debt_is_profile_scheduled_is_still_listed(self):
         # The shape that lost 30 repositories: every declared check is
@@ -1291,14 +1334,20 @@ class ProfileSelectionTests(RepoCase):
         # be dropped for having no gaps at all.
         self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
         debt = self.debt()
-        self.assertEqual(set(self.unresolved(debt)), set(PRODUCT_PROFILE_DEBT))
+        self.assertEqual(
+            set(self.unresolved(debt)), {"placeholder-threshold", "product-code-boundary"}
+        )
         self.assertEqual(debt["totals"]["repositories_with_debt"], 1)
-        self.assertEqual(debt["totals"]["unresolved_checks"], 3)
+        self.assertEqual(debt["totals"]["unresolved_checks"], 2)
 
     def test_a_profile_scheduled_check_names_the_way_out(self):
+        # The reason has to name the file and the key, or the next reader
+        # has nothing to act on. It names both, and it offers the two real
+        # ways out: write the policy, or exempt the check with a reason.
         reason = self.unresolved(self.debt())["placeholder-threshold"]
-        self.assertIn("profile: product", reason)
-        self.assertIn("commands.placeholder-threshold", reason)
+        self.assertIn(".project.json", reason)
+        self.assertIn("`quality`", reason)
+        self.assertIn("product_roots", reason)
         self.assertIn("not_applicable", reason)
 
     def test_the_in_process_check_is_never_recorded(self):
@@ -1327,18 +1376,156 @@ class ProfileSelectionTests(RepoCase):
         ))
         self.assertNotIn("accessibility", self.unresolved(self.debt()))
 
-    def test_a_profile_scheduled_check_is_never_written_as_a_command(self):
-        # The gate's `.ai-gate` reader refuses a manifest whose `commands:`
-        # names a check the manifest does not select, so a binding here would
-        # trade a reported gap for an unparseable manifest.
+    def test_a_profile_scheduled_check_is_bound_in_both_blocks_when_reachable(self):
+        # The change this file exists to pin. The gate refuses a `commands:`
+        # entry for a check the manifest does not select, so the old answer
+        # was to record and never write. But `profile: product` is the
+        # repository's own declaration that it runs these three checks, and
+        # the gate is already failing it for not binding them. The correct
+        # write is both halves, in one operation.
         self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
-        self.write("scripts/check-placeholder-threshold.mjs", "export default [];\n")
+        outcome = self.bind(apply=True)
+        text = self.manifest_text()
+        self.assertEqual(self.concern(outcome, "governance-quality").status, BOUND)
+        # Both halves, so the manifest stays parseable AND the check runs.
+        self.assertIn("  governance-quality: true\n", text)
+        # The command is scoped to THIS repository, because the concern
+        # filters by code and not by project: an unscoped workspace audit
+        # charges every repository for every other repository's findings.
+        self.assertIn(
+            "  governance-quality: 'python3 ../workspace-governance/scripts/"
+            "workspace_check.py --root .. --project demo --json'",
+            text,
+        )
+        # And it leaves the debt record.
+        self.assertNotIn("governance-quality", self.unresolved(self.debt()))
+
+    def test_the_governance_command_is_scoped_to_this_repository(self):
+        # The scoping is a correctness property, not a style choice. The
+        # gate's concern filters findings by `code` alone, so a
+        # workspace-wide audit makes every repository's gate fail on every
+        # other repository's findings. Each repository's own name goes in.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        self.bind(apply=True)
+        self.assertIn("--project demo", self.manifest_text())
+
+    def test_the_checks_entry_precedes_the_commands_entry_it_licenses(self):
+        # A `commands:` entry above a `checks:` entry is fine for the parser
+        # (both are top-level blocks), but the ordering that reads correctly
+        # is selection first, then the command that satisfies it. It also
+        # means a reader diffing the file sees the selection change beside
+        # the profile that asked for it rather than at the bottom.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        self.bind(apply=True)
+        text = self.manifest_text()
+        self.assertLess(
+            text.index("  governance-quality: true"),
+            text.index("commands:"),
+            "the selection was written below the commands block",
+        )
+
+    def test_a_profile_scheduled_check_with_no_reachable_checker_stays_in_debt(self):
+        # The negative half, and the case that protects the invariant. With
+        # no sibling workspace-governance checkout there is no checker to
+        # reach, so NEITHER half is written: a `checks:` entry with no
+        # command behind it is strictly worse than the gap, because it makes
+        # a declared check one the gate now fails on while running nothing.
+        self.forget_sibling()
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
         before = self.manifest_text()
         outcome = self.bind(apply=True)
-        self.assertEqual(self.manifest_text(), before, "a profile-only check was written")
+        self.assertEqual(self.manifest_text(), before, "a selection was written with no command")
         self.assertEqual(
-            self.concern(outcome, "placeholder-threshold").status, UNRESOLVED
+            self.concern(outcome, "governance-quality").status, UNRESOLVED
         )
+        self.assertEqual(
+            set(self.unresolved(self.debt())), set(UNREACHABLE_PROFILE_DEBT)
+        )
+        # And the reason says why, naming the path that is not there.
+        self.assertIn(
+            "workspace_check.py", self.unresolved(self.debt())["governance-quality"]
+        )
+
+    def test_a_missing_quality_block_names_the_file_and_the_key(self):
+        # The debt record has to be actionable. "needs configuration" tells
+        # the next reader nothing; ".project.json has no `quality` block,
+        # and the checker exits 2 without one" tells them what to write.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        reason = self.unresolved(self.debt())["placeholder-threshold"]
+        self.assertIn(".project.json", reason)
+        self.assertIn("`quality`", reason)
+        self.assertIn("exits 2", reason)
+        # A policy is never invented, so this concern is not bound even
+        # though its checker is perfectly reachable.
+        self.assertNotIn("placeholder-threshold", self.manifest_text())
+
+    def test_a_quality_policy_is_never_invented(self):
+        # The checker is reachable and the concern is required; the only
+        # thing missing is the repository's own policy, and policy is an
+        # owner decision. `product_code_quality.py` is fail-closed, so this
+        # tool leaves the gap rather than writing a `quality` block.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        self.bind(apply=True)
+        text = self.manifest_text()
+        self.assertNotIn("product-code-boundary: true", text)
+        self.assertNotIn("product_code_quality.py", text)
+        # And nothing was written into the repository's own declaration.
+        self.assertFalse((self.repo / ".project.json").exists())
+
+    def test_a_quality_policy_is_honoured_when_the_repository_wrote_one(self):
+        # The other half of the previous two: a repository that HAS declared
+        # the policy gets both halves, because the checker can then actually
+        # run. This is the 1 of 81 case, and it is the one that proves the
+        # refusal above is about the missing policy and not about the checker.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        self.write(".project.json", json.dumps({"quality": {"product_roots": ["src"]}}))
+        outcome = self.bind(apply=True)
+        self.assertEqual(
+            self.concern(outcome, "placeholder-threshold").status, BOUND
+        )
+        text = self.manifest_text()
+        self.assertIn("  placeholder-threshold: true", text)
+        self.assertIn("product_code_quality.py .", text)
+
+    def test_an_already_declared_concern_is_not_given_a_duplicate(self):
+        # A repository that already lists the concern has made the selection
+        # itself; adding a second entry would be writing over its own
+        # decision. Only the `commands:` half is missing.
+        self.write_manifest(text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS + "  governance-quality: true\n"
+        ))
+        self.bind(apply=True)
+        text = self.manifest_text()
+        self.assertEqual(
+            text.count("  governance-quality: true"), 1, "the selection was duplicated"
+        )
+        self.assertIn("workspace_check.py", text)
+
+    def test_a_disabled_concern_is_never_selected(self):
+        # `checks: <id>: false` is the repository taking the concern out of
+        # the gate's selection. The binder must not write it back as `true`,
+        # whatever the profile schedules and whatever a checker could answer.
+        self.write_manifest(text=PRODUCT_MANIFEST.format(
+            checks=BUILD_AND_TESTS + "  governance-quality: false\n"
+        ))
+        self.bind(apply=True)
+        text = self.manifest_text()
+        self.assertIn("  governance-quality: false", text)
+        self.assertNotIn("  governance-quality: true", text)
+        self.assertNotIn("governance-quality: 'python3", text)
+
+    def test_a_repositorys_own_script_wins_over_the_workspace_checker(self):
+        # A repository that wrote `scripts/check-governance-quality.*` meant
+        # that script. The workspace checker is a fallback for repositories
+        # that wrote none, not an override.
+        self.write_manifest(checks="", text=PRODUCT_MANIFEST.format(checks=""))
+        self.write("scripts/check-governance-quality.mjs", "export default [];\n")
+        outcome = self.bind(apply=True)
+        self.assertEqual(
+            self.concern(outcome, "governance-quality").command,
+            "scripts/check-governance-quality.mjs",
+        )
+        self.assertNotIn("workspace_check.py", self.manifest_text())
 
     def test_a_manifest_declared_profile_check_with_a_script_is_bound(self):
         # `driftwatchdog`'s shape: the concern is named under `checks:` as
