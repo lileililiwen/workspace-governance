@@ -811,16 +811,59 @@ sibling repository.
 
 ## Next action
 
-1. **`bind-declared-gate-checks` (`8e3aecd`) is implemented, tested and
-   validated, and deliberately not archived.** It gates on one thing the owner
-   must decide, not on code: 48 declared checks across the fleet are still
-   unbound because no command could be derived for them. Applying the other 50
-   repositories' bindings is a cross-repo source edit needing explicit
-   authorization under the boundary in `AGENTS.md` — review the dry run, then
-   `--apply`, then commit `gate-debt.json`. Until that is done the tool exits 3
-   by design, and that is the honest state: a check with no command is not a
-   check. Two items are knowingly open in `tasks.md`: `README.md` is not yet
-   updated (3.7), and the two reporting quirks above are reported, not fixed.
+1. **`bind-declared-gate-checks` is implemented, tested, validated, and
+   partly closed; still deliberately not archived.** The fleet write landed
+   and `gate-debt.json` was regenerated against it.
+
+   | Measurement | Before | After |
+   |---|---|---|
+   | `governance-quality` UNBOUND across the fleet | 41 | **0** |
+   | Debt record, unresolved checks | 168 | **127** |
+   | Debt record, repositories carrying debt | 59 | **54** |
+   | Debt record vs the gate's own unbound set | equal | **equal (127 = 127)** |
+   | `python3 -m pytest tests -q` | 725 passed | **734 passed**, 158 subtests, 0 failed |
+
+   The 127 that remain are 80 `placeholder-threshold` / `product-code-boundary`
+   pairs (40 each) plus 47 shape refusals. Every one names the file and key
+   whose absence caused it — for the product-quality pair, the `quality` block
+   missing from that repository's own `.project.json`, and the checker's exit-2
+   behaviour without it.
+
+   **The `checks:` boundary moved, and this is the design call to review.** The
+   binder used to refuse to touch `checks:` at all, so a repository naming
+   `profile: product` was failed by the gate for three unbound checks it could
+   never close. That guarded the wrong boundary: the gate enforces one rule —
+   `commands:` must not name a check the manifest does not select
+   (`driftwatchdog/src/gate/aigate.rs:213`) — not "`checks:` is never written".
+   The binder now writes both halves in one operation, and only when a checker
+   is reachable; where none is, neither half is written, because a selection
+   with no command is a worse state than the gap. The spec amendment says so
+   plainly and names the test that guarded the wrong boundary.
+
+   **Both command flags are load-bearing, and dropping either is a silent
+   wrong answer.** Without `--root ..` the checker defaults to this
+   repository and reports 81 false `PROJECT_MISSING` findings. Without
+   `--project <repo>` it audits the whole workspace, and the gate's concern
+   filters findings by **code, not project** — measured on this fleet, that
+   charges `bargora` for 12 findings of which 0 are its own (4 from
+   `chronicleaf`, 3 from `metiscope`, 3 from `openlearning`, 1 from
+   `dotnet-platform-libs`). Scoped, the same repository reads PASS.
+
+   **Re-measured on real gate runs, not dry runs.** The 8 repositories whose
+   only failure was these bindings (`bargora`, `crossalheart`, `dharmatlas`,
+   `hypora`, `mnemyx`, `mortalect`, `namevia`, `triplanify`) all read
+   `governance-quality: PASS` after the binding, and each is blocked only by
+   the two product-quality concerns that have no policy to run. All 76
+   manifests were checked for the invariant that matters: **0** `commands:`
+   entries name a check the manifest does not select.
+
+   **Not done, on purpose.** No `quality` block was written anywhere, so the
+   80 product-quality checks stay unbound — `product_roots`, `languages` and
+   `placeholder_threshold` are per-repository owner decisions and 79 of 81
+   repositories have not written one. `forge_governance_adapter.py` remains
+   unbindable by construction (it reads stdin; the gate gives the child
+   `Stdio::null()`) and is not wired. `README.md` is still not updated
+   (3.7). Nothing was pushed; all 40 fleet commits are local on `main`.
 2. Archive `derived-kind-canonical-form` and `identity-and-taxonomy-axis-split`
    when the owner is ready. Both are implemented, committed, and validated
    strictly; neither is archived. Archiving the first folds the MODIFIED
