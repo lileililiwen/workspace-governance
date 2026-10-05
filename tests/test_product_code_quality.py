@@ -128,6 +128,163 @@ class RustBoundaryTests(unittest.TestCase):
         self.assertEqual(report.summary["test_code"], 0)
 
 
+class RustModuleTreeBoundaryTests(unittest.TestCase):
+    """The Rust branch decides test scope from the crate's module tree.
+
+    The shape these pin is `src/<dir>/tests.rs` reached by
+    `#[cfg(test)] mod tests;` in the sibling `mod.rs`. It is what
+    `driftwatchdog/src/gate/governance/tests.rs` is, and a single-file lexical
+    scan reports its contents as product test code, which made a healthy
+    repository red. Every test here has to keep failing if the declaration goes
+    away — that is the difference between reading the module graph and adding a
+    file-name exception.
+    """
+
+    TESTS_RS = (
+        "use super::*;\n"
+        "\n"
+        "#[test]\n"
+        "fn it_works() {\n"
+        "    assert_eq!(add(1, 2), 3);\n"
+        "}\n"
+        "\n"
+        "#[test]\n"
+        "fn it_also_works() {\n"
+        "    assert_eq!(add(2, 2), 4);\n"
+        "}\n"
+    )
+
+    def setUp(self) -> None:
+        self.tmp, self.root = _make_project(["src"], ["rust"])
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def _evaluate(self) -> Any:
+        declaration = json.loads((self.root / ".project.json").read_text(encoding="utf-8"))
+        return pcq.evaluate(pcq.load_policy(declaration).with_root(self.root))
+
+    def _test_code_findings(self, report: Any) -> list[Any]:
+        return [f for f in report.findings if f.rule_id == "product-test-code"]
+
+    def _findings_in(self, report: Any, rel: str) -> list[Any]:
+        return [f for f in self._test_code_findings(report) if f.file == rel]
+
+    def test_cfg_test_declaration_in_sibling_mod_rs_clears_the_tests_file(self):
+        """The shape measured on driftwatchdog: declared, so not product code."""
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\nmod tests;\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(report.summary["test_code"], 0, [f.marker for f in report.findings])
+        self.assertEqual(report.status, "PASS", report.notes)
+
+    def test_the_declaration_is_what_clears_it_not_the_file_name(self):
+        """Remove the declaration and the same file is product test code again."""
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\nmod tests;\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        findings = self._findings_in(report, "src/governance/tests.rs")
+        self.assertEqual(report.status, "FAIL", report.notes)
+        self.assertEqual(len(findings), 2, [(f.file, f.line) for f in findings])
+        # The unguarded declaration is itself a finding: it is the line a reader
+        # has to fix, and the two test functions are what it drags into product.
+        self.assertEqual([f.line for f in self._findings_in(report, "src/governance/mod.rs")], [3])
+
+    def test_a_tests_file_with_no_declaration_at_all_is_reported(self):
+        """No `mod.rs` anywhere: the name authorizes nothing."""
+        _write(self.root / "src/governance.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(report.status, "FAIL", report.notes)
+        self.assertEqual(len(self._findings_in(report, "src/governance/tests.rs")), 2)
+
+    def test_a_non_cfg_test_declaration_still_reports_the_tests_file(self):
+        """`mod tests;` without the guard compiles the file into the product."""
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\nmod tests;\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(len(self._findings_in(report, "src/governance/tests.rs")), 2)
+
+    def test_an_ambiguous_cfg_does_not_authorize_test_scope(self):
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(any(test, feature = \"integration\"))]\nmod tests;\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(len(self._findings_in(report, "src/governance/tests.rs")), 2)
+
+    def test_lib_rs_declares_the_test_module_too(self):
+        _write(self.root / "src/governance/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\nmod tests;\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(report.summary["test_code"], 0, [f.marker for f in report.findings])
+
+    def test_an_intervening_path_attribute_does_not_disarm_the_guard(self):
+        """`#[cfg(test)]` `#[path = ...]` `mod tests;` is one guarded item.
+
+        This is the shape in `rust-ecommerce/src/shipment/mod.rs` and
+        `alltools-platform/.../typed_loop.rs`, where the old scanner dropped the
+        guard on the attribute line between the guard and the item.
+        """
+        _write(
+            self.root / "src/governance/mod.rs",
+            "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\n#[path = \"tests.rs\"]\nmod tests;\n",
+        )
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(report.summary["test_code"], 0, [f.marker for f in report.findings])
+        self.assertEqual(report.status, "PASS", report.notes)
+
+    def test_an_intervening_allow_attribute_does_not_disarm_an_inline_guard(self):
+        """`#[cfg(test)]` `#[allow(...)]` `mod tests { ... }` is one item too."""
+        _write(
+            self.root / "src/governance.rs",
+            "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\n#[allow(clippy::await_holding_lock)]\nmod tests {\n    use super::*;\n    #[test]\n    fn it_works() { assert_eq!(add(1, 2), 3); }\n}\n",
+        )
+        report = self._evaluate()
+        self.assertEqual(report.summary["test_code"], 0, [f.marker for f in report.findings])
+        self.assertEqual(report.status, "PASS", report.notes)
+
+    def test_real_test_code_in_a_product_file_is_still_reported(self):
+        """A product module with a bare `#[test]` and no guard stays a finding."""
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n")
+        _write(self.root / "src/governance/add.rs", "#[test]\nfn it_works() { assert_eq!(add(1, 2), 3); }\n")
+        report = self._evaluate()
+        findings = self._test_code_findings(report)
+        self.assertEqual(report.status, "FAIL", report.notes)
+        self.assertEqual([f.file for f in findings], ["src/governance/add.rs"])
+
+    def test_a_non_test_file_reached_by_a_cfg_test_declaration_is_cleared(self):
+        """The rule is the declaration, not the conventional file name."""
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[cfg(test)]\nmod helpers;\n")
+        _write(self.root / "src/governance/helpers.rs", "#[test]\nfn helper_works() { assert_eq!(add(1, 2), 3); }\n")
+        report = self._evaluate()
+        self.assertEqual(report.summary["test_code"], 0, [f.marker for f in report.findings])
+
+    def test_a_declaring_file_elsewhere_does_not_clear_the_file(self):
+        """The declaration has to reach *this* module, not some other one."""
+        _write(self.root / "src/other/mod.rs", "#[cfg(test)]\nmod tests;\n")
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n")
+        _write(self.root / "src/governance/tests.rs", self.TESTS_RS)
+        report = self._evaluate()
+        self.assertEqual(len(self._test_code_findings(report)), 2)
+
+    def test_a_tests_directory_in_a_product_root_stays_out_of_scope(self):
+        """Already excluded by the `tests` path segment, and still excluded."""
+        _write(self.root / "src/governance/mod.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }\n")
+        _write(self.root / "src/governance/tests/mod.rs", "#[test]\nfn it_works() {}\n")
+        report = self._evaluate()
+        self.assertEqual(report.summary["test_code"], 0)
+        self.assertEqual(report.summary["excluded_paths"], 1, report.summary)
+
+    def test_helper_predicates_answer_the_module_tree_questions(self):
+        declared = self.root / "src/gate/governance"
+        _write(declared / "mod.rs", "#[cfg(test)]\nmod tests;\npub mod sibling;\n")
+        _write(declared / "tests.rs", self.TESTS_RS)
+        _write(declared / "sibling.rs", "pub fn x() {}\n")
+        self.assertTrue(pcq._rust_declared_under_cfg_test(declared / "tests.rs"))
+        self.assertFalse(pcq._rust_declared_under_cfg_test(declared / "sibling.rs"))
+        self.assertEqual(pcq._rust_module_keys(declared / "tests.rs"), ("tests",))
+
+
 class PythonBoundaryTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp, self.root = _make_project(["src"], ["python"])

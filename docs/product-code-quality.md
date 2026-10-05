@@ -296,17 +296,31 @@ subtree in `exclude`.
 
 ## Known limits
 
-**The Rust scan is lexical and single-file, so `#[cfg(test)]` modules are
-reported as product test code.** The scanner reads each file in isolation and
-cannot see that `src/gate/governance/tests.rs` is only compiled under
-`#[cfg(test)] mod tests;` (`mod.rs:627`), so it counts that file's contents
-against `product-code-boundary`. `driftwatchdog` reports 24 such findings and
-none of them is a real boundary violation. The same shape produces a false
-finding in every Rust repository that keeps tests behind a `#[cfg(test)] mod`
-declaration. The fix is a module graph, not a word list and not an `exclude`,
-so it is recorded for the checker's owner rather than worked around here.
-Until it is fixed, treat a `product-test-code` finding in a `tests.rs` reached
-by a `#[cfg(test)] mod` declaration as unverified.
+**The Rust scan reads the module tree, but only one directory deep.** A `.rs`
+file is treated as test scope when the crate declares its module under
+`#[cfg(test)]`: a sibling `mod.rs`, `lib.rs` or `main.rs`, or the parent
+directory's `mod.rs` for a directory module, carrying the guard on the
+`mod <name>;` declaration that reaches the file — including through a
+`#[path = "..."]` attribute, which is the shape
+`rust-ecommerce/src/shipment/mod.rs` uses. A file with no such declaration is
+product code even when it is called `tests.rs`, because a name is a convention
+and an exclusion would hide a real finding rather than report one. The guard is
+tracked per item, so `#[cfg(test)]`, `#[path = …]` and `mod tests;` on
+consecutive lines are one guarded item and not three. An ambiguous guard
+(`cfg(any(test, …))`, `cfg(all(test, …))`) authorizes nothing, as before.
+
+What the reader cannot have: a `#[cfg(test)]` declaration reached through
+`include!`, a build script, or a `#[path]` pointing outside the directory that
+declares it, and inline modules such as `mod tests { … }` in a file that is
+itself declared `#[cfg(test)]` elsewhere — those are still scanned and still
+reported. The languages other than Rust are unchanged and keep their
+file-name-based heuristics.
+
+**A `tests/` directory inside a product root is out of scope before the module
+tree is consulted.** `DEFAULT_EXCLUDED_DIRS` matches the path *segment* `tests`,
+so `src/gate/governance/tests/mod.rs` is never scanned whether or not a parent
+`mod.rs` declares it. That is the intended shape — test roots are first-class —
+and it is why the fix needed no `tests`-directory handling.
 
 ## Non-goals
 

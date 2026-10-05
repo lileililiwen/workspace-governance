@@ -500,23 +500,63 @@ here instead, as a spec correction with its reasoning and its numbers in
 
 ## 8. Recorded, not fixed — findings for their owners
 
-- [ ] **The Rust scan in `product_code_quality.py` is lexical and
-  single-file, so it reports 24 false `product-test-code` findings in
-  `driftwatchdog`.** `src/gate/governance/tests.rs` is declared
-  `#[cfg(test)] mod tests;` from `mod.rs:627`, and the scanner reads each file
-  in isolation, so it cannot see that the module is compiled only under
-  `cfg(test)` and counts its contents as product test code. The same shape
-  will produce false findings in every Rust repository that uses
-  `#[cfg(test)] mod tests;`; it is why 5 of the 13 red repositories in §7.3
-  are red with **zero** markers. This is a defect in the checker, not in the
-  vocabulary, and the fix is a module graph rather than a word list. **Not
-  fixed here** — it is the checker's owner's call, and a
-  `cfg(test)`-aware scan is a change to detection logic, not a
-  specification correction. Recorded, not worked around: no `exclude` was
-  added to make any repository pass.
+- [x] **The Rust scan in `product_code_quality.py` was lexical and
+  single-file, so it reported 24 false `product-test-code` findings in
+  `driftwatchdog`. FIXED here, as a correction to detection rather than as a
+  workaround.** `src/gate/governance/tests.rs` is declared `#[cfg(test)] mod
+  tests;` from `mod.rs:627`, and the old scanner read each file in isolation, so
+  it could not see that the module is compiled only under `cfg(test)` and
+  counted its contents as product test code. The Rust branch now decides test
+  scope from the crate's module tree: a `.rs` file is test scope when a sibling
+  `mod.rs`/`lib.rs`/`main.rs` — or the parent directory's `mod.rs` for a
+  directory module — carries `#[cfg(test)]` on the `mod <name>;` declaration
+  that reaches the file, including through a `#[path = "…"]` attribute. The
+  guard is also tracked per item, so `#[cfg(test)]`, `#[path = …]` and `mod
+  tests;` on consecutive lines are one guarded item; that was a second, separate
+  cause of the same false positive. Measured over the fleet on the
+  `product-test-code` rule, before → after:
+
+  | Repository | Before | After | Cause |
+  |---|---|---|---|
+  | `driftwatchdog` | 24 | **0** | `src/gate/governance/tests.rs`, declared `#[cfg(test)] mod tests;` |
+  | `rust-ecommerce` | 18 | **0** | `src/cdn.rs` (16, `#[cfg(test)]` then `#[allow(…)]` then `mod tests {`), `src/shipment/mod.rs` (1, `#[cfg(test)]` then `#[path = "tests.rs"]`) |
+  | `alltools-platform` | 2 | **1** | `typed_loop.rs` cleared (same `#[path]` shape); `test_prompt.rs` kept — a bare `#[test]` in a file no module declares |
+  | `argoset`, `crossify`, `fotofy`, `orphevia`, `transitfy` | 2/1/6/1/6 | unchanged | TypeScript `describe(`/`it(` heuristic, not Rust |
+  | fleet total | 60 | **17** | 43 findings removed, all of them Rust |
+
+  The other 5 repositories of the 13 in §7.3 that were red on
+  `product-test-code` alone with zero markers — `argoset`, `crossify`, `fotofy`,
+  `rust-ecommerce`, `transitfy` — split: `rust-ecommerce` is now clean, and the
+  other four are red on the **TypeScript** `describe(`/`it(` heuristic, which is
+  a separate defect in a language this change does not touch. `driftwatchdog`
+  is still red, now for two real reasons it owns: 2 placeholder markers in
+  `src/gate/concerns.rs:20` and 8 files over the 1000-line source limit.
+
+  No `exclude` was added, no filename exception list was introduced, and no test
+  was weakened: a `tests.rs` with no `#[cfg(test)]` declaration reaching it is
+  still reported, which is what
+  `RustModuleTreeBoundaryTests::test_the_declaration_is_what_clears_it_not_the_file_name`
+  pins. Negative control, run on a **copy** of `src/gate/governance` in a
+  temp directory (`driftwatchdog` itself was never written to): with the
+  declaration 0 findings, with `#[cfg(test)] mod tests;` removed from the copy
+  24 findings return, restored 0 again.
+
+  Tests: `747 passed, 158 subtests, 1 failed` before and after — the one
+  failure, `GateOracleTest::test_the_record_names_nothing_the_gate_calls_bound`
+  (`('metiscope', 'build')`), is pre-existing on `main` and unrelated to the
+  Rust scan. The baseline quoted in §7.8 was `748 passed, 0 failed`; the
+  recorded debt and the live gate no longer agree for `metiscope`, so that
+  figure no longer holds on this tree. 13 added, all in
+  `RustModuleTreeBoundaryTests`.
 - [ ] **`opendockify` is `REVIEW_REQUIRED` on `readme-claim-unscoped`.** Its
   README line 52 makes a negative status statement naming no surface the
   checker can resolve. A README finding for the repository's owner, surfaced
   only now because the block made the check run.
+- [ ] **Four repositories are red on the TypeScript `describe(`/`it(` heuristic**
+  (`argoset` 2, `crossify` 1, `fotofy` 6, `transitfy` 6) with zero marker
+  findings. The same class of false positive as the Rust one, in a different
+  language: a component whose own name or subject is "test" trips a
+  two-token regex. Recorded for the checker's owner; not fixed here, because
+  this change is scoped to the Rust branch.
 - [ ] **The change is not archived.** Archiving needs separate authorization.
 
