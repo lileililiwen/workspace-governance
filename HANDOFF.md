@@ -26,7 +26,9 @@ Verification: 44 focused debt-precondition tests passed; the complete suite ran
 workspace self-check and auto-gate passed with 0 errors and 0 warnings; change
 names and `git diff --check` passed. The live-clean/live-unbound integration
 fixture confirms the next new change fails and names `late-check`. The change
-remains active and is not archived.
+remains active and is not archived. Commit 1: `8ab77e6`
+(`feat(governance): ratchet live gate debt before new changes`). Commit 2 records
+this HANDOFF update only.
 
 ## Current package: new-project gate binding
 
