@@ -284,6 +284,18 @@ PROFILE_DEFAULTS: dict[str, tuple[str, ...]] = {
     "rust-product": PRODUCT_PROFILE_CONCERNS,
     "release": RELEASE_GATE_CONCERNS,
     "deployable": DEPLOYABLE_CONCERNS,
+    # Workspace profiles declared by Driftwatchdog. Their extra checks are
+    # supplied by the mandatory governance-quality default at runtime.
+    "typescript-product": ("governance-quality",),
+    "python-product": ("governance-quality",),
+    "dotnet-product": ("governance-quality",),
+    "dotnet-library": ("governance-quality",),
+    "typescript-monorepo": ("governance-quality",),
+    "rust-platform": ("governance-quality",),
+    "tooling": ("governance-quality",),
+    "deployment": ("governance-quality",),
+    "inventory": ("governance-quality",),
+    "governance": ("governance-quality",),
 }
 
 # The gate runs this one itself, in-process, and never counts it unbound
@@ -2068,9 +2080,16 @@ def run(
 ) -> Report:
     """Bind across the workspace. Never raises."""
     report = Report()
-    for repo_path in discover_repos(root):
-        if only and repo_path.name not in only:
-            continue
+    repos = {path.name: path for path in discover_repos(root)}
+    if only:
+        # A freshly scaffolded repository may not have a Git directory yet.
+        # Explicit targeting is sufficient to inspect that one directory;
+        # workspace-wide discovery remains restricted to sibling Git repos.
+        for name in only:
+            candidate = root / name
+            if candidate.is_dir():
+                repos[name] = candidate
+    for repo_path in (repos[name] for name in sorted(repos) if not only or name in only):
         report.add(bind_repo(repo_path, apply=apply, check_clean=check_clean))
     return report
 
@@ -2158,7 +2177,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # `--debt-only` threads `apply=False` all the way into `run`, so no code
     # path in the run can reach a manifest write. Only the record is persisted.
-    report = run(root, apply=args.apply and not args.debt_only, only=args.only)
+    report = run(
+        root,
+        apply=args.apply and not args.debt_only,
+        only=args.only,
+        check_clean=True,
+    )
     for outcome in report.outcomes:
         marker = "wrote" if outcome.wrote else outcome.status.lower()
         detail = format_detail(outcome, args.verbose)

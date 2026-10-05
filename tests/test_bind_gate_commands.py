@@ -1073,6 +1073,17 @@ class WorkspaceWriteTests(GitRepoCase):
         report = run(root, apply=False, only=["cvunify"])
         self.assertEqual([o.repo for o in report.outcomes], ["cvunify"])
 
+    def test_an_explicitly_targeted_new_scaffold_needs_no_git_directory(self):
+        root = self.tmp / "ws"
+        repo = root / "fresh-product"
+        (repo / ".ai-gate").mkdir(parents=True)
+        (repo / ".ai-gate" / "gate.yaml").write_text(
+            MANIFEST.format(checks=BUILD_AND_TESTS), encoding="utf-8"
+        )
+        report = run(root, apply=True, only=["fresh-product"], check_clean=False)
+        self.assertEqual([outcome.repo for outcome in report.outcomes], ["fresh-product"])
+        self.assertTrue((repo / ".ai-gate" / "gate.yaml").read_text().startswith("version: 1"))
+
 
 # --- the debt record ------------------------------------------
 
@@ -2017,7 +2028,10 @@ class ProfileSelectionTests(RepoCase):
             set(PROFILE_DEFAULTS),
             {
                 "backend", "frontend", "full", "minimal", "product",
-                "rust-product", "release", "deployable",
+                "rust-product", "release", "deployable", "typescript-product",
+                "python-product", "dotnet-product", "dotnet-library",
+                "typescript-monorepo", "rust-platform", "tooling", "deployment",
+                "inventory", "governance",
             },
         )
         self.assertEqual(

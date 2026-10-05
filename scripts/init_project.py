@@ -11,6 +11,14 @@ from datetime import datetime
 from pathlib import Path
 
 from repository_metadata import build_discoverability
+from bind_gate_commands import (
+    DIRTY,
+    PROFILE_DEFAULTS,
+    REFUSED,
+    debt_concerns,
+    format_detail,
+    run as run_gate_binder,
+)
 
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
@@ -153,6 +161,14 @@ def main() -> int:
     parser.add_argument("--visibility", choices=["public", "private", "internal"])
     args = parser.parse_args()
     target = args.target.resolve()
+    if args.profile not in PROFILE_DEFAULTS:
+        supported = ", ".join(sorted(PROFILE_DEFAULTS))
+        print(
+            f"init_project refused: unsupported gate profile {args.profile!r}; "
+            f"supported profiles: {supported}",
+            file=sys.stderr,
+        )
+        return 2
     project_id, error = resolve_project_id(target.name, args.id)
     if project_id is None:
         print(f"init_project refused: {error}", file=sys.stderr)
@@ -201,6 +217,38 @@ def main() -> int:
             print(f"init_project refused metadata repair: {exc}", file=sys.stderr)
             return 2
     created = list(dict.fromkeys(created))
+    scaffold_files_created = {".project.json", ".ai-gate/gate.yaml"}.issubset(created)
+    try:
+        binder = run_gate_binder(
+            target.parent,
+            apply=True,
+            only=[target.name],
+            check_clean=not scaffold_files_created,
+        )
+    except Exception as exc:  # noqa: BLE001 - binder errors must fail initialization
+        print(f"init_project failed to run gate binder for {target}: {exc}", file=sys.stderr)
+        return 2
+    if binder.names(REFUSED) or binder.names(DIRTY):
+        detail = "; ".join(
+            f"{outcome.repo}: {outcome.detail}"
+            for outcome in binder.outcomes
+            if outcome.status in (REFUSED, DIRTY)
+        )
+        print(
+            "init_project failed: gate binder refused to update the manifest "
+            f"({detail}); scaffold files are preserved",
+            file=sys.stderr,
+        )
+        return 2
+    unresolved = binder.unresolved()
+    if unresolved:
+        details = "; ".join(
+            format_detail(outcome, verbose=True)
+            for outcome in binder.outcomes
+            if debt_concerns(outcome)
+        )
+        print(f"Gate binder completed with {len(unresolved)} unresolved check(s): {details}")
+        print("The scaffold remains blocked until those checks are bound.")
     print(f"Initialized {project_id} at {target}")
     print("Created: " + (", ".join(created) if created else "nothing; existing files preserved"))
     return 0

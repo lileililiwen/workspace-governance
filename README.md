@@ -310,6 +310,12 @@ python3 scripts/init_project.py /path/to/project --profile rust-product --kind p
 python3 scripts/workspace_check.py --root .. --project my-project
 ```
 
+The initializer validates the profile against the gate binder and runs a
+repository-scoped bind after creating the manifest. Commands are recorded only
+when repository evidence supports them. An empty scaffold can therefore finish
+with unresolved checks; run the workspace binder again after adding the real
+build and test entry points.
+
 ```bash
 # Promote / demote (the only path to deployable: true; records the evidence reference, never runs verification itself)
 python3 scripts/promote_project.py <project-id> --evidence-ref "<revision-or-build pointer>"

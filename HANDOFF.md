@@ -2,7 +2,28 @@
 
 ## Current state
 
-current_spec: drive-legacy-gate-debt-to-zero
+current_spec: scaffold-binds-governance-gate
+
+## Current package: new-project gate binding
+
+`init_project.py` now rejects profiles absent from the binder registry before
+creating the target, adds the ten Driftwatchdog workspace profiles to the
+binder's profile mirror, and invokes the binder's repository-scoped apply API
+after creating both `.project.json` and `.ai-gate/gate.yaml`. Only a manifest
+and declaration created by this initializer invocation bypass the binder's
+clean-tree guard. A partial result reports each unresolved check and leaves the
+scaffold blocked; binder refusal fails initialization and preserves files.
+The scoped run does not rewrite the workspace-wide debt snapshot.
+
+Verification: focused initializer/binder tests ran 153 tests, 1 skipped;
+`python3 -m unittest discover -s tests -q` ran 839 tests, 0 failures, 1
+skipped. Strict OpenSpec validation passed 12/12; workspace self-check reported
+0 errors and 0 warnings; auto-gate passed with 0 errors and 0 warnings; change
+names and `git diff --check` passed. A real temporary scaffold invocation
+bound the repository command, reported four unresolved checks, exited 0 for
+the completed bind operation, and did not write a partial workspace debt file.
+The change stays active and must not be archived without authorization. Commit 1
+and HANDOFF-only commit 2 are recorded after creation below.
 
 **Legacy debt repair is implemented and verified, but not archived.** The
 original 24-entry snapshot classified A=10, B=7, C=3, D=2, E=1, F=1 with no
@@ -32,10 +53,9 @@ does not provide it. Python dependency audits could not upgrade pip because
 the index/network failed, so the existing `pip-audit` declarations remain bound
 but runtime audit success is unverified.
 
-Next independent changes remain: mandatory `governance-quality` scheduling for
-every profile in Driftwatchdog; new-project scaffold profile validation and
-binder execution; and a live debt ratchet that compares current gate state to
-the recorded state. Each needs its own OpenSpec package in its owning project.
+The next independent change is a live debt ratchet that compares current gate
+state to the recorded state. It requires its own OpenSpec package before
+implementation.
 Commit 1: `af095e8` (`feat(governance): drive legacy gate debt repairs`). Commit 2 records this handoff update. The change remains unarchived; archiving needs separate authorization.
 
 **A cross-cutting shared capability is now declarable in every profile.**

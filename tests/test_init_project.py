@@ -1,10 +1,12 @@
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import sys
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
-from init_project import apply_local_metadata, derive_id, resolve_project_id
+from init_project import apply_local_metadata, derive_id, resolve_project_id, main
+from bind_gate_commands import ConcernOutcome, Outcome, PARTIAL, PROFILE_DEFAULTS, REFUSED, Report
 from repository_metadata import build_discoverability
 
 
@@ -82,6 +84,72 @@ class MetadataRepairTests(unittest.TestCase):
             self.assertEqual(changed, [".project.json", "LICENSE"])
             self.assertEqual(json.loads((target / ".project.json").read_text())["discoverability"], metadata)
             self.assertIn("MIT License", (target / "LICENSE").read_text())
+
+
+class ScaffoldGateTests(unittest.TestCase):
+    def run_init(self, target: Path, profile: str) -> int:
+        with patch("sys.argv", ["init_project.py", str(target), "--profile", profile]):
+            return main()
+
+    def test_supported_profile_registry_includes_gate_workspace_profiles(self):
+        self.assertTrue({
+            "typescript-product", "python-product", "dotnet-product",
+            "dotnet-library", "typescript-monorepo", "rust-platform",
+            "tooling", "deployment", "inventory", "governance",
+        }.issubset(PROFILE_DEFAULTS))
+
+    def test_unknown_profile_is_rejected_before_target_creation(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "new-project"
+            with patch("sys.argv", ["init_project.py", str(target), "--profile", "typescript-produc"]):
+                self.assertEqual(main(), 2)
+            self.assertFalse(target.exists())
+
+    def test_binder_runs_after_manifest_creation_for_only_the_new_repo(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "new-project"
+
+            def binder_call(root, **kwargs):
+                self.assertEqual(root, target.parent)
+                self.assertEqual(kwargs, {"apply": True, "only": ["new-project"], "check_clean": False})
+                self.assertTrue((target / ".ai-gate" / "gate.yaml").is_file())
+                self.assertTrue((target / ".project.json").is_file())
+                return Report()
+
+            with patch("init_project.run_gate_binder", side_effect=binder_call):
+                self.assertEqual(self.run_init(target, "typescript-product"), 0)
+
+    def test_binder_execution_failure_is_reported_and_scaffold_is_preserved(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "new-project"
+            report = Report()
+            report.add(Outcome("new-project", REFUSED, "invalid manifest"))
+            with patch("init_project.run_gate_binder", return_value=report):
+                self.assertEqual(self.run_init(target, "typescript-product"), 2)
+            self.assertTrue((target / ".ai-gate" / "gate.yaml").is_file())
+
+    def test_completed_bind_with_unresolved_debt_is_reported_without_claiming_pass(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "new-project"
+            report = Report()
+            report.add(Outcome(
+                "new-project", PARTIAL, "four unresolved checks",
+                concerns=[ConcernOutcome("new-project", "build", "UNRESOLVED", reason="no build input")],
+            ))
+            with patch("init_project.run_gate_binder", return_value=report):
+                with patch("builtins.print") as output:
+                    self.assertEqual(self.run_init(target, "typescript-product"), 0)
+            printed = " ".join(str(call.args[0]) for call in output.call_args_list if call.args)
+            self.assertIn("1 unresolved check(s)", printed)
+            self.assertIn("remains blocked until those checks are bound", printed)
 
 
 if __name__ == "__main__":
