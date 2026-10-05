@@ -2,8 +2,8 @@
   "generator": "scripts/bind_gate_commands.py",
   "note": "Every check listed here is one the gate would report as UNBOUND: a check this repository's .ai-gate/gate.yaml selects under `checks:`, or one its `profile:` schedules by default, with no command bound under `commands:`. The gate reports UNBOUND for these and fails the project. A wrong command is worse than a listed gap: resolve these by hand, then re-run the generator.",
   "totals": {
-    "repositories_with_debt": 24,
-    "unresolved_checks": 47
+    "repositories_with_debt": 22,
+    "unresolved_checks": 44
   },
   "by_reason": [
     {
@@ -21,38 +21,6 @@
       ]
     },
     {
-      "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation",
-      "checks": 4,
-      "repositories": [
-        "alethefy",
-        "ariadex",
-        "jenkins-local",
-        "metiscope"
-      ],
-      "entries": [
-        "alethefy:build",
-        "ariadex:build",
-        "jenkins-local:build",
-        "metiscope:build"
-      ]
-    },
-    {
-      "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library",
-      "checks": 4,
-      "repositories": [
-        "jenkins-local",
-        "metiscope",
-        "platform-contracts",
-        "workspace-governance"
-      ],
-      "entries": [
-        "jenkins-local:security",
-        "metiscope:security",
-        "platform-contracts:security",
-        "workspace-governance:security"
-      ]
-    },
-    {
       "reason": "no rule derives a accessibility command and this repository has no scripts/check-accessibility.* to run",
       "checks": 4,
       "repositories": [
@@ -66,6 +34,34 @@
         "citylens:accessibility",
         "mewo:accessibility",
         "trailCrew:accessibility"
+      ]
+    },
+    {
+      "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation",
+      "checks": 3,
+      "repositories": [
+        "alethefy",
+        "ariadex",
+        "jenkins-local"
+      ],
+      "entries": [
+        "alethefy:build",
+        "ariadex:build",
+        "jenkins-local:build"
+      ]
+    },
+    {
+      "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library",
+      "checks": 3,
+      "repositories": [
+        "jenkins-local",
+        "platform-contracts",
+        "workspace-governance"
+      ],
+      "entries": [
+        "jenkins-local:security",
+        "platform-contracts:security",
+        "workspace-governance:security"
       ]
     },
     {
@@ -201,16 +197,6 @@
       ],
       "entries": [
         "opendockify:tests"
-      ]
-    },
-    {
-      "reason": "2 equally plausible entry points: dotnet test OpenLearning.sln (root solution OpenLearning.sln); python3 -m unittest discover -s tests -v (3 test file(s) in tests/ are unittest.TestCase only)",
-      "checks": 1,
-      "repositories": [
-        "openlearning"
-      ],
-      "entries": [
-        "openlearning:tests"
       ]
     },
     {
@@ -532,22 +518,6 @@
       ]
     },
     {
-      "repo": "metiscope",
-      "shape": "python",
-      "unresolved": [
-        {
-          "concern": "build",
-          "status": "UNRESOLVED",
-          "reason": "a pure-Python package has no build step; a packaging build is an owner decision, not a derivation"
-        },
-        {
-          "concern": "security",
-          "status": "UNRESOLVED",
-          "reason": "no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library"
-        }
-      ]
-    },
-    {
       "repo": "mewo",
       "shape": "dotnet",
       "unresolved": [
@@ -571,17 +541,6 @@
           "concern": "tests",
           "status": "UNRESOLVED",
           "reason": "2 equally plausible entry points: dotnet test OpenDockify.sln (root solution OpenDockify.sln); python3 -m unittest discover -s tests -v (1 test file(s) in tests/ are unittest.TestCase only)"
-        }
-      ]
-    },
-    {
-      "repo": "openlearning",
-      "shape": "dotnet",
-      "unresolved": [
-        {
-          "concern": "tests",
-          "status": "UNRESOLVED",
-          "reason": "2 equally plausible entry points: dotnet test OpenLearning.sln (root solution OpenLearning.sln); python3 -m unittest discover -s tests -v (3 test file(s) in tests/ are unittest.TestCase only)"
         }
       ]
     },
