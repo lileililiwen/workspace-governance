@@ -913,49 +913,109 @@ create the required two commits. Each completed OpenSpec spec/change requires
 exactly two commits: first the implementation/tests/archive commit, then a
 HANDOFF.md-only pointer/evidence commit.
 
-## The `quality` block is derived now, and the fleet write is deliberately not done
+## The marker vocabulary is corrected and the fleet write is done
 
-`placeholder-threshold` and `product-code-boundary` were 80 unbound checks in
-40 repositories — the second-largest gap in the fleet. Both are answered by
+`placeholder-threshold` and `product-code-boundary` were 78 unbound checks in 39
+repositories — the second-largest gap in the fleet. Both are answered by
 `scripts/product_code_quality.py`, which is fail-closed and exits 2 without a
-`quality` block in the repository's own `.project.json`. Only 2 of 81
-repositories declared one, so the previous pass refused to write one and named
-the gap instead.
+`quality` block in the repository's own `.project.json`.
 
-`scripts/bind_gate_commands.py` now derives the block
-(`derive_quality_block`) and writes it with the command in one operation.
-`product_roots` and `languages` are derived from the same disk detection the
-build commands use, with the manifest each root came from attached as
-evidence. `placeholder_threshold` is a judgement and is written as `0`, the
-deliberately strict default both hand-written blocks chose. No `exclude` and no
-marker list are invented.
+`scripts/bind_gate_commands.py` derives the block (`derive_quality_block`) and
+writes it with the command in one operation, both under `--apply` and both
+behind the dirty check. `product_roots` and `languages` come from the same disk
+detection the build commands use, with the manifest each root came from as
+evidence. The `src` convention is per manifest kind: a `.csproj` at
+`src/Foo/Foo.csproj` yields `src/Foo`, not `src/Foo/src`. `placeholder_threshold`
+is a judgement, written as `0` — the deliberately strict default, relaxable per
+project. No `exclude` and no marker list are invented.
 
-Proven end to end on `driftwatchdog` alone, on a real `driftwatchdog gate` run:
-both concerns moved from `UNBOUND` to executing, and report
-`FAIL: placeholder marker count 30 exceeds threshold 0`.
+**The vocabulary was the blocker, and it is corrected.** Over
+`driftwatchdog/src/` the word `placeholder` matched **26** times and **zero** of
+them was unfinished work: every one was prose describing the word
+(`//! ... extends this placeholder`, `/// Ordered, comma-separated placeholder
+names`) or the gate's own `placeholder-threshold` concern identifier in
+`src/gate/adapters.rs`, against 1 `TODO` and 1 `FIXME` on the same tree.
+`vocabulary.json` now holds `todo`, `fixme`, `xxx`, `hack`, `unimplemented!`,
+`todo!`. `product_code_quality.py` is unchanged — it already resolved its
+markers from that file at use time.
 
-**The other 39 are not written, and the reason is measured, not assumed:**
+**This reduces the finding count, and the number is not hidden.** Across the 39
+repositories written, marker findings fall **468 → 38** and repositories
+reporting `FAIL` fall **28 → 13**. 430 of the 468 were the two ordinary English
+words. It is a correction to a mis-specified vocabulary in the one file that
+owns it: no threshold moved, no `exclude` was added, no test was skipped or
+filtered, and every `TODO` and `FIXME` in the fleet is still reported. The spec
+delta at
+`openspec/changes/bind-declared-gate-checks/specs/portfolio-vocabulary/spec.md`
+states this and keeps the correction-versus-filter distinction explicit.
 
-| Measurement | Value |
-|---|---|
-| Block derivable for | 40 of 40 |
-| Would go red under `placeholder_threshold: 0` | **29** |
-| Would stay green | 11 |
+A hand-written per-project `placeholder_markers` list is left exactly as its
+author wrote it. Every `.project.json` in the fleet was grepped: exactly one
+carries an inline list — `forge` — and it already names the six retained
+tokens, so the earlier premise that it included `placeholder` and `stub` did not
+hold, and there was no conflict to resolve.
 
-Of 498 findings, 338 are the word `placeholder` and 120 are `stub`; only 40 are
-`todo`/`fixme`/`xxx`/`hack`. Excluding the two generic words leaves 8 red. The
-strict default is right; the marker vocabulary in `vocabulary.json` is
-currently matching ordinary English. Narrowing it is a change to that file and
-belongs to whoever owns it — it is not an `exclude` this tool may invent.
+### Fleet outcome
 
-Next step, when the vocabulary is settled: `python3 scripts/bind_gate_commands.py
---root /home/paul/code --apply`, then re-run the gate across the fleet at
-**parallelism 2** (4 concurrent .NET builds get OOM-killed on this 14GB box and
-produce fake instant failures).
+| Measurement | Before | After |
+|---|---|---|
+| Gate unbound checks | 125 | **47** |
+| Gate repositories with an unbound check | 53 | **24** |
+| `gate-debt.json` `unresolved_checks` | 125 | **47** |
+| `gate-debt.json` `repositories_with_debt` | 53 | **24** |
+| Set-equal against the gate | yes | yes |
+| `placeholder-threshold` unbound | 39 | **0** |
+| `product-code-boundary` unbound | 39 | **0** |
+| Repositories fully wired (of 76 with a manifest) | 23 | **52** |
 
-The debt record and the gate agree exactly: 125 checks across 53 repositories,
-set-equal against `driftwatchdog/target/debug/driftwatchdog`. Note that the
-`driftwatchdog` on `PATH` is a 2026-10-01 `cargo install` build that reports 0
-unbound checks fleet-wide and is not a usable oracle.
+Set equality, never a count, against
+`driftwatchdog/target/debug/driftwatchdog`. The `driftwatchdog` on `PATH` is a
+2026-10-01 `cargo install` build that predates unbound reporting and answers 0
+for the whole fleet; it is not a usable oracle.
 
-Suite: 741 passed, 158 subtests, 0 failed (baseline on arrival: 734).
+Confirmed on real gate runs, not only on the checker. `openlearning`:
+`placeholder-threshold FAIL — placeholder marker count 18 exceeds threshold 0`,
+`unbound: ['tests']`. `pangoman`: `placeholder-threshold PASS — placeholder
+marker count 0 at or below threshold 0`, `unbound: []`. Both checks execute and
+return verdicts in both directions, which is the point of binding them.
+
+**Regenerating the record can no longer write the fleet.** `--debt-only` threads
+`apply=False` into `run()` and persists only `gate-debt.json`; it refuses to
+combine with `--apply` (exit 2). `DebtOnlyTests` (4) pins that. Note the
+`--apply` default `--debt-out` is `root/gate-debt.json`, so an apply run against
+`--root /home/paul/code` writes a stray record at the workspace root — pass
+`--debt-out` explicitly. The one produced here was removed with
+`Path.unlink(missing_ok=True)`.
+
+**Fleet scope, verified.** 39 repositories written, `.project.json` and
+`.ai-gate/gate.yaml` only, one commit each on `main`, no push. Confirmed by
+hashing both files across all 81 repositories before and after (78 files, 39
+repositories, empty set difference against the authorised list) and by
+`git show --name-only` on every one of the 39 commits. Pre-existing uncommitted
+work in those repositories from earlier sessions — including
+`openaccounting/Cargo.toml`, `rust-ecommerce/Cargo.toml` and the `*.bak-profile`
+files — was left untouched.
+
+Suite: **748 passed, 158 subtests, 0 failed** (741 on arrival). Seven tests
+added: 3 in `PlaceholderTests`, 4 in `DebtOnlyTests`.
+`test_placeholder_markers_unchanged` asserted the old list and is now
+`test_placeholder_markers_are_unambiguous_debt_tokens`, pinning the retained set
+and asserting `placeholder` and `stub` are absent. Negative control: putting
+both words back raises marker findings 38 → 468 and red repositories 13 → 28;
+the file was restored byte-identically and the suite returned to 748.
+
+### Open for their owners
+
+- **The Rust scan in `product_code_quality.py` is lexical and single-file, so
+  `#[cfg(test)]` modules are reported as product test code.** 24 false
+  `product-test-code` findings in `driftwatchdog`, where
+  `src/gate/governance/tests.rs` is declared `#[cfg(test)] mod tests;` from
+  `mod.rs:627`. Five of the 13 red repositories are red this way with **zero**
+  markers. The fix is a module graph, not a word list; recorded in
+  `docs/product-code-quality.md` under "Known limits" and in `tasks.md` §8, and
+  not worked around with an `exclude`.
+- **`opendockify` is `REVIEW_REQUIRED` on `readme-claim-unscoped`** — its README
+  line 52 makes a negative status statement naming no surface the checker can
+  resolve. A README finding for that repository's owner, surfaced only now
+  because the block made the check run.
+- The change is **not archived**. Archiving needs separate authorization.
