@@ -32,6 +32,42 @@ from workspace_check import run  # noqa: E402
 import promote_project  # noqa: E402
 
 
+# Every top-level governance data file the audit reads is fail-closed: a missing
+# one makes `workspace_check` refuse the run, which would mask whatever the
+# promote tests are actually asserting. They are copied as ONE declared set, and
+# `SandboxCoverageTests` fails if a new one reaches the governance root without
+# being placed here or in the absence table below. Hand-maintaining the copy
+# list in place broke this fixture twice — `rules-drift-baseline.json` and the
+# three `gate-debt*` records each arrived as a new fail-closed file and turned
+# seven tests red with an exit code unrelated to what they test.
+GOVERNANCE_ROOT_DATA_FILES = (
+    "vocabulary.json",
+    "capabilities.json",
+    "rules-drift-baseline.json",
+    "gate-debt.json",
+    "gate-debt-baseline.json",
+    "gate-debt-exceptions.json",
+)
+
+# Top-level data files deliberately kept OUT of the sandbox, each with the
+# evidence for why its absence is harmless here. Nothing may be added to this
+# table on the strength of "the promote path probably does not read it": the
+# check is the audit run, and the audit is what reads the file.
+GOVERNANCE_ROOT_DATA_FILES_ABSENT = {
+    "projects.json": (
+        "the fixture writes its own one-project registry into the sandbox "
+        "workspace root; the real registry names 81 sibling paths that do not "
+        "exist under the temp root"
+    ),
+    "decisions.json": (
+        "a portfolio audit tolerates its absence with a single WARNING "
+        "DECISIONS_REGISTER_ABSENT (scripts/workspace_check.py "
+        "load_decisions_register); only --self-check requires it, and this "
+        "fixture is not a self-check"
+    ),
+}
+
+
 BASE_DECLARATION = {
     "schema_version": 1,
     "id": "demo-project",
@@ -104,30 +140,83 @@ def setup_sandboxed_governance_root(governance_root: Path):
         else:
             shutil.copy2(child, target)
     (sandbox / "deployment").mkdir()
-    # vocabulary.json, capabilities.json, and profiles/ are load-bearing
-    # governance-root files (the audit fails closed without them), so the
-    # sandbox needs copies.
-    shutil.copy2(governance_root / "vocabulary.json", sandbox / "vocabulary.json")
-    shutil.copy2(governance_root / "capabilities.json", sandbox / "capabilities.json")
+    # The declared data-file set, copied as one unit. A declared file that is
+    # absent is a hard error here rather than a silent skip: under `is_file()`
+    # guards a file that failed to copy is indistinguishable from a file that
+    # was never needed, and the first symptom is an exit code in a test that
+    # asserts something else entirely.
+    for record in GOVERNANCE_ROOT_DATA_FILES:
+        source = governance_root / record
+        if not source.is_file():
+            raise FileNotFoundError(
+                f"{record} is declared load-bearing for the sandbox but is "
+                f"absent from {governance_root}"
+            )
+        shutil.copy2(source, sandbox / record)
+    # profiles/ is the one load-bearing directory, and it is optional in shape:
+    # a governance root without one is not malformed, so it stays guarded.
     if (governance_root / "profiles").is_dir():
         shutil.copytree(governance_root / "profiles", sandbox / "profiles")
-    # rules-drift-baseline.json is load-bearing for the same reason: the audit
-    # fails closed with RULES_DRIFT_BASELINE when it is missing, which would mask
-    # whatever these tests are actually asserting.
-    baseline = governance_root / "rules-drift-baseline.json"
-    if baseline.is_file():
-        shutil.copy2(baseline, sandbox / "rules-drift-baseline.json")
-    # gate-debt.json, gate-debt-baseline.json and gate-debt-exceptions.json are
-    # load-bearing for the same reason as the block above: the new-change
-    # precondition fails closed with QUALITY_NEW_CHANGE_WITH_GATE_DEBT when any
-    # of the three is missing, which would mask whatever these tests are actually
-    # asserting. The records name repositories the sandbox does not contain,
-    # which is harmless — the rule only reports a scanned project.
-    for record in ("gate-debt.json", "gate-debt-baseline.json", "gate-debt-exceptions.json"):
-        source = governance_root / record
-        if source.is_file():
-            shutil.copy2(source, sandbox / record)
     return temp, sandbox
+
+
+class SandboxCoverageTests(unittest.TestCase):
+    """The sandbox must not fall silently behind the governance root.
+
+    `setup_sandboxed_governance_root` builds a partial replica of the governance
+    root, and the audit fails closed on any data file the replica is missing. A
+    new fail-closed record therefore breaks the promote tests in a way that
+    names neither the new file nor the fixture. These tests make the coupling
+    explicit and put the failure where the new file is added.
+    """
+
+    _REAL_GOVERNANCE_ROOT = Path(__file__).resolve().parents[1]
+
+    def test_every_governance_root_data_file_is_accounted_for(self):
+        # `.project.json` is this repository's own declaration, not a fleet
+        # data record, and pathlib's glob matches dotfiles.
+        on_disk = {
+            p.name
+            for p in self._REAL_GOVERNANCE_ROOT.glob("*.json")
+            if p.is_file() and not p.name.startswith(".")
+        }
+        unaccounted = (
+            on_disk
+            - set(GOVERNANCE_ROOT_DATA_FILES)
+            - set(GOVERNANCE_ROOT_DATA_FILES_ABSENT)
+        )
+        self.assertEqual(
+            unaccounted,
+            set(),
+            "top-level governance data file(s) that are neither copied into "
+            "the sandbox nor listed in GOVERNANCE_ROOT_DATA_FILES_ABSENT: "
+            f"{sorted(unaccounted)}. The audit is fail-closed on a data file it "
+            "cannot read, so leaving one out here turns every promote test red "
+            "with an exit code that has nothing to do with what it asserts.",
+        )
+
+    def test_the_absence_table_explains_itself(self):
+        for name, reason in GOVERNANCE_ROOT_DATA_FILES_ABSENT.items():
+            self.assertNotIn(
+                name, GOVERNANCE_ROOT_DATA_FILES,
+                f"{name} is both copied and declared absent",
+            )
+            self.assertTrue(
+                reason.strip(),
+                f"{name} is declared absent with no reason; an unexplained "
+                f"absence is indistinguishable from an oversight",
+            )
+
+    def test_the_sandbox_actually_carries_the_declared_set(self):
+        temp, sandbox = setup_sandboxed_governance_root(self._REAL_GOVERNANCE_ROOT)
+        try:
+            for record in GOVERNANCE_ROOT_DATA_FILES:
+                self.assertTrue(
+                    (sandbox / record).is_file(),
+                    f"{record} is declared load-bearing but is not in the sandbox",
+                )
+        finally:
+            temp.cleanup()
 
 
 class _SandboxedGovernanceRootMixin:

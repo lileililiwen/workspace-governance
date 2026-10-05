@@ -17,11 +17,18 @@
   is worse than an honest gap.
 - [x] **No `rm`.** Cleanup uses `tempfile.mkdtemp()` plus
   `shutil.rmtree(..., ignore_errors=True)`.
-- [x] **No commit sweeps unrelated work.** The tree carries an untracked
+- [x] **No commit sweeps unrelated work.** The tree carried an untracked
   `openspec/changes/bind-declared-verification/` directory from an
   earlier session. It is not staged and not committed by this change.
-  `main` only, no branch, no `git add -A`, no attribution trailers, no
-  push.
+  **Resolved after this change landed:** that directory held only the
+  `--apply` run's rollback record and no change package, and the change
+  itself is `bind-declared-verification-command` in `driftwatchdog`,
+  which owns the Gate contract these spec deltas amend. The record is
+  now tracked at
+  `migration/bind-declared-verification-command-rollback.json` and the
+  empty directory is gone, so `openspec validate --all --strict` is
+  22/0. `main` only, no branch, no `git add -A`, no attribution
+  trailers, no push.
 
 ## 0b. Where the previous session stopped
 
@@ -601,9 +608,26 @@ here instead, as a spec correction with its reasoning and its numbers in
 - [x] **Negative control, measured.** Weakening the trigger to grandfather every
   change (`if baseline is not None: continue`) turns **9 of the 36 tests red**,
   including the end-to-end gate acceptance. Restored: **36 passed**.
-- [x] **`tests/test_promote_project.py`'s sandbox copies all three records**,
-  for the same reason it copies `rules-drift-baseline.json`: a missing record
-  fails closed and would mask what those tests assert.
+- [x] **`tests/test_promote_project.py`'s sandbox carries every fail-closed
+  governance data file, and can no longer fall silently behind a new one.**
+  The one-line remedy for the 7 red `test_promote_project` failures was to add
+  the three records to that fixture's copy loop, but the loop was hand-kept in
+  three separate blocks and guarded by `if source.is_file()`, so a file that
+  failed to copy was indistinguishable from one that was never needed. It had
+  already broken twice on this exact axis: `rules-drift-baseline.json` and now
+  these three. The three blocks are one declared set,
+  `GOVERNANCE_ROOT_DATA_FILES`, copied unconditionally, with a missing declared
+  file raising instead of skipping. `projects.json` and `decisions.json` are
+  excluded in a second table, each with its evidence, and
+  `SandboxCoverageTests` (3 tests) fails if a top-level `.json` reaches the
+  governance root and is in neither table. **Negative control, run:** a probe
+  file `gate-debt-probe.json` at the root turns the coverage test red naming
+  the file and the remedy, where before it would have surfaced as 7 unrelated
+  exit-code failures; the probe was removed and the suite returned to green.
+  The three exit-code assertions were checked against `promote_project`'s own
+  contract rather than against what the code happened to return: the module
+  defines exactly two codes, `EXIT_OK = 0` and `EXIT_REJECTED = 2`, and the
+  tests assert 0 for a completed promotion and 2 for each refusal.
 - [x] **No sibling repository is written** except the one line in
   `driftwatchdog` this rule cannot gate without, and the one test beside it.
 - [x] **No `rm`.** Fixtures use `tempfile.TemporaryDirectory()` and
