@@ -36,7 +36,7 @@ Next independent changes remain: mandatory `governance-quality` scheduling for
 every profile in Driftwatchdog; new-project scaffold profile validation and
 binder execution; and a live debt ratchet that compares current gate state to
 the recorded state. Each needs its own OpenSpec package in its owning project.
-Do not archive this change without authorization.
+Commit 1: `af095e8` (`feat(governance): drive legacy gate debt repairs`). Commit 2 records this handoff update. The change remains unarchived; archiving needs separate authorization.
 
 **A cross-cutting shared capability is now declarable in every profile.**
 `capability-adoption-gate` measures adoption as a three-way join and expects a
