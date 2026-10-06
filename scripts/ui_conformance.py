@@ -25,14 +25,27 @@ gate that reports OK without performing a comparison is worse than no gate.
 
 Scope split, and why it exists
 ------------------------------
-Filename-level rules run on a repo-wide census: `UI_AUTH_HANDROLLED` matches on
-a path, it costs nothing across 2067 files, and it is exactly the rule that
-must not be narrowed. Content-level rules run only inside the repository's
-declared `ui.scope.roots`, because they have to open the file. A repository
-that declares no scope therefore has its content rules silent by *declaration*
-rather than by exemption, and `UI_SCOPE_UNDECLARED` fires so the silence is
-visible. Any repository over `ui.scope.max_files` (default 400) is reported
-with its exact count and the ceiling it exceeded.
+The auth rule runs on a repo-wide census: `UI_AUTH_HANDROLLED` matches on a
+path across 2067 files, and it is exactly the rule that must not be narrowed by
+a declaration. It opens only the files whose *name* matched, which is 113 files
+across the whole fleet, each bounded by `MAX_FILE_BYTES`. The other content
+rules run only inside the repository's declared `ui.scope.roots`, because they
+have to open every file. A repository that declares no scope therefore has those
+rules silent by *declaration* rather than by exemption, and `UI_SCOPE_UNDECLARED`
+fires so the silence is visible. Any repository over `ui.scope.max_files`
+(default 400) is reported with its exact count and the ceiling it exceeded.
+
+Adoption evidence, and what it is not
+-------------------------------------
+A filename pattern cannot tell a *migrated* login page from a *hand-rolled*
+one, so the auth rule reads the file it matched and asks whether the file
+demonstrably renders the shared layer: a `platform-*` class name, or a
+stylesheet reference that names the shared layer. That is evidence read out of
+the file, not a declaration read out of `.project.json` — a repository that
+declares adoption and then hand-writes a login page is still reported, which is
+the combination this checker exists for. Every file that goes unreported is
+named in the notes together with the signal that was read, so a silence is
+visible rather than silent.
 
 Token resolution is NOT implemented here
 ----------------------------------------
@@ -110,6 +123,49 @@ AUTH_FILENAME_RE = re.compile(
     r"|forgot.?password|reset.?password|auth)",
     re.IGNORECASE,
 )
+
+# ---------------------------------------------------------------------------
+# Shared-layer evidence. String shapes over file content, in the same class as
+# THEME_MECHANISM_RE below — not token semantics. Nothing here walks a token
+# tree, follows an alias, or resolves a colour; that stays in token-model.mjs.
+# ---------------------------------------------------------------------------
+
+# The shared layer's class vocabulary. A file that uses one is speaking the
+# shared composition. This is evidence of the NAME, not of the stylesheet that
+# defines it: an adopting repository proves that half in its own suite, where a
+# test asserts every `platform-*` name its pages use is defined by a stylesheet
+# the shared feed emitted.
+SHARED_CLASS_RE = re.compile(r"\bplatform-[a-z0-9]+(?:-[a-z0-9]+)*\b", re.IGNORECASE)
+
+# A path that names the shared layer: an `@platform/*` package specifier, the
+# vendored feed directory, the served `platform/` directory, or the token layer.
+# Coarse on purpose, and shared with the existing `platform-*` vocabulary.
+SHARED_LAYER_PATH_RE = re.compile(
+    r"@platform/"      # npm package specifier
+    r"|platform-ui/"   # the vendored feed directory
+    r"|/platform/"     # a served vendored copy, e.g. ~/css/platform/
+    r"|design-tokens/",  # the token layer itself
+    re.IGNORECASE,
+)
+
+# A quoted stylesheet path. Combined with SHARED_LAYER_PATH_RE this covers both
+# the vendored token stylesheet and a vendored shared-layer stylesheet: a path
+# that names the layer and ends in `.css` is one or the other.
+CSS_REFERENCE_RE = re.compile(r"""["'(]([^"'()\s]*\.css)["')]""", re.IGNORECASE)
+
+# `<` opening a tag, comment or doctype: this file renders markup of its own.
+# `a < b` and `count <3` do not match, so a comparison in a Razor code block
+# reads as markup — the direction that keeps a finding rather than dropping one.
+MARKUP_RE = re.compile(r"<[a-zA-Z!/?]")
+
+# Only these two suffixes can be a handler page that renders no screen at all.
+RAZOR_PAGE_SUFFIXES = frozenset({".cshtml", ".razor"})
+
+LAYOUT_DIRECTIVE_RE = re.compile(r"""@layout\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
+VIEWSTART_LAYOUT_RE = re.compile(r"""Layout\s*=\s*["']([^"']+)["']""")
+
+VIEWSTART_FILE = "_ViewStart.cshtml"
+SHARED_LAYOUT_DIRECTORY = "Shared"
 
 THEME_MECHANISM_RE = re.compile(
     r"\[data-theme\s*="          # attribute selector
@@ -489,6 +545,120 @@ def _read_text(path: Path) -> tuple[str | None, bool]:
 
 
 # ---------------------------------------------------------------------------
+# Shared-layer evidence, read from the file the pattern matched
+# ---------------------------------------------------------------------------
+
+
+def _shows_shared_layer(text: str) -> str | None:
+    """The shared-layer signal this file shows, or `None`.
+
+    Returns the signal in words so the note can name what was actually read
+    rather than asserting that a check passed.
+    """
+    if SHARED_CLASS_RE.search(text):
+        return "a platform-* class name"
+    for path in CSS_REFERENCE_RE.findall(text):
+        if SHARED_LAYER_PATH_RE.search(path):
+            return (
+                "the vendored token stylesheet"
+                if "design-tokens" in path.lower()
+                else "a vendored shared-layer stylesheet"
+            )
+    return None
+
+
+def _layout_file(name: str) -> str:
+    value = name.strip().replace("\\", "/")
+    return value if value.endswith(".cshtml") else f"{value}.cshtml"
+
+
+def _first_existing(project_dir: Path, candidates: Iterable[Path]) -> str | None:
+    """The first candidate that resolves to a real file inside the project.
+
+    Every candidate goes through `_resolve_inside`, so a declared layout name
+    can never reach outside the repository.
+    """
+    for candidate in candidates:
+        relative = candidate.as_posix()
+        if relative in (".", ""):
+            continue
+        try:
+            resolved = _resolve_inside(project_dir, relative)
+        except ConfigError:
+            continue
+        if resolved.is_file() and not resolved.is_symlink():
+            return relative
+    return None
+
+
+def _nearest_viewstart(project_dir: Path, rel: str) -> str | None:
+    """The Razor Pages root holding `rel`: the nearest ancestor with a
+    `_ViewStart.cshtml`. `None` when the page is outside a Pages root."""
+    directory = Path(rel).parent
+    while True:
+        root = directory.as_posix()
+        if (project_dir / directory / VIEWSTART_FILE).is_file():
+            return root
+        if directory == Path("."):
+            return None
+        directory = directory.parent
+
+
+def _composed_layout(project_dir: Path, rel: str, text: str) -> str | None:
+    """The project-relative surface `rel` renders inside, or `None`.
+
+    Razor's own order: an explicit `@layout` wins, otherwise the nearest
+    `_ViewStart.cshtml` assigns one, resolved first at the Pages root and then
+    under its `Shared/` directory. Nothing is inferred from the file name.
+    """
+    page = Path(rel).parent
+    directive = LAYOUT_DIRECTIVE_RE.search(text)
+    if directive:
+        return _first_existing(project_dir, [page / _layout_file(directive.group(1))])
+
+    root = _nearest_viewstart(project_dir, rel)
+    if root is None:
+        return None
+    start_text, _ = _read_text(project_dir / root / VIEWSTART_FILE)
+    if start_text is None:
+        return None
+    assigned = VIEWSTART_LAYOUT_RE.search(start_text)
+    if assigned is None:
+        return None
+    layout = _layout_file(assigned.group(1))
+    root_path = Path(root)
+    return _first_existing(project_dir, [
+        root_path / layout,
+        root_path / SHARED_LAYOUT_DIRECTORY / layout,
+    ])
+
+
+def _rendered_by_shared_surface(
+    project_dir: Path, rel: str, text: str, policy: UiPolicy
+) -> str | None:
+    """The shared-layer surface `rel` renders inside, or `None`.
+
+    Three gates, all required: the repository declares adoption, the file is a
+    Razor page, and the file renders no markup of its own. A page that renders a
+    screen is never exempt here — a declared adopter that hand-writes a login
+    page is exactly the finding this rule exists to raise.
+    """
+    if not policy.adopted:
+        return None
+    if Path(rel).suffix.lower() not in RAZOR_PAGE_SUFFIXES:
+        return None
+    if MARKUP_RE.search(text):
+        return None
+    layout = _composed_layout(project_dir, rel, text)
+    if layout is None:
+        return None
+    layout_text, _ = _read_text(project_dir / layout)
+    if layout_text is None:
+        return None
+    return layout if _shows_shared_layer(layout_text) is not None else None
+
+
+# ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
 
@@ -527,11 +697,27 @@ def evaluate(
             "filename rules still run over the whole census and content rules stay inside the declared scope"
         )
 
-    # --- hand-rolled auth (filename-level: whole census) -------------------
+    # --- hand-rolled auth (filename pattern over the whole census) ---------
+    # The pattern opens the files it matched, and no others. Adoption is read
+    # from the declaration only as a gate on the composition test below; the
+    # shared-layer test itself is read out of the file.
     for rel in files:
         if not AUTH_FILENAME_RE.search(Path(rel).name):
             continue
         if any(rel == p or rel.startswith(p.rstrip("/") + "/") for p in policy.consume_paths):
+            continue
+        signal: str | None = None
+        text, _truncated = _read_text(project_dir / rel)
+        if text is not None:
+            signal = _shows_shared_layer(text)
+            if signal is None:
+                layout = _rendered_by_shared_surface(project_dir, rel, text, policy)
+                if layout is not None:
+                    signal = f"the shared surface it renders inside, {layout}"
+        if signal is not None:
+            report.notes.append(
+                f"{rel} is not reported as hand-rolled: it shows the shared layer through {signal}"
+            )
             continue
         report.findings.append(_finding(
             UI_AUTH_HANDROLLED, "ERROR", rel, 0,

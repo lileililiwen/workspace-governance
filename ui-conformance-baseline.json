@@ -523,7 +523,7 @@
         "UI_TOKEN_NOT_CONSUMED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 6,
+        "UI_AUTH_HANDROLLED": 5,
         "UI_BRANDING_ABSENT": 1,
         "UI_CONTRAST_UNMEASURED": 1,
         "UI_SCOPE_UNDECLARED": 1,
@@ -895,7 +895,7 @@
         "UI_TOKEN_NOT_CONSUMED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 4,
+        "UI_AUTH_HANDROLLED": 3,
         "UI_BRANDING_ABSENT": 1,
         "UI_CONTRAST_UNMEASURED": 1,
         "UI_SCOPE_UNDECLARED": 1,

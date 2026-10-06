@@ -373,6 +373,155 @@ class AdoptionCombinationTests(unittest.TestCase):
         self.assertNotIn(ui.UI_AUTH_HANDROLLED, report.codes())
 
 
+class SharedLayerEvidenceTests(unittest.TestCase):
+    """A migrated login page is not a hand-rolled one. The file proves it."""
+
+    def _adopter(self, root: Path) -> None:
+        declare(root, {
+            "scope": {"roots": ["Pages"]},
+            "shared_layer": {"adopted": True, "consume_paths": ["vendor/ui"]},
+        })
+        write(root, "Pages/Home.cshtml", "<main class=\"platform-shell\"></main>\n")
+
+    def _report(self, root: Path) -> object:
+        policy = ui.parse_ui_policy(ui._load_declaration(root / ".project.json"))
+        return ui.evaluate(root, policy, token_source=TOKEN_SOURCE, module_path=TOKEN_MODULE)
+
+    def _note(self, report, rel: str) -> str:
+        return next(n for n in report.notes if rel in n)
+
+    def test_bare_login_page_still_fires(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            declare(root, {"scope": {"roots": ["src"]}})
+            write(root, "src/Home.tsx", "export const Home = 1;\n")
+            write(root, "src/LoginPage.tsx",
+                  "export const LoginPage = () => (\n"
+                  "  <form class=\"login\">\n"
+                  "    <label htmlFor=\"u\">User</label>\n"
+                  "    <input id=\"u\" />\n"
+                  "  </form>\n"
+                  ");\n")
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+        self.assertEqual(
+            [f.file for f in report.findings if f.rule_id == ui.UI_AUTH_HANDROLLED],
+            ["src/LoginPage.tsx"],
+        )
+
+    def test_shared_class_name_does_not_fire_and_names_the_signal(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/Login.cshtml",
+                  '<section class="platform-card platform-auth-card">\n'
+                  '  <form class="platform-auth-form"><input class="platform-control" /></form>\n'
+                  "</section>\n")
+            report = self._report(root)
+        self.assertNotIn(ui.UI_AUTH_HANDROLLED, report.codes())
+        self.assertIn("platform-* class name", self._note(report, "Pages/Login.cshtml"))
+
+    def test_shared_token_stylesheet_does_not_fire(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/Register.cshtml",
+                  '<link rel="stylesheet" href="~/css/platform/design-tokens/dist/tokens.css" />\n'
+                  '<form class="register"><input name="u" /></form>\n')
+            report = self._report(root)
+        self.assertNotIn(ui.UI_AUTH_HANDROLLED, report.codes())
+        self.assertIn("vendored token stylesheet", self._note(report, "Pages/Register.cshtml"))
+
+    def test_shared_layer_stylesheet_does_not_fire(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/ForgotPassword.cshtml",
+                  '@import url("~/css/platform/react-auth/styles.css");\n'
+                  '<form class="forgot"><input name="u" /></form>\n')
+            report = self._report(root)
+        self.assertNotIn(ui.UI_AUTH_HANDROLLED, report.codes())
+        self.assertIn("shared-layer stylesheet", self._note(report, "Pages/ForgotPassword.cshtml"))
+
+    def test_declared_adopter_writing_a_fresh_login_page_still_fires(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/Login.cshtml",
+                  '<form class="login"><input name="u" /></form>\n')
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+        self.assertEqual(ui.exit_code(report), 1)
+
+    def test_handler_page_rendered_by_the_shared_surface_does_not_fire(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/_ViewStart.cshtml", '@{\n    Layout = "_Layout";\n}\n')
+            write(root, "Pages/Shared/_Layout.cshtml",
+                  '<link rel="stylesheet" href="~/css/platform/react-auth/styles.css" />\n'
+                  "@RenderBody()\n")
+            # A POST handler with no screen: the control that posts to it is the
+            # shared one, rendered by the layout.
+            write(root, "Pages/Logout.cshtml",
+                  "@page\n@model Demo.LogoutModel\n@{\n    ViewData[\"Title\"] = \"Out\";\n}\n")
+            report = self._report(root)
+        self.assertNotIn(ui.UI_AUTH_HANDROLLED, report.codes())
+        note = self._note(report, "Pages/Logout.cshtml")
+        self.assertIn("Pages/Shared/_Layout.cshtml", note)
+
+    def test_handler_page_is_reported_when_the_layout_resolves_to_nothing_shared(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/_ViewStart.cshtml", '@{\n    Layout = "_Layout";\n}\n')
+            write(root, "Pages/Shared/_Layout.cshtml", '<link rel="stylesheet" href="~/css/site.css" />\n')
+            write(root, "Pages/Logout.cshtml", "@page\n@model Demo.LogoutModel\n")
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+
+    def test_handler_page_is_reported_when_no_layout_resolves(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/Logout.cshtml", "@page\n@model Demo.LogoutModel\n")
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+
+    def test_handler_page_is_reported_without_a_declared_adoption(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            declare(root, {"scope": {"roots": ["Pages"]}})
+            write(root, "Pages/Home.cshtml", '<main class="platform-shell"></main>\n')
+            write(root, "Pages/_ViewStart.cshtml", '@{\n    Layout = "_Layout";\n}\n')
+            write(root, "Pages/Shared/_Layout.cshtml",
+                  '<link rel="stylesheet" href="~/css/platform/react-auth/styles.css" />\n')
+            write(root, "Pages/Logout.cshtml", "@page\n@model Demo.LogoutModel\n")
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+
+    def test_non_razor_file_that_renders_nothing_is_still_reported(self):
+        with scratch() as tmp:
+            root = Path(tmp)
+            self._adopter(root)
+            write(root, "Pages/Login.tsx", "export const Login = 1;\n")
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+
+    def test_a_layout_outside_the_project_is_never_read(self):
+        with scratch() as tmp:
+            root = Path(tmp) / "demo"
+            root.mkdir()
+            (Path(tmp) / "secret.cshtml").write_text(
+                '<link rel="stylesheet" href="~/css/platform/react-auth/styles.css" />\n',
+                encoding="utf-8",
+            )
+            self._adopter(root)
+            write(root, "Pages/Login.cshtml", '@layout="../../secret.cshtml"\n')
+            report = self._report(root)
+        self.assertIn(ui.UI_AUTH_HANDROLLED, report.codes())
+
+
 class ScopeCeilingTests(unittest.TestCase):
     def test_over_ceiling_repository_names_its_count(self):
         with scratch() as tmp:
