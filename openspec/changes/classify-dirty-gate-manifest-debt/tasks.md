@@ -27,3 +27,17 @@
 - [x] Record exact results and the two-commit evidence contract in `HANDOFF.md`; add the resulting commit references in its HANDOFF-only commit.
 - [x] Commit explicit package paths and debt snapshot as commit 1; commit `HANDOFF.md` only as commit 2.
 - [x] Keep the change active and unarchived.
+
+## 5. Follow-up — resolve the measured debt entries
+
+- [x] Update the eight dirty-manifest owners' existing gate-debt OpenSpecs,
+  bind their required commands, and commit each package with a HANDOFF-only
+  second commit.
+- [x] Resolve the remaining build/security decisions in `jenkins-local` and
+  `sisyphusfy` from repository evidence and bind real checks.
+- [x] Regenerate the authoritative `gate-debt.json` at this repository path;
+  the current driver dry-run reports 0 entries and 0 decisions needed.
+- [x] Preserve 27 other dirty manifests, 5 repositories without manifests,
+  and unrelated dirty files; the debt record reports 0 unresolved checks.
+- **Done when** the debt driver reports zero and no dirty/unrelated work has
+  been overwritten.
