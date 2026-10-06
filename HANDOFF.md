@@ -1608,3 +1608,42 @@ was a stray untracked rollback record with no `specs/` deltas, resolved at
 `9105360` — the change is `bind-declared-verification-command` in
 `driftwatchdog`. The change is **not archived**; archiving needs separate
 authorization.
+
+## Follow-up: the recorded gate debt is cleared — 2026-10-06
+
+The remaining 11 entries were resolved in the affected repositories, using
+their existing `close-unbound-gate-checks` OpenSpecs. Each product repository
+received the implementation/spec commit followed by a HANDOFF-only commit:
+
+| Repository | Implementation | HANDOFF |
+|---|---|---|
+| `hestiaLab` | `d33995c` | `40d058f` |
+| `jenkins-local` | `7b170e7` | `6fa8727` |
+| `sisyphusfy` | `8e66b5d` | `75948c7` |
+| `alethefy` | `4c97a73` | `f14d2c2` |
+| `ariadex` | `07b93e3` | `e24e255` |
+| `catchen` | `27c9cc9` | `d3b2bbf` |
+| `linglitch` | `4bc4cef` | `567a045` |
+| `platform-contracts` | `1c95354` | `2d62fce` |
+
+Jenkins-local's build is Python adapter bytecode compilation; its README
+assigns selected project image builds to the Mac release runtime. Sisyphusfy
+builds its root Python distribution and audits its published npm launcher;
+`.opencode/` package files are ignored local integration files, absent from
+clean checkouts. Platform Contracts' schema and fixture wrappers pass with no
+findings. The composite backend/frontend commands in Catchen and Linglitch
+were bound but their full test suites were not executed in this pass.
+
+The authoritative debt snapshot was regenerated at
+`workspace-governance/gate-debt.json` with the explicit `--debt-out` path.
+The driver dry-run now reports **0 entries and 0 decisions needed**. The
+portfolio scan measured 81 repositories: 49 resolved, 0 unresolved, 5 without
+manifests, and 27 with other dirty manifest work preserved. The unrelated
+untracked `HANDOVER.md` and `driftwatch.toml` remain untouched. No changes were
+archived or pushed.
+
+Material verification limits: the Alethefy build was not executed because the
+local environment has no Python 3.12 executable (the project requires
+`>=3.12`); Platform Contracts' `pip-audit` could not reach the PyPI proxy.
+Those checks are bound, but those live verification results remain unproven.
+Snapshot/task commit: `829c1be`.
