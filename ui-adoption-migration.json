@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "ui-adoption-migration",
   "title": "Migrate hand-rolled auth and UI surfaces onto the shared ui layer",
-  "status": "planned",
+  "status": "in-progress",
   "created": "2026-10-06",
   "owner": "workspace-governance",
   "problem": "44 hand-written login/register/logout page files are spread across 17 repositories, and 22 repositories each implement their own theme switching. Meanwhile dotnet-platform-libs/ui is a complete, tested design-token and component layer whose adoption count is zero. The workspace pays for the same pages repeatedly and has no single place to change them.",
@@ -62,7 +62,10 @@
         "stack": "dotnet",
         "role": "product",
         "branch": "main",
-        "auth_files_to_replace": ["src/SomadaNote.Web/Pages/Login.cshtml", "src/SomadaNote.Web/Pages/Logout.cshtml"],
+        "auth_files_to_replace": [
+          "src/SomadaNote.Web/Pages/Login.cshtml",
+          "src/SomadaNote.Web/Pages/Logout.cshtml"
+        ],
         "verification_command": "dotnet test SomadaNote.sln",
         "blocker": "The working tree has one modified tracked file, src/SomadaNote.Api/Dockerfile, which is leftover .NET 8 to 10 migration work (sdk:8.0 to 10.0, aspnet:8.0 to 10.0, plus ENV HUSKY=0). It is unverified and was not written by this effort, so the standard no-uncommitted-tracked-changes guard would block the migration. The owner must land or discard it first."
       },
@@ -143,25 +146,45 @@
       "id": "D1",
       "question": "Publish the feed to a public npm scope, or vendor per repository?",
       "why_it_matters": "dotnet-platform-libs is now PUBLIC on GitHub, but the feed tarballs are committed to the repo rather than published. Vendoring keeps the packages private but means every consumer copies tarballs and no version bump propagates.",
-      "default_if_unanswered": "vendor, because publishing a package under the user's npm identity is an account-level action the owner should take deliberately"
+      "default_if_unanswered": "vendor, because publishing a package under the user's npm identity is an account-level action the owner should take deliberately",
+      "ruling": {
+        "decision": "vendor",
+        "decided": "2026-10-06",
+        "reason": "The feed tarballs are already committed under ui/feed/ and verified by verify-ui-feed.mjs. Publishing to a public npm scope is an account-level action under the owner's npm identity; a vendored feed with a sync script keeps every install offline-reproducible and digest-pinned, which is what the layer was built for. A consumer syncs with one script and never needs credentials."
+      }
     },
     {
       "id": "D2",
       "question": "Does the auth page set include a username/password form, or only provider redirects?",
       "why_it_matters": "forge's portal-browser-sign-in designs OIDC with PKCE only. The React pages assume a local form. The two must agree or consumers will get the wrong page.",
-      "default_if_unanswered": "support both; a local form for site users, a provider redirect for operators"
+      "default_if_unanswered": "support both; a local form for site users, a provider redirect for operators",
+      "ruling": {
+        "decision": "both",
+        "decided": "2026-10-06",
+        "reason": "react-auth ships a local username/password form for site users; forge's portal-browser-sign-in ships a provider redirect for operators. These are different actors, not competing designs. A site user logs in with a local credential; an operator authenticates to the control plane through OIDC with PKCE."
+      }
     },
     {
       "id": "D3",
       "question": "Are the 8 Flutter repositories in scope at all?",
       "why_it_matters": "There is no Dart token artifact. Supporting them means writing and maintaining a fourth consumer path.",
-      "default_if_unanswered": "out of scope, recorded as a permanent exemption so they stop being counted as drift"
+      "default_if_unanswered": "out of scope, recorded as a permanent exemption so they stop being counted as drift",
+      "ruling": {
+        "decision": "out of scope, permanent exemption",
+        "decided": "2026-10-06",
+        "reason": "There is no Dart token artifact and writing a fourth consumer path for 8 repositories is not justified against the measured benefit. Record these as exempt so they stop being counted as drift rather than carrying an open gap forever."
+      }
     },
     {
       "id": "D4",
       "question": "Who owns branding.json — the repo, or the workspace registry?",
       "why_it_matters": "If the registry owns it, a product cannot change its own logo without a governance round trip. If the repo owns it, 70+ files drift again and nothing enforces a schema.",
-      "default_if_unanswered": "repo owns it, schema validated at build time by verify-ui.mjs"
+      "default_if_unanswered": "repo owns it, schema validated at build time by verify-ui.mjs",
+      "ruling": {
+        "decision": "repo owns branding.json",
+        "decided": "2026-10-06",
+        "reason": "A product must be able to change its own logo without a governance round trip. The schema in ui/schemas/branding.schema.json and the loader in react-auth/src/branding.ts already implement this; verify-ui.mjs validates the shape at build time, so 70+ files cannot silently drift."
+      }
     }
   ],
   "not_done": [
