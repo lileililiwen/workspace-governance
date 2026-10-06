@@ -2,7 +2,108 @@
 
 ## Current state
 
-current_spec: ui-convention-check
+current_spec: ui-auth-adoption-evidence
+
+## Current package: auth-page adoption evidence
+
+`UI_AUTH_HANDROLLED` fired on a filename pattern alone and read nothing. That is
+why the only repository in the workspace that adopted the shared layer failed its
+own gate: `somedanote` renders `Login.cshtml` through the shared composition
+carrying `platform-auth-card`, `platform-auth-title`, `platform-auth-description`,
+`platform-auth-form`, `platform-auth-header`, `platform-auth-logo`,
+`platform-button`, `platform-control`, `platform-shell` and `platform-state`, and
+was still reported as hand-rolled. Change `ui-auth-adoption-evidence`, archived
+as `2026-10-06-ui-auth-adoption-evidence`.
+
+**What the rule does now.** It keeps the pattern, the ERROR level and the
+repo-wide scope. Before reporting, it opens the file it matched and asks whether
+that file demonstrates the shared layer: a `platform-*` class name, or a
+stylesheet reference whose path names the shared layer — the vendored token
+stylesheet or a vendored shared-layer stylesheet. A `.cshtml`/`.razor` page that
+renders no markup of its own is judged by the surface it composes (`@layout`, or
+the `Layout` its nearest `_ViewStart.cshtml` assigns), and only when the
+repository declares adoption, the file is a Razor page, and that surface itself
+shows the layer. That is how a POST-only `Logout.cshtml` is accounted for: the
+sign-out control that posts to it is the shared one, rendered by the shared
+shell.
+
+**Fail-closed, itemised.** A declared adopter that hand-writes a login page is
+still reported; the declaration is not consulted for any file that renders a
+screen. An unreadable auth-named file is still reported. A layout that cannot be
+resolved, or that shows no shared signal, is still reported. A `.tsx` file that
+renders nothing is still reported — the composition gate is Razor-only. Every
+file that goes unreported is written to `report.notes` naming the file and the
+signal read, so a narrowed finding is visible rather than absent.
+
+**The three-way proof**, each case a scratch repository built in
+`tempfile.TemporaryDirectory()`, run through the CLI with
+`--baseline /nonexistent.json`:
+
+| Case | Result |
+|---|---|
+| bare `LoginPage.tsx`, no shared reference | `exit=1`, `ERROR UI_AUTH_HANDROLLED src/LoginPage.tsx` |
+| same page rendering `platform-*` | `UI_AUTH_HANDROLLED` absent, note: "it shows the shared layer through a platform-* class name" |
+| declares adoption, writes a fresh bare login page | `exit=1`, `ERROR UI_AUTH_HANDROLLED src/LoginPage.tsx` (the only error raised) |
+| declared adopter, handler-only `Logout.cshtml` in the shared shell | `exit=0`, note names `Pages/Shared/_Layout.cshtml` |
+
+**Fleet neutrality.** `ui_conformance.py --audit --root /home/paul/code
+--baseline <none> --json` was captured before and after and every project report
+compared field by field: 59 projects, exactly 2 changed, both removals.
+`dotnet-platform-libs` (the provider) loses
+`ui/packages/react-auth/src/auth-forms.tsx`, which is the layer's own source and
+speaks the shared vocabulary; `somedanote` loses its migrated login page. Total
+findings 349 → 347. No repository's findings were added, and no non-adopter
+moved.
+
+**Baseline.** `generate_ui_conformance_baseline.py --check --root /home/paul/code`
+exited 1 after the change and 0 before it. The snapshot was regenerated with its
+own generator: two `UI_AUTH_HANDROLLED` counts shrink by one each, nothing is
+added, no code leaves any entry. It now exits 0.
+
+**Portability.** No token semantics moved into Python. The new tests are string
+shapes over file content, the same class as the existing `THEME_MECHANISM_RE`.
+`UI_COLOR_LITERAL` still consults
+`dotnet-platform-libs/ui/scripts/lib/token-model.mjs` over one bounded `node`
+subprocess, and the run note still says so.
+
+**Commands and results.**
+
+| Command | Exit | Result |
+|---|---|---|
+| `python3 -m unittest discover -s tests` | 1 | 935 tests, 2 failures, 2 skipped — the same 2 as before this change |
+| `python3 -m unittest tests.test_ui_conformance` | 0 | 60 tests (49 before) |
+| `python3 scripts/ui_conformance.py --audit --root /home/paul/code --baseline <none>` | 1 | 59 projects, 347 findings, down from 349 |
+| `python3 scripts/generate_ui_conformance_baseline.py --check --root /home/paul/code` | 0 | up to date after regeneration |
+| `openspec validate --all --strict --no-interactive` | 0 | 30 items passed |
+| `node scripts/check-openspec-change-names.mjs` | 0 | valid |
+| `python3 scripts/workspace_check.py --self-check` | 0 | errors=0 warnings=0 |
+| `git diff --check` | 0 | clean |
+
+**Pre-existing failures, recorded not fixed.** `python3 -m unittest discover -s
+tests` fails on two tests that pre-date this work, reproduced before the first
+edit:
+
+1. `test_identity_and_taxonomy.SequencingGateTests.test_the_gate_is_open_and_the_fleet_corpus_is_clean`
+   — `refused: somedanote: design.md §5.2 rule 1: 1 records a registry profile
+   but no registry entry exists`. The registry entry for that repository has id
+   and path `somodanote`; the checkout declares id `somedanote`. Nothing here
+   changes the registry.
+2. `test_promote_project.SandboxCoverageTests.test_every_governance_root_data_file_is_accounted_for`
+   — `registry-remote-drift.json`, `tag-taxonomy.json` and
+   `ui-adoption-migration.json` are neither copied into the sandbox nor listed
+   as absent.
+
+**Test count correction.** `tests/test_ui_conformance.py` held **49** tests
+before this change and holds **60** after it. A commit message already in this
+history says "47 tests" for that file. That number was wrong when it was
+written, and correcting it would require rewriting history, which this
+repository does not do. The correct figure at the time that commit landed was
+49.
+
+**Not done.** No repository is migrated or declared from here; `somedanote`'s
+declaration is its own change. No finding code is added, renamed or removed. The
+token boundary, the scope rule and the baseline shape are untouched. The two
+failures above are not fixed.
 
 ## Current package: UI convention conformance check
 
