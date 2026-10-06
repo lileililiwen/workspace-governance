@@ -2,7 +2,120 @@
 
 ## Current state
 
-current_spec: classify-dirty-gate-manifest-debt
+current_spec: ui-convention-check
+
+## Current package: UI convention conformance check
+
+`dotnet-platform-libs/ui` had zero adoption across the portfolio and nothing
+could see it. `scripts/product_code_quality.py` reads the `quality` block and
+the `readme-status-claim` rule reads `README.md`, so a repository satisfied both
+while shipping its own login form, its own colour literals and no theme
+mechanism. The measured facts that motivated the change, with the surface census
+fixed in the archived `design.md` §2:
+
+| Measured fact | Value |
+|---|---|
+| Registered repositories | 81 |
+| Repositories shipping UI surface | 59 |
+| UI files across the fleet | 4280 |
+| Repositories with an auth-named UI file | 22 |
+| Auth-named UI files | 113 |
+| Repositories declaring adoption of the shared `ui` layer | 0 |
+| Repositories declaring a UI scan scope | 0 |
+
+The eight finding codes are fixed by the portfolio owner and were implemented
+unchanged: `UI_AUTH_HANDROLLED`, `UI_TOKEN_NOT_CONSUMED`, `UI_COLOR_LITERAL`,
+`UI_THEME_ABSENT`, `UI_BRANDING_ABSENT`, `UI_CONTRAST_UNMEASURED` (all ERROR) and
+`UI_SCOPE_UNDECLARED` (REVIEW_REQUIRED). Two things worth stating plainly
+because they are design decisions rather than mechanics:
+
+**The scope rule.** Filename-level rules run on a repo-wide census;
+content-level rules read only inside the repository's declared
+`ui.scope.roots`. That is what keeps `alltools-platform` — a tooling platform,
+not a consumer, with 2067 UI files — bounded and visible instead of skipped or
+drowning the report. It emits its 24 real auth-named file paths, its declaration
+findings, and one note naming 2067 against the 400-file ceiling; it opens no
+file. `dotnet-platform-libs` is recorded with `role: "provider"` because it is
+the layer itself. `rust-ecommerce` (305) and `openlearning` (239) are the next
+largest and sit under the ceiling.
+
+**The token boundary.** `UI_COLOR_LITERAL` does not re-implement the resolver.
+One bounded `node` process per run imports
+`dotnet-platform-libs/ui/scripts/lib/token-model.mjs` and reads
+`declaredLiterals(resolveAliases(readTokens(...)))`. The DTCG walk, the alias
+chain and the canonical name rule stay where they belong. Every way of failing
+to consult that module — no `node`, missing module, unreadable source, an
+unresolved alias (which `resolveAliases` throws on), or a timeout — reports
+every colour literal as unreached and exits non-zero. A literal is never
+declared token-reachable by a comparison that did not run.
+
+The baseline is the fourth piece and is not a switch: a run without
+`--baseline` fails closed on every finding, a code that is not listed fails
+normally, and `--check` reports a stale entry as dead weight. It records 59
+projects and 258 codes across them — `UI_BRANDING_ABSENT`,
+`UI_CONTRAST_UNMEASURED`, `UI_SCOPE_UNDECLARED` and `UI_TOKEN_NOT_CONSUMED` 59
+times each, `UI_AUTH_HANDROLLED` on the 22 repositories that hold one.
+
+Verification actually run, with real output:
+
+| Command | Exit | Result |
+|---|---|---|
+| `python3 -m unittest tests.test_ui_conformance` | 0 | 49 tests pass |
+| `python3 -m unittest discover -s tests -v` (declared) | 1 | 924 tests, **2 pre-existing failures** |
+| `scripts/ui_conformance.py <conformant scratch repo>` | 0 | PASS, 1 UI file, token source compared |
+| `scripts/ui_conformance.py /home/paul/code/fotofy --baseline /nonexistent.json` | 1 | 8 ERROR + 1 REVIEW_REQUIRED, 5 named auth files |
+| `scripts/ui_conformance.py /home/paul/code/fotofy` | 0 | PASS with 9 findings reported as baselined |
+| `scripts/ui_conformance.py /home/paul/code/alltools-platform` | 0 | PASS, 2067 files noted against the 400 ceiling, 28 baselined |
+| `scripts/ui_conformance.py --audit --root /home/paul/code` | 0 | 59 projects, 0 fail, 0 review_required |
+| `generate_ui_conformance_baseline.py --root /home/paul/code --check` | 0 | up to date, 59 projects, 1 over the ceiling |
+| `python3 scripts/workspace_check.py --self-check` | 0 | errors=0 warnings=0 |
+| `openspec validate --changes --strict` | 0 | 16/16 passed |
+| `openspec validate --specs --strict` | 0 | 15/15 passed |
+| `python3 scripts/check_skill_refs.py` | 0 | SKILL.md + 9 references |
+| `node scripts/check-openspec-change-names.mjs` | 0 | names valid |
+
+**Load-bearing proof, outside the test suite.** A conformant scratch repository
+was built in a `tempfile.TemporaryDirectory()`, checked (exit 0), given a
+hand-written `src/pages/LoginPage.tsx` (exit 1, `UI_AUTH_HANDROLLED
+src/pages/LoginPage.tsx`), had the file removed (exit 0 again). The gate flips
+on the thing it exists to catch. No shell delete was used anywhere; cleanup was
+in-process.
+
+Two deviations from the brief, both real and both recorded rather than papered
+over:
+
+1. **`workspace_check.py --self-check` reports 0 errors, not 3.** The three
+   `SPEC_PURPOSE_PLACEHOLDER` errors named in the brief
+   (`platform-build-policy`, `platform-test-web-factory`,
+   `platform-ui-token-distribution`) are not present on `main` as it stands.
+   Nothing was fixed to achieve that. The one placeholder this archive could
+   introduce — `TBD - created by archiving change ui-convention-check` — was
+   replaced with real prose, and the post-archive self-check is still 0/0.
+2. **The fleet census reads 59 repositories, not 64, and 113 auth files, not
+   44.** The suffix set and prune set are exactly those in the brief; 59 is what
+   that set yields today. The 44 figure comes from
+   `ui-adoption-migration.json`, which counted a narrower auth pattern; this
+   checker's pattern includes bare `auth`, which is why it finds more.
+
+Pre-existing failures, not introduced here and not fixed here:
+
+- `test_identity_and_taxonomy.SequencingGateTests.test_the_gate_is_open_and_the_fleet_corpus_is_clean`
+  — `axis_migration.py --check` refuses on `somodanote`, which records a
+  registry profile with no registry entry. From commit `4395a3f`.
+- `test_promote_project.SandboxCoverageTests.test_every_governance_root_data_file_is_accounted_for`
+  — `registry-remote-drift.json`, `tag-taxonomy.json` and
+  `ui-adoption-migration.json` are unaccounted. From commits `db140a6` and
+  `8b5304e`. This change added only its own `ui-conformance-baseline.json` to
+  the accounted set; the other three were left as found.
+
+Commit 1 is `e07b43b` (`feat(ui-convention-check): ...`) and contains the
+implementation, the tests, the baseline and the archived change
+(`openspec/changes/archive/2026-10-06-ui-convention-check/` plus
+`openspec/specs/ui-convention-check/spec.md`). This commit is HANDOFF evidence
+only. The change is archived; the checker is standalone and is not wired into
+`validate_project()`, which is a separate change in a file this one does not
+own. `skills/workspace-governance/**` and `docs/ui-convention.md` belong to a
+parallel agent and were not touched.
 
 ## Current package: classify dirty gate-manifest debt
 
