@@ -56,7 +56,16 @@
       "name": "Prove it on one repository",
       "blocked_by": "wave 0",
       "rationale": "Adoption is currently zero. One real consumer proves the feed, the tokens, and the components work outside the owning repo; zero consumers proves nothing.",
-      "candidate": "one small dotnet Razor product already in the undeclared-UI list",
+      "candidate": "somodanote",
+      "candidate_rationale": "Selected by measuring bespoke UI across all 34 dotnet repos in the undeclared-UI list. somodanote is the smallest that actually has auth pages to replace: 12 razor files, with hand-written Login.cshtml (42 lines) and Logout.cshtml (5 lines). Smaller repos were rejected because they have no auth surface to prove the replacement: singleatee (5 files, no auth), citylens (9, none), testify (11, none). The largest, openlearning at 234 razor files, is far too big for a first adopter because a failure there would be impossible to attribute.",
+      "candidate_state": {
+        "stack": "dotnet",
+        "role": "product",
+        "branch": "main",
+        "auth_files_to_replace": ["src/SomadaNote.Web/Pages/Login.cshtml", "src/SomadaNote.Web/Pages/Logout.cshtml"],
+        "verification_command": "dotnet test SomadaNote.sln",
+        "blocker": "The working tree has one modified tracked file, src/SomadaNote.Api/Dockerfile, which is leftover .NET 8 to 10 migration work (sdk:8.0 to 10.0, aspnet:8.0 to 10.0, plus ENV HUSKY=0). It is unverified and was not written by this effort, so the standard no-uncommitted-tracked-changes guard would block the migration. The owner must land or discard it first."
+      },
       "tasks": [
         "Adopt the feed in a single chosen repository",
         "Replace its hand-written Login/Register/Logout with the shared pages",
