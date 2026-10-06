@@ -47,6 +47,7 @@ GOVERNANCE_ROOT_DATA_FILES = (
     "gate-debt.json",
     "gate-debt-baseline.json",
     "gate-debt-exceptions.json",
+    "ui-conformance-baseline.json",
 )
 
 # Top-level data files deliberately kept OUT of the sandbox, each with the
