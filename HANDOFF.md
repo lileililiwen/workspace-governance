@@ -1642,8 +1642,12 @@ manifests, and 27 with other dirty manifest work preserved. The unrelated
 untracked `HANDOVER.md` and `driftwatch.toml` remain untouched. No changes were
 archived or pushed.
 
-Material verification limits: the Alethefy build was not executed because the
-local environment has no Python 3.12 executable (the project requires
-`>=3.12`); Platform Contracts' `pip-audit` could not reach the PyPI proxy.
-Those checks are bound, but those live verification results remain unproven.
+Verification correction — Alethefy's build was subsequently run with
+`UV_CACHE_DIR=/tmp/alethefy-uv-cache uv run --with build python -m build`.
+uv selected Python 3.14.4, satisfying the package's `>=3.12` requirement; it
+produced both sdist and wheel. The manifest now runs the build through uv, in
+line with the repository workflow. Alethefy build verification is complete.
+The manifest/spec update is `03d7d03`; its HANDOFF-only commit is `fc0c01e`.
+Platform Contracts' `pip-audit` still could not establish an advisory result
+through the restricted PyPI proxy, so that live result remains unverified.
 Snapshot/task commit: `829c1be`.
