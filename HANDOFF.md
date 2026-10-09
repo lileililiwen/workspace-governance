@@ -2,7 +2,87 @@
 
 ## Current state
 
-current_spec: ui-auth-adoption-evidence
+current_spec: classify-dirty-gate-manifest-debt
+
+## Current package: UI convention guidance and the one-repository binder
+
+The rule existed and the checker existed; the door and the gate were missing.
+Nothing in the workspace-governance skill routed an agent writing UI to
+`scripts/ui_conformance.py`, and no repository Gate carried a bound
+`ui-conformance` check, so the checker reported drift while blocking nothing
+(ruling D18: a verifier that no gate runs does not gate). Change
+`ui-convention-guidance`, completed and archived 2026-10-09 as
+`openspec/changes/archive/2026-10-09-ui-convention-guidance/`, canonical spec
+promoted to `openspec/specs/ui-convention-guidance/spec.md` (no `--skip-specs`;
+Purpose written from the proposal, not left TBD). Two commits:
+`b851cab` (route, reference, docs, binder, tests, archive, spec) then this
+handoff-only commit.
+
+**What shipped.** One UI routing row in `skills/workspace-governance/SKILL.md`
+onto `skills/workspace-governance/references/ui-convention.md`; the human
+mirror `docs/ui-convention.md`; and `scripts/bind_ui_gate.py`, a dry-run-default,
+single-target, idempotent binder. Docs cross-check: the seven codes both files
+state are exactly the seven constants at `scripts/ui_conformance.py:83-89`
+(`UI_EXTENSIONS` there is an extension set, not a code), the
+`UI_SCOPE_UNDECLARED` = REVIEW_REQUIRED severities match
+`ui_conformance.py:690`, every `somedanote` worked-example path was verified to
+exist in the sibling checkout, and `check_skill_refs.py` resolves the row.
+Binder behaviour: refuses a missing manifest, a non-`workspace-governance@`
+`rule_pack`, a manifest with no `checks:` block, an absolute or env-var
+command, and a conflicting existing entry — in every refusal nothing is
+written; a second `--apply` is byte-for-byte identical.
+
+**Deviations found by verification, fixed before the commit.** Two:
+
+1. `design.md` claimed in its behaviour table and contract line that the
+   default dry run exits non-zero when a change is needed ("Exit zero means
+   already bound"), contradicting its own CLI section, the spec — which
+   mandates non-zero only for `--check` — the reference docs and the tests.
+   `--check` exists precisely to carry that exit contract, so the spec's
+   reading won: default previews with exit `0`; `--check` exits `1` when the
+   binding is missing or wrong. `design.md` corrected to say so.
+2. The spec requires the second run to report `no change`; the `ALREADY_BOUND`
+   detail said only "already bound to …". The detail now carries `no change`
+   and `tests/test_bind_ui_gate.py` pins it.
+
+**Commands and results.**
+
+| Command | Exit | Result |
+|---|---|---|
+| `python3 -m unittest tests.test_bind_ui_gate -v` | 0 | Ran 30 tests, OK |
+| `python3 scripts/check_skill_refs.py` | 0 | skill refs ok: SKILL.md + 9 references |
+| scratch dry-run/apply/second-apply sequence (fresh `/tmp` repos only; no real repository was ever passed) | 0 | default exits `0`, sha256 unchanged; `--check` unbound exits `1`; `--apply` exits `0` and writes the two entries; second `--apply` prints "already bound … no change" and leaves the sha256 unchanged; `--check` bound exits `0` |
+| `python3 scripts/workspace_check.py --self-check` | 0 | Summary: errors=0 warnings=0 |
+| `openspec validate --changes --strict --no-interactive` | 0 | 15 passed pre-archive, incl. `✓ change/ui-convention-guidance` |
+| `openspec validate --all --strict --no-interactive` | 0 | post-archive: 30 items passed, incl. `✓ spec/ui-convention-guidance` |
+| `node scripts/check-openspec-change-names.mjs` | 0 | OpenSpec change names valid |
+| `git diff --check` | 0 | clean |
+| `python3 -m unittest discover -s tests` | 1 | 935 tests, 2 failures, 2 skipped — the same two pre-existing failures recorded under the auth-page package above; neither names a path this change touched |
+
+**Deliberately not run here — the follow-up action.** Binding a real
+repository is the owner's decision one repository at a time; no real repository
+was bound by this change. A later agent binds exactly one named repository from
+this checkout:
+
+```
+python3 scripts/bind_ui_gate.py <repository-path> --check   # names what it would bind; exit 1 while unbound
+python3 scripts/bind_ui_gate.py <repository-path> --apply   # writes checks.ui-conformance and commands.ui-conformance
+```
+
+The written command is `python3 ../workspace-governance/scripts/ui_conformance.py .`
+and requires this checkout at its sibling path. After binding, run that
+repository's own Gate once to confirm the check executes inside the gate, and
+report its verdict there — binding is not conformance.
+
+**Pointer.** `current_spec` advances to `classify-dirty-gate-manifest-debt`,
+first in `openspec list` and already ✓ Complete — it needs only its
+verification and archive cycle. Active changes remain, so under this
+repository's one-pointer rule the line advances rather than being removed, as
+it has at every prior cycle end.
+
+**Untouched.** `HANDOVER.md` and `driftwatch.toml` stay untracked and were not
+committed. No consumer repository was edited, declared or bound; the other
+fourteen active changes were not modified.
 
 ## Current package: auth-page adoption evidence
 
