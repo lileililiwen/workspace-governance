@@ -7,23 +7,15 @@
     {
       "project": "argoset",
       "role": "consumer",
-      "ui_files": 36,
+      "ui_files": 39,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
+      "scope_declared": true,
       "codes": [
-        "UI_AUTH_HANDROLLED",
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
+        "UI_AUTH_HANDROLLED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 3,
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
+        "UI_AUTH_HANDROLLED": 3
       }
     },
     {
@@ -112,41 +104,23 @@
       "ui_files": 85,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
+      "scope_declared": true,
       "codes": [
-        "UI_AUTH_HANDROLLED",
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
+        "UI_AUTH_HANDROLLED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 3,
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
+        "UI_AUTH_HANDROLLED": 3
       }
     },
     {
       "project": "loreMix",
       "role": "consumer",
-      "ui_files": 24,
+      "ui_files": 25,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "metiscope",
@@ -215,43 +189,25 @@
     {
       "project": "alethefy",
       "role": "consumer",
-      "ui_files": 4,
+      "ui_files": 5,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "crossify",
       "role": "consumer",
-      "ui_files": 33,
+      "ui_files": 36,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
+      "scope_declared": true,
       "codes": [
-        "UI_AUTH_HANDROLLED",
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
+        "UI_AUTH_HANDROLLED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 4,
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
+        "UI_AUTH_HANDROLLED": 4
       }
     },
     {
@@ -279,22 +235,12 @@
     {
       "project": "hermexa",
       "role": "consumer",
-      "ui_files": 16,
+      "ui_files": 17,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "hypora",
@@ -365,23 +311,15 @@
     {
       "project": "openaccounting",
       "role": "consumer",
-      "ui_files": 124,
-      "scope_ceiling": 400,
+      "ui_files": 125,
+      "scope_ceiling": 200,
       "scope_oversize": false,
-      "scope_declared": false,
+      "scope_declared": true,
       "codes": [
-        "UI_AUTH_HANDROLLED",
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
+        "UI_AUTH_HANDROLLED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 4,
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
+        "UI_AUTH_HANDROLLED": 4
       }
     },
     {
@@ -451,22 +389,12 @@
     {
       "project": "chinago",
       "role": "consumer",
-      "ui_files": 23,
+      "ui_files": 16,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "crossalheart",
@@ -491,27 +419,17 @@
     {
       "project": "dharmatlas",
       "role": "consumer",
-      "ui_files": 6,
+      "ui_files": 7,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "dotnet-platform-libs",
       "role": "provider",
-      "ui_files": 27,
+      "ui_files": 30,
       "scope_ceiling": 400,
       "scope_oversize": false,
       "scope_declared": false,
@@ -533,27 +451,7 @@
     {
       "project": "forge",
       "role": "consumer",
-      "ui_files": 1,
-      "scope_ceiling": 400,
-      "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
-    },
-    {
-      "project": "fotofy",
-      "role": "consumer",
-      "ui_files": 114,
+      "ui_files": 4,
       "scope_ceiling": 400,
       "scope_oversize": false,
       "scope_declared": false,
@@ -565,7 +463,7 @@
         "UI_TOKEN_NOT_CONSUMED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 5,
+        "UI_AUTH_HANDROLLED": 1,
         "UI_BRANDING_ABSENT": 1,
         "UI_CONTRAST_UNMEASURED": 1,
         "UI_SCOPE_UNDECLARED": 1,
@@ -573,24 +471,28 @@
       }
     },
     {
-      "project": "gradevia",
+      "project": "fotofy",
       "role": "consumer",
-      "ui_files": 9,
+      "ui_files": 123,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
+      "scope_declared": true,
       "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
+        "UI_AUTH_HANDROLLED"
       ],
       "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
+        "UI_AUTH_HANDROLLED": 5
       }
+    },
+    {
+      "project": "gradevia",
+      "role": "consumer",
+      "ui_files": 11,
+      "scope_ceiling": 400,
+      "scope_oversize": false,
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "hookit",
@@ -615,42 +517,22 @@
     {
       "project": "kairion",
       "role": "consumer",
-      "ui_files": 9,
+      "ui_files": 11,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "labrys",
       "role": "consumer",
-      "ui_files": 9,
+      "ui_files": 12,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "lileililiwen.github.io",
@@ -675,22 +557,12 @@
     {
       "project": "linglitch",
       "role": "consumer",
-      "ui_files": 12,
+      "ui_files": 14,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "openlearning",
@@ -717,22 +589,12 @@
     {
       "project": "orphevia",
       "role": "consumer",
-      "ui_files": 9,
+      "ui_files": 10,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "pangoman",
@@ -927,22 +789,12 @@
     {
       "project": "tantalyn",
       "role": "consumer",
-      "ui_files": 23,
+      "ui_files": 24,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "testify",
@@ -1129,47 +981,27 @@
     {
       "project": "vowra",
       "role": "consumer",
-      "ui_files": 9,
+      "ui_files": 12,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "argoscope",
       "role": "consumer",
-      "ui_files": 19,
+      "ui_files": 21,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "chronicleaf",
       "role": "consumer",
-      "ui_files": 32,
+      "ui_files": 66,
       "scope_ceiling": 400,
       "scope_oversize": false,
       "scope_declared": false,
@@ -1192,40 +1024,22 @@
       "ui_files": 68,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
-      "codes": [
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
-      ],
-      "counts": {
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
-      }
+      "scope_declared": true,
+      "codes": [],
+      "counts": {}
     },
     {
       "project": "kairovia",
       "role": "consumer",
-      "ui_files": 54,
+      "ui_files": 56,
       "scope_ceiling": 400,
       "scope_oversize": false,
-      "scope_declared": false,
+      "scope_declared": true,
       "codes": [
-        "UI_AUTH_HANDROLLED",
-        "UI_BRANDING_ABSENT",
-        "UI_CONTRAST_UNMEASURED",
-        "UI_SCOPE_UNDECLARED",
-        "UI_TOKEN_NOT_CONSUMED"
+        "UI_AUTH_HANDROLLED"
       ],
       "counts": {
-        "UI_AUTH_HANDROLLED": 2,
-        "UI_BRANDING_ABSENT": 1,
-        "UI_CONTRAST_UNMEASURED": 1,
-        "UI_SCOPE_UNDECLARED": 1,
-        "UI_TOKEN_NOT_CONSUMED": 1
+        "UI_AUTH_HANDROLLED": 2
       }
     }
   ]
