@@ -23,7 +23,7 @@ beside an existing one.
 | Shared rules, `.ai-rules`, or handoff shape | `skills/workspace-governance/references/rules-baseline.md` (`scripts/rules_drift.py`, `openspec/specs/rules-baseline/spec.md`) |
 | License, discoverability, GitHub metadata, or repository publication | `skills/workspace-governance/references/repository-metadata.md` (`scripts/repository_metadata.py`, `scripts/github_metadata.py`, `scripts/init_project.py`) |
 | Shared library adoption (.NET / Rust) | `skills/workspace-governance/references/platform-adoption.md` (dotnet-platform-libs, rust-platform-libs, `docs/capabilities.md`) |
-| Writing or changing any UI, auth page, theme, or design token | `skills/workspace-governance/references/ui-convention.md` (`python3 scripts/ui_conformance.py <this-repo>`, `python3 scripts/bind_ui_gate.py <this-repo>`) |
+| Writing or changing any UI, auth page, theme, or design token | `skills/workspace-governance/references/ui-convention.md` (`python3 scripts/ui_conformance.py <this-repo>`, `python3 scripts/bind_ui_gate.py <this-repo>`); for adopting a repo to the kit or draining the baseline, the `ui-kit-adoption` skill (`skills/ui-kit-adoption/SKILL.md`) |
 | Shared contracts or schemas | `skills/workspace-governance/references/contracts.md` (platform-contracts) |
 | Forge and common-project cooperation, project factory, idea graduation, publishing, or post-publish operations | `skills/workspace-governance/references/portfolio-cooperation.md` (owner and contract routing) |
 | Unknown or ambiguous | Safe default: `python3 scripts/workspace_check.py --root .. --audit`, then `openspec list`. Say that no route matched; never guess. |
