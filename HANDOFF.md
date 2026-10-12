@@ -2,7 +2,23 @@
 
 ## Current state
 
-current_spec: scaffold-binds-governance-gate
+current_spec: derive-composite-gate-command
+
+## Completed: scaffold gate binding
+
+`scaffold-binds-governance-gate` is archived at
+`openspec/changes/archive/2026-10-12-scaffold-binds-governance-gate/`; its
+canonical requirement is in `openspec/specs/project-scaffolding/spec.md`.
+The generated Purpose was replaced with the actual initializer contract before
+commit.
+
+**Verification.** Focused initializer and binder tests — 153 passed, 1
+skipped; workspace self-check — 0 errors, 0 warnings; auto-gate — PASS; change
+names valid; strict change validation passed; diff check clean.
+
+**Commits.** `0434e8f` contains the archive and canonical spec. This
+HANDOFF-only commit records evidence and advances the pointer to
+`derive-composite-gate-command`.
 
 ## Completed: live gate debt ratchet
 
