@@ -228,13 +228,9 @@ honoured, and is left exactly as its author wrote it.
 and never drives profile requirements. The canonical spec is
 `openspec/specs/portfolio-vocabulary/spec.md`.
 
-A project is also classified by two independent axes, `role` (what it is for)
-and `stack` (what it is written in); `kind` survives only as the derived,
-deprecated composite `<stack>-<role>`. The axes are descriptive and never drive
-requirements. The taxonomy audit — including ERROR `TAXONOMY_MISMATCH` — is
-**not enabled** until the fleet migration is applied, and
-`scripts/axis_migration.py` is the reviewable tool that applies it. See
-`docs/vocabulary.md`.
+Projects use independent `role` and `stack` axes; `kind` remains their derived,
+deprecated composite. The audit checks the axes and registry agreement without
+changing project requirements. See [the vocabulary guide](docs/vocabulary.md).
 
 Archiving a change writes a marker into the `## Purpose` of every spec it
 produced. ERROR `SPEC_PURPOSE_PLACEHOLDER` is **not enabled** until the backfill

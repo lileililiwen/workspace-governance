@@ -18,7 +18,7 @@
   12 `.py`, no entry point, no compose, no Dockerfile) that ships no runnable
   artifact, and both authority surfaces already agree on
   `profile: deployment`. See `design.md` §10, rulings 1 and 4.
-- [ ] **`TAXONOMY_MISMATCH` is ruled ERROR, so the migration must land in the
+- [x] **`TAXONOMY_MISMATCH` is ruled ERROR, so the migration must land in the
   same package.** Do not enable the finding before the 30 rows are resolved, or
   the audit fails for 30 repositories with no owner action recorded. The
   pre-migration count of 30 is a **fixture baseline**, not a sanctioned merge
@@ -39,10 +39,9 @@
 - [x] **The census must not be run against the fleet as an audit.** Use the
   bounded, read-only walk in `design.md` §5.1 only, with no project command
   executed and no sibling written.
-- [ ] **Stage only this change directory.** The repository has a
-  pre-existing uncommitted `.project.json` edit and an untracked
-  `MATURITY_PROGRESS_SUMMARY.md`; they must not be swept into the change's
-  commits.
+- [x] **Stage only this change directory.** Historical change commits are
+  scoped to the migration artifacts; current unrelated dirty template files
+  and untracked `HANDOVER.md` / `driftwatch.toml` remain unstaged.
 
 ## 1. BFS — Baseline and impact coverage
 
@@ -66,11 +65,11 @@
   `properties` with matching `$defs` and **not** into `required`, so a
   declaration without them stays schema-valid and reports
   `TAXONOMY_AXIS_UNKNOWN` instead of `DECLARATION_SCHEMA`.
-- [ ] 1.5 Add failing tests before implementation: axis canonical-set
-  membership for registry and declaration, the `kind` derivation round-trip,
-  a fixture reproducing the 30-repository disagreement set, a fixture
-  asserting the 8 alias entries produce no taxonomy finding, and a
-  vocabulary-load failure test for an empty `roles` array.
+- [x] 1.5 Add regression tests for axis canonical-set membership, the `kind`
+  derivation round-trip, the 30-repository disagreement set, the 8 alias
+  entries, and fail-closed handling of an empty `roles` array. The tests are
+  in `tests/test_identity_and_taxonomy.py`; the original commit did not
+  preserve a separate red-test commit.
 - [x] 1.6 Verify the implementation-handoff gate: Python 3.11,
   `workspace-governance`, no shared-library boundary crossed, no sibling
   repository edited.
@@ -129,10 +128,9 @@
   (81/81), and no surviving entry changed its `path`. The id set did move, by
   design; what is asserted is that it moved *only* by the plan's own recorded
   actions, so a rename would surface as a removal with no declared addition.
-- [ ] 2.7 Update `docs/vocabulary.md` with the two axis tables, the
-  derivation rule, the id-immutability rule, and the three new finding
-  codes. Update `README.md` with one short paragraph and link rather than
-  restate. Record the outcome in `HANDOFF.md` in the second commit.
+- [x] 2.7 Update `docs/vocabulary.md` with the axis tables, derivation rule,
+  id immutability, and finding codes; keep README to a short summary and
+  link. Record outcome in the HANDOFF-only commit.
 - [x] 2.8 Record the change in `decisions.json` with the measured
   disagreement count, the contested rows, and the immutability rule, so the
   reasoning survives the migration.

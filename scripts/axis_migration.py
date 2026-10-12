@@ -51,7 +51,7 @@ if str(_SCRIPTS) not in sys.path:
 
 GOVERNANCE_ROOT = Path(__file__).resolve().parents[1]
 CHANGE_ID = "identity-and-taxonomy-axis-split"
-DESIGN_RELATIVE = f"openspec/changes/{CHANGE_ID}/design.md"
+DESIGN_RELATIVE = f"openspec/changes/archive/2026-10-12-{CHANGE_ID}/design.md"
 PLAN_RELATIVE = f"migration/{CHANGE_ID}.json"
 REGISTRY_RELATIVE = "projects.json"
 

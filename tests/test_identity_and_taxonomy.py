@@ -35,7 +35,7 @@ from workspace_check import (
     validate_taxonomy,
 )
 
-CHANGE_DIR = REPO_ROOT / "openspec" / "changes" / "identity-and-taxonomy-axis-split"
+CHANGE_DIR = REPO_ROOT / "openspec" / "changes" / "archive" / "2026-10-12-identity-and-taxonomy-axis-split"
 DESIGN = CHANGE_DIR / "design.md"
 PLAN = REPO_ROOT / "migration" / "identity-and-taxonomy-axis-split.json"
 REGISTRY = REPO_ROOT / "projects.json"
