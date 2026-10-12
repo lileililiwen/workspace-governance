@@ -25,6 +25,15 @@ OpenSpec emitted a non-blocking warning that the proposal Why section exceeds
 HANDOFF-only commit records completion and clears the active pointer; there
 are no active OpenSpec changes.
 
+**Final verification.** The first workspace self-check caught the generated
+Purpose placeholder in the archived `readme-claim-verification` spec. Commit
+`33fd932` replaced it with the actual contract purpose. The workspace
+self-check then passed with 0 errors and 0 warnings; auto-gate passed; strict
+validation passed for all 26 canonical specs; the full unit suite passed 938
+tests with 2 skipped; the skill reference check passed; and `openspec list`
+reported no active changes. The pre-existing dirty files and untracked
+`HANDOVER.md`/`driftwatch.toml` were preserved and not staged.
+
 ## Completed: cross-repo adoption grant
 
 `cross-repo-adoption-grant` is archived at
