@@ -4,6 +4,27 @@
 
 current_spec: none
 
+## Completed: OpenSpec seriality guard
+
+`enforce-openspec-seriality` is archived at
+`openspec/changes/archive/2026-10-12-enforce-openspec-seriality/`. The
+`workspace-governance` audit now reports `OPENSPEC_CHANGE_SERIALITY` when more
+than one change is active or when the single `current_spec` pointer is missing,
+duplicated, or stale. A live repository-state assertion in the required unit
+test Gate blocks those states.
+
+**Verification.** Focused seriality suite — 10 tests passed; full unit suite —
+948 passed, 2 skipped; workspace self-check — 0 errors, 0 warnings; auto-gate —
+PASS; Driftwatchdog Gate — PASS; strict OpenSpec validation — 26 passed, 0
+failed; change-name validation and `git diff --check` — clean; `openspec list` —
+no active changes. Driftwatchdog's declared-code allowlist does not include the
+new finding code, so the local required test Gate enforces live seriality; the
+checker still emits the finding in its audit output. No sibling repository was
+changed.
+
+**Commits.** `5e6b4ce` contains the implementation, canonical requirement, and
+archived change. This HANDOFF-only commit clears the active pointer.
+
 ## Completed: capability adoption gate
 
 `capability-adoption-gate` is archived at
