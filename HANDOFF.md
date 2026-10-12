@@ -2,7 +2,33 @@
 
 ## Current state
 
-current_spec: close-unbound-gate-checks
+current_spec: spec-purpose-backfill-gate
+
+## Completed: local gate debt closure
+
+`close-unbound-gate-checks` is archived at
+`openspec/changes/archive/2026-10-12-close-unbound-gate-checks/`. The
+repository already declared `pip-audit` in `requirements-dev.txt` and already
+had a security command, but that command audited the host's global Python
+installation. The Gate command now runs `pip-audit -r requirements-dev.txt`,
+so it checks the dependencies this repository declares. The dependency file
+itself required no change. The stale manifest note about inactive Gate
+bindings was corrected.
+
+**Gate evidence.** `pip-audit -r requirements-dev.txt` reported no known
+vulnerabilities. `driftwatchdog gate` passed all six selected checks,
+including `security`; no `UNBOUND` check remained. The binder dry run reports
+0 unresolved checks. It preserves the scoped security command as an existing
+owner command (`CONFLICT` relative to its broader generated default) instead of
+overwriting it. The debt driver reports 0 entries.
+
+**Verification.** `python3 -m unittest discover -s tests -q` — 938 passed,
+2 skipped; workspace self-check — 0 errors, 0 warnings; auto-gate — PASS;
+strict all-spec validation — 27 passed; change names valid; diff check clean.
+
+**Commits.** `8737055` contains the scoped security binding, archived change,
+and canonical debt-record requirement. This HANDOFF-only commit records the
+Gate evidence and advances the pointer to `spec-purpose-backfill-gate`.
 
 ## Completed: declared gate command binding
 
