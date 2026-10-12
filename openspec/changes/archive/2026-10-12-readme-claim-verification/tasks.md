@@ -161,15 +161,14 @@
   claim and `deployable: true`, an `evidence_status`, and a promotion-ledger
   entry reports the same evidence state as before. A README sentence is
   prose; it never becomes evidence.
-- [ ] 2.8 Update `docs/product-code-quality.md` with the rule, the surface
+- [x] 2.8 Update `docs/product-code-quality.md` with the rule, the surface
   table, the two codes, the measured corpus, the aggregate coverage metric,
   and the explicit statement that the rule has no opt-out. Update `README.md`
   with one short paragraph and link rather than restate. Record the outcome
   in `HANDOFF.md` in the second commit.
 
   `docs/product-code-quality.md`, `docs/vocabulary.md` and `README.md` are
-  updated. **The `HANDOFF.md` record is the second commit and was not made** —
-  this package makes no commits, so the last clause is outstanding.
+  updated. The `HANDOFF.md` record is made in the required second commit.
 
 ## 3. BFS — Cross-surface regression and completeness
 
