@@ -2,7 +2,15 @@
 
 ## Current state
 
-current_spec: classify-dirty-gate-manifest-debt
+current_spec: identity-and-taxonomy-axis-split
+
+## Completed: legacy gate debt remediation
+
+Changes `drive-legacy-gate-debt-to-zero` and `classify-dirty-gate-manifest-debt` are archived under `openspec/changes/archive/2026-10-12-*`. The first established the canonical `legacy-gate-debt-remediation` spec; the second extended it with reporting-only class G for dirty manifests. `openspec archive` initially rejected the second delta because the canonical spec was missing. Archiving the foundational change first restored the intended dependency, then the delta archived successfully. The canonical Purpose was filled with the actual scope before commit.
+
+**Verification.** `python3 -m unittest tests.test_close_gate_debt -v` — 20 tests passed; `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings; `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS; `node scripts/check-openspec-change-names.mjs` — valid; `openspec validate --all --strict --no-interactive` — 31 passed before archiving; `git diff --check` — clean.
+
+**Commits.** `7ed055f` archived both dependency-linked changes and created the canonical spec. This HANDOFF-only commit records evidence and advances the pointer to `identity-and-taxonomy-axis-split`. Pre-existing dirty template files and untracked `HANDOVER.md` and `driftwatch.toml` remain unstaged.
 
 ## Current package: restore governance verification baseline
 
