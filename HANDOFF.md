@@ -2,7 +2,26 @@
 
 ## Current state
 
-current_spec: readme-claim-verification
+current_spec: cross-repo-adoption-grant
+
+## Completed: README claim verification
+
+`readme-claim-verification` is archived at
+`openspec/changes/archive/2026-10-12-readme-claim-verification/`. Its new
+capability requirements are recorded in
+`openspec/specs/readme-claim-verification/spec.md`; the JSON report extension
+updates the existing `product-code-quality-boundary` capability.
+
+**Archive notes.** The outstanding documentation task was already satisfied
+in the live README and product quality guide; it is now checked off. The
+initial archive attempt exposed a delta target mismatch, which was corrected
+by placing the modified JSON-report requirement under its owning capability.
+Strict change validation passed and the archive completed. OpenSpec emitted a
+non-blocking proposal warning because its Why section exceeds 1000 characters.
+
+**Commits.** `0aa1395` contains the spec updates and archive. This HANDOFF-only
+commit records the outcome and advances the pointer to
+`cross-repo-adoption-grant`.
 
 ## Completed: derived kind canonical form
 
