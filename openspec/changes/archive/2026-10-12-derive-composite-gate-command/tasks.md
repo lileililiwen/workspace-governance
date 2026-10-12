@@ -146,5 +146,6 @@
 - [x] Commit 2: `HANDOFF.md` only
 - [x] Explicit paths, never `git add -A`
 - [x] On `main`. No branch, no worktree, no push.
-- [x] Not archived. The 20 remaining refusals are the reason, and they are
-      recorded in `gate-debt.json` with their reasons.
+- [x] Archive this completed change with the owner's authorization. The 20
+      remaining refusals are separate recorded debt entries and do not leave
+      this already completed composite-command change active.

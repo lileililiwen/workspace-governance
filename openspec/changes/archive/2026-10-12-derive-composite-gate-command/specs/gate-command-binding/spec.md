@@ -48,8 +48,6 @@ SHALL name every candidate it joins.
 - **THEN** the two commands are byte-identical, so a re-run reports `ALREADY_BOUND`
   rather than `DIRTY`
 
-## MODIFIED Requirements
-
 ### Requirement: An ambiguous entry point is refused rather than guessed
 
 The binder SHALL bind exactly one command per concern, or refuse. It SHALL

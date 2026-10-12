@@ -42,6 +42,13 @@ green `build` on a repository whose frontend was never built.
 | `rust-ecommerce` | `security` |
 | `sisyphusfy` | `security` |
 
+## What Changes
+
+The binder composes commands for disjoint product surfaces when their
+candidates come from distinct stacks, while preserving the existing dominance
+rule and same-stack refusal. Each composite is stable, names its source
+candidates, and executes each part in its own shell directory.
+
 ## What is not changed
 
 The dominance rule stays. A root-level entry point still beats a nested one, so
