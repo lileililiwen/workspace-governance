@@ -2,7 +2,25 @@
 
 ## Current state
 
-current_spec: anchor-typescript-test-code-match
+current_spec: bind-declared-gate-checks
+
+## Completed: TypeScript test matcher
+
+`anchor-typescript-test-code-match` is archived at
+`openspec/changes/archive/2026-10-12-anchor-typescript-test-code-match/` and
+updates the existing `Reject test code in product scope` requirement in
+`openspec/specs/product-code-quality-boundary/spec.md`. The delta now retains
+the Rust and cross-language scenarios alongside the TypeScript qualifier
+scenarios; archive validation caught and prevented dropping those existing
+scenarios.
+
+**Verification.** `python3 -m unittest tests.test_product_code_quality -q` —
+50 tests passed; workspace self-check — 0 errors, 0 warnings; auto-gate — PASS;
+strict all-spec validation — 29 passed; change names valid; diff check clean.
+
+**Commits.** `23c4f43` contains the archive and canonical requirement update.
+This HANDOFF-only commit records evidence and advances the pointer to the next
+incomplete change, `bind-declared-gate-checks`.
 
 ## Completed: composite gate command
 
