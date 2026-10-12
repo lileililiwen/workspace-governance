@@ -2,7 +2,43 @@
 
 ## Current state
 
-current_spec: identity-and-taxonomy-axis-split
+current_spec: ratchet-live-gate-debt
+
+## Completed: identity and taxonomy axis split
+
+`identity-and-taxonomy-axis-split` is archived at
+`openspec/changes/archive/2026-10-12-identity-and-taxonomy-axis-split/`.
+It creates `openspec/specs/identity-and-taxonomy/spec.md` and updates the
+existing portfolio-vocabulary and registry-integrity specs. The delta initially
+combined those three targets under one spec path; splitting the modified
+requirements by canonical owner let OpenSpec update all three canonical specs.
+The archive also exposed two live references to the active design file; the
+migration checker and its tests now read the archived design as the retained
+decision table. README's taxonomy status was corrected and vocabulary docs now
+link to the canonical spec.
+
+The task record now marks the verified work complete. It explicitly records
+that the original implementation commit did not preserve a separate red-test
+commit for the regression tests. This historical limitation is visible rather
+than claimed as TDD evidence.
+
+**Verification.** `python3 -m unittest tests.test_identity_and_taxonomy -q` —
+70 tests passed; `python3 -m unittest discover -s tests -q` — 937 tests,
+passed, 2 skipped; `python3 scripts/axis_migration.py --root /home/paul/code
+--governance-root . --check` — all rows applied; `workspace_check.py
+--self-check` — 0 errors, 0 warnings; `auto_gate.py --self-check
+--no-deployment` — PASS; `openspec validate --all --strict
+--no-interactive` — 30 passed; change names valid; diff check clean. The first
+full-suite run after archiving found the design-path dependency. Updating the
+migration tool and test to read the archived design fixed it. The self-check
+then caught the generated Purpose placeholder; the actual purpose is now in
+the canonical spec.
+
+**Commits.** `05310af` archives the change, adds canonical specs, corrects the
+documentation, and updates the migration tool/tests to read the archived
+decision table. This HANDOFF-only commit records the evidence and advances the
+pointer to `ratchet-live-gate-debt`. Older notes below describe state at their
+recorded dates; this section is the current archive state.
 
 ## Completed: legacy gate debt remediation
 
@@ -10,7 +46,7 @@ Changes `drive-legacy-gate-debt-to-zero` and `classify-dirty-gate-manifest-debt`
 
 **Verification.** `python3 -m unittest tests.test_close_gate_debt -v` — 20 tests passed; `python3 scripts/workspace_check.py --self-check` — 0 errors, 0 warnings; `python3 scripts/auto_gate.py --self-check --no-deployment` — PASS; `node scripts/check-openspec-change-names.mjs` — valid; `openspec validate --all --strict --no-interactive` — 31 passed before archiving; `git diff --check` — clean.
 
-**Commits.** `7ed055f` archived both dependency-linked changes and created the canonical spec. This HANDOFF-only commit records evidence and advances the pointer to `identity-and-taxonomy-axis-split`. Pre-existing dirty template files and untracked `HANDOVER.md` and `driftwatch.toml` remain unstaged.
+**Commits.** `7ed055f` archived both dependency-linked changes and created the canonical spec; `9178469` records the evidence in HANDOFF. Pre-existing dirty template files and untracked `HANDOVER.md` and `driftwatch.toml` remain unstaged.
 
 ## Current package: restore governance verification baseline
 
