@@ -2,7 +2,33 @@
 
 ## Current state
 
-current_spec: spec-purpose-backfill-gate
+current_spec: derived-kind-canonical-form
+
+## Completed: spec Purpose backfill gate
+
+`spec-purpose-backfill-gate` is archived at
+`openspec/changes/archive/2026-10-12-spec-purpose-backfill-gate/`; its
+canonical contract is `openspec/specs/spec-purpose-integrity/spec.md`. The
+local Purpose placeholder rule is enabled and its D18 code is wired into the
+real Gate. The original 1,234-marker backfill and rollback manifest remain
+recorded in the archived package.
+
+The current fleet recheck finds 134 newer Purpose markers across sibling
+repositories. They appeared after the original backfill and require their own
+owner-authorized cross-repository cleanup. This archive record does not claim
+the fleet is marker-free. A separate Driftwatchdog follow-up also remains for
+the declared-code inventory weakness: the current Purpose code is gated, while
+detecting future omitted codes needs the runtime's emittable-code contract.
+
+**Verification.** Full suite — 938 tests passed, 2 skipped; workspace
+self-check — 0 errors, 0 warnings; auto-gate — PASS; strict all-spec
+validation — 27 passed; change names valid; diff check clean. The live fleet
+backfill `--check` reports 134 later markers; the local checker and Gate
+remain green for workspace-governance.
+
+**Commits.** `eed8a6e` contains the archive and canonical spec. This
+HANDOFF-only commit records the fleet limitation and advances the pointer to
+`derived-kind-canonical-form`.
 
 ## Completed: local gate debt closure
 
