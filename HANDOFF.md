@@ -2,7 +2,24 @@
 
 ## Current state
 
-current_spec: derived-kind-canonical-form
+current_spec: readme-claim-verification
+
+## Completed: derived kind canonical form
+
+`derived-kind-canonical-form` is archived at
+`openspec/changes/archive/2026-10-12-derived-kind-canonical-form/`. The
+canonical `portfolio-vocabulary` requirement now recognizes a kind derived
+from present canonical axes while preserving the legacy vocabulary and its
+existing scenarios.
+
+**Archive notes.** OpenSpec validation passed. The archive command reported
+one intentionally unchecked design decision (keeping `kinds` at 12) and a
+non-blocking proposal heading warning (`What Changes`); the implementation,
+tests, and change scope were already complete. The archive preserved both
+pre-existing canonical scenarios that the initial delta omitted.
+
+**Commits.** `4f2cae4` contains the canonical spec update and archive. This
+HANDOFF-only commit advances the pointer to `readme-claim-verification`.
 
 ## Completed: spec Purpose backfill gate
 
