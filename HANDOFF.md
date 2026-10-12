@@ -2,7 +2,27 @@
 
 ## Current state
 
-current_spec: derive-composite-gate-command
+current_spec: anchor-typescript-test-code-match
+
+## Completed: composite gate command
+
+`derive-composite-gate-command` is archived at
+`openspec/changes/archive/2026-10-12-derive-composite-gate-command/`; its
+canonical contract is in `openspec/specs/gate-command-binding/spec.md`. The
+archive initially exposed malformed delta structure: two `ADDED` headings and
+a `MODIFIED` requirement with no canonical baseline. The requirement is now
+represented as an addition, the proposal has the required `What Changes`
+section, and both command composition and ambiguity refusal are present in the
+canonical spec. The change's completed task list records that the 20 remaining
+binder debt entries are separate work.
+
+**Verification.** `python3 -m unittest tests.test_bind_gate_commands -q` —
+138 tests passed, 1 skipped; workspace self-check — 0 errors, 0 warnings;
+auto-gate — PASS; strict all-spec validation — 30 passed; diff check clean.
+
+**Commits.** `475e127` contains the archive and complete canonical spec. This
+HANDOFF-only commit records evidence and advances the pointer to
+`anchor-typescript-test-code-match`.
 
 ## Completed: scaffold gate binding
 
