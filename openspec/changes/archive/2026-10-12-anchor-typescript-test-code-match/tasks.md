@@ -13,7 +13,7 @@
 ## 2. DFS — One coherent contract
 
 - [x] `proposal.md` — the measurement, the discriminator table, what is refused
-- [x] `specs/product-code-quality/spec.md` — MODIFIED the product-scope
+- [x] `specs/product-code-quality-boundary/spec.md` — MODIFIED the product-scope
       requirement with six scenarios, including one that fails if the anchor is
       removed
 - [x] `design.md` — why a name match cannot work, and why comments are excluded
@@ -75,5 +75,6 @@
 - [x] Commit 2: `HANDOFF.md` only
 - [x] Explicit paths, never `git add -A`
 - [x] On `main`. No branch, no worktree, no push.
-- [x] Not archived. `opendockify`'s `readme-claim-unscoped` is a checker-coverage
-      gap, not this rule's subject, and is recorded as such.
+- [x] Archive with the owner's authorization. `opendockify`'s
+      `readme-claim-unscoped` is a checker-coverage gap, not this rule's
+      subject, and remains recorded separately.

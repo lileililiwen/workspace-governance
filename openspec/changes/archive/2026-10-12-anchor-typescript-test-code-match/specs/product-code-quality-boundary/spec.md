@@ -1,8 +1,8 @@
-# product-code-quality Specification (delta: anchor-typescript-test-code-match)
+# product-code-quality-boundary Specification (delta: anchor-typescript-test-code-match)
 
 ## MODIFIED Requirements
 
-### Requirement: Test code in product scope is a failure
+### Requirement: Reject test code in product scope
 
 The quality checker SHALL report a test call found in product scope as
 `product-test-code` at ERROR, and SHALL NOT report a call that is not a test.
@@ -13,6 +13,23 @@ global. A call on any expression is a method on that expression, and a method
 named `test` is a method: a regular expression literal, a compiled `RegExp`, or
 a `String` method are all product code. A comment line SHALL NOT be matched at
 all, because a comment cannot call anything.
+
+#### Scenario: Rust cfg test module
+
+- **WHEN** a Rust product file contains a test module under `#[cfg(test)]`
+- **THEN** the test module is allowed and produces no boundary finding
+
+#### Scenario: Rust integration code in source
+
+- **WHEN** a Rust product file contains an integration-test module or test-only
+  imports outside `#[cfg(test)]`
+- **THEN** the checker reports `product-test-code` as `FAIL`
+
+#### Scenario: Non-Rust test module
+
+- **WHEN** a Python, TypeScript, C#, or supported product file contains a
+  recognized test-only module/file pattern
+- **THEN** the checker reports `product-test-code` as `FAIL`
 
 #### Scenario: A framework global in product scope
 
