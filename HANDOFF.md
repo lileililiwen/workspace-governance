@@ -2,7 +2,28 @@
 
 ## Current state
 
-current_spec: capability-adoption-gate
+current_spec: none
+
+## Completed: capability adoption gate
+
+`capability-adoption-gate` is archived at
+`openspec/changes/archive/2026-10-12-capability-adoption-gate/`, with its
+contract at `openspec/specs/capability-adoption-gate/spec.md`. Its generated
+Purpose was replaced with a contract summary before commit. Task 4.4 is
+complete: after the adoption-grant package landed,
+`python3 scripts/check_skill_refs.py` passed for all nine references.
+
+**Deferred scope.** Six unchecked tasks remain explicit follow-ups: capability
+vocabulary unification, behavioral proof of adoption, legacy `kind` cleanup,
+registration of four discovered repositories, Driftwatchdog gate-check
+binding, and adoption-grant remediation permission (now separately specified
+and archived). None is an incomplete task inside this capability contract.
+OpenSpec emitted a non-blocking warning that the proposal Why section exceeds
+1000 characters.
+
+**Commits.** `7a34715` contains the canonical spec and archive. This
+HANDOFF-only commit records completion and clears the active pointer; there
+are no active OpenSpec changes.
 
 ## Completed: cross-repo adoption grant
 
