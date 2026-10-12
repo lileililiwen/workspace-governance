@@ -2,7 +2,23 @@
 
 ## Current state
 
-current_spec: ratchet-live-gate-debt
+current_spec: scaffold-binds-governance-gate
+
+## Completed: live gate debt ratchet
+
+`ratchet-live-gate-debt` is archived at
+`openspec/changes/archive/2026-10-12-ratchet-live-gate-debt/`; its canonical
+requirement is in `openspec/specs/workspace-check/spec.md`. The generated
+Purpose was replaced with the actual workspace-check scope before commit.
+
+**Verification.** `python3 -m unittest tests.test_gate_debt_precondition -q` —
+40 tests passed, 1 skipped; workspace self-check — 0 errors, 0 warnings;
+auto-gate — PASS; change names valid; strict change validation passed; diff
+check clean.
+
+**Commits.** `7f399d7` contains the archive and canonical spec. This
+HANDOFF-only commit records evidence and advances the pointer to
+`scaffold-binds-governance-gate`.
 
 ## Completed: identity and taxonomy axis split
 
