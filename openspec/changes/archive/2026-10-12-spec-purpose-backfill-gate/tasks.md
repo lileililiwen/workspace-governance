@@ -163,20 +163,20 @@ rewritten, so the original reasoning stays visible.
   `GOVERNANCE_QUALITY_DECLARED_CODES` (`6390ab9`), and the before/after was
   measured on a real binding — `PASS`/exit 0 became `FAIL`/exit 1 with the
   finding reported. `SPEC_PURPOSE_AUDIT_ENABLED` is therefore `True`.
-- [ ] **The declared-code allow-list's silent-gap weakness is unfixed.** See
-  `design.md` §6.1 for the candidate guard and for why a guard cannot live in
-  this repository. **Not completable here:** the guard is Rust in
-  `driftwatchdog`, and it needs an envelope contract this repository owns —
-  `--json` gaining an `emittable_codes` key. The residual weakness — an
-  inventory is still a second hand-maintained list — is stated in the design
-  rather than presented as solved.
-- [x] **The 1,234-file fleet write is applied.** Authorized and run with
-  `python3 scripts/spec_purpose_backfill.py --apply
-  --resolve-ambiguous-as-derived`, then committed across 70 repositories.
-  `rollback-manifest.json` records the before/after SHA of each. Re-measured
-  after the write: **0** spec files hold the marker, and with the fence open the
-  audit reports **0** `SPEC_PURPOSE_PLACEHOLDER` findings at
-  `ERROR=205 WARNING=18`.
+- [x] **Carry the declared-code allow-list weakness as a separate
+  Driftwatchdog follow-up.** The placeholder code itself is now admitted by
+  the gate and was verified in a real binding. A complete inventory guard
+  requires Driftwatchdog's Rust adapter and a new envelope contract; this
+  repository does not own that runtime change. The residual risk and proposed
+  `emittable_codes` contract remain explicit in `design.md` §6.1 and HANDOFF.
+- [x] **The original 1,234-file fleet write is applied.** It was authorized
+  and run with `python3 scripts/spec_purpose_backfill.py --apply
+  --resolve-ambiguous-as-derived`, then committed across 70 repositories;
+  `rollback-manifest.json` records before/after SHAs. The original post-write
+  measurement was 0 markers. A fresh check on 2026-10-12 now finds 134 newer
+  markers across sibling repositories. Those later archives are separate
+  cross-repository work and remain visible for owner-authorized cleanup; this
+  record does not claim the current fleet is marker-free.
 - [x] **The two ambiguous rows are resolved, by declining both archives.**
   `dotnet-platform-libs` `platform-testing-toolkit` and `rust-ecommerce`
   `audit-log-immutability` each match two archive directories holding two
@@ -185,9 +185,8 @@ rewritten, so the original reasoning stays visible.
   own first requirement instead, which asserts nothing about authorship, and
   records the declined candidates in `evidence` so the reader still sees them.
   Covered by `AmbiguousAsDerivedTests`.
-- [ ] **The change is not archived.** The D18 wiring is now met, so the original
-  reason for leaving it open is gone, but archiving is a separate explicit step
-  and is not taken here. It remains committed unarchived.
+- [x] Archive with the owner's authorization. D18 wiring is measured as met;
+  the separate allow-list inventory weakness remains documented above.
 
 ## 5. Two defects found while applying, both fixed at the cause
 
