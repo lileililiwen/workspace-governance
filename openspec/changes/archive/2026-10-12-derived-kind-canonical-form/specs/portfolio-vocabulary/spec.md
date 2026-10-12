@@ -24,6 +24,13 @@ remain WARNING and the code MUST NOT be repurposed or suppressed.
 - **THEN** the audit reports WARNING `KIND_UNKNOWN` and the project's required
   files are unchanged
 
+#### Scenario: Composite with the axes present
+
+- **WHEN** a declaration carries `kind: rust-product` together with
+  `role: platform` and `stack: rust`
+- **THEN** the audit reports WARNING `TAXONOMY_LEGACY_VALUE` and does not
+  report `KIND_UNKNOWN`, because `rust-product` is inside the legacy kind set
+
 #### Scenario: A derived value that the legacy vocabulary does not list
 
 - **WHEN** a declaration carries `role: platform`, `stack: rust`, and
@@ -37,6 +44,13 @@ remain WARNING and the code MUST NOT be repurposed or suppressed.
   own canonical axes, whether or not `kinds` contains that string
 - **THEN** the audit reports no `KIND_UNKNOWN` for that project, and the
   legacy `kinds` vocabulary is left unchanged
+
+#### Scenario: The kind set stays a projection
+
+- **WHEN** the two axis sets are enumerated
+- **THEN** every canonical kind value is either a role value or a
+  `<stack>-<role>` pair from those sets, and no value needs to be added to
+  the legacy kind set to express a new combination
 
 #### Scenario: A hand-authored value that disagrees with its own derivation
 
