@@ -106,15 +106,13 @@
   update `README.md` so the capability section states that adoption is
   measured. Keep `docs/vocabulary.md` as the single entry point and link
   rather than restate.
-- [ ] 4.4 Update the `workspace-governance` skill reference and run
+- [x] 4.4 Update the `workspace-governance` skill reference and run
   `python3 scripts/check_skill_refs.py` so every newly cited path exists.
   The skill routing table and `references/platform-adoption.md` are updated and
-  cite `capabilities.json` and `docs/capabilities.md`. They also cite
-  `docs/adoption-grant.md` and `adoption/adoptions.json`, which are the
-  `cross-repo-adoption-grant` artifacts; `check_skill_refs.py` therefore still
-  reports those two paths missing at the end of this change alone. Left
-  unchecked rather than deleting the pointers, because they become correct as
-  soon as that change lands and the check goes green there.
+  cite `capabilities.json`, `docs/capabilities.md`, `docs/adoption-grant.md`,
+  and `adoption/adoptions.json`. After `cross-repo-adoption-grant` landed,
+  `python3 scripts/check_skill_refs.py` passed: `skill refs ok: SKILL.md + 9
+  references`.
 - [x] 4.5 Run `openspec validate capability-adoption-gate --strict` and
   `openspec list`, and record both outputs.
 
