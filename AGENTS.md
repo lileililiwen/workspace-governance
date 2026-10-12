@@ -18,6 +18,13 @@
 - Run `python3 scripts/jenkins_manifest.py --check` for deployment-related changes.
 - Existing projects keep declarations and exceptions; shared runtimes remain centralized.
 
+## Project facts
+
+- Stack: Python 3.11; governance tools use Python, with YAML and JSON Schema test dependencies declared in `requirements-dev.txt`.
+- Toolchain: Python 3.11 and pip; run repository commands from this checkout.
+- Verify: `python3 -m unittest discover -s tests -v`; also run `python3 scripts/workspace_check.py --self-check` before completion.
+- Layout: `scripts/` contains governance checkers and utilities; `tests/` contains unit and fixture tests; `openspec/` contains canonical contracts and archived changes; `docs/` contains operator guidance.
+
 ## Classification
 
 - `role` and `stack` are independent axes. `role` is what a repository is for; `stack` is what it is written in. Never write one into the other's field — a stack-shaped value in `role` is the defect this split exists to remove.
@@ -30,6 +37,8 @@
 - Build/test success is not runtime or release evidence.
 - A checker that reports OK without performing a comparison is worse than no checker, because it retires the question while answering nothing. A verifier that no gate runs does not gate: wire every check into the gate that blocks, or it is documentation.
 - A check that can be switched off is not a check. Do not add an opt-in, an exemption registry, or an environment-variable escape to a check that is meant to hold.
+- UI/UX is the first planning priority for human-facing work; an API does not replace its interface. For this CLI repository, see `docs/assets/capture-plan.md` for milestone evidence and `.ai-rules/concerns/` for applicable concern rules.
+- Detailed workflow and completion rules live in `.ai-rules/workflow.md` and `.ai-rules/completion.md`. For coding work, use the `ponytail` skill to minimize scope without weakening requirements or verification. Build/test/skeleton success alone is not DONE.
 
 ## Shared infrastructure
 
@@ -62,6 +71,7 @@
 ## Commit protocol
 
 - Keep exactly one `current_spec` line in `HANDOFF.md` while work is active.
+- Keep at most one active OpenSpec change in this repository. Archive it before creating another; when none remain, set `current_spec: none`.
 - Each completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit.
 - Stop after the second commit.
 

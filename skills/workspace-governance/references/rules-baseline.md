@@ -2,7 +2,9 @@
 
 ## Read first
 
-- `templates/project/AGENTS.md` — the shared rules text a new project receives.
+- `templates/project/AGENTS.md` — the shared rules text a new project receives,
+  including its Project facts block (stack, toolchain, verification command,
+  layout) that the project keeps true as its structure changes.
 - `templates/project/.ai-rules/workflow.md` and
   `templates/project/.ai-rules/completion.md` — the canonical rule files.
   `templates/project/**` as a whole is the single source; `AGENTS.md` is one

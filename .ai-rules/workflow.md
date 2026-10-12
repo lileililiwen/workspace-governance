@@ -13,7 +13,7 @@ Work directly on `main` by default; do not create a branch or worktree unless th
 
 ## OpenSpec lifecycle
 
-Run `openspec list`, set `current_spec` in `HANDOFF.md`, and run `node scripts/check-openspec-change-names.mjs` before status or instructions. Implement one change, run the local checker and tests, validate strictly, archive without `--skip-specs`, and inspect the staged diff.
+Run `openspec list`, confirm there is at most one active change, set `current_spec` in `HANDOFF.md`, and run `node scripts/check-openspec-change-names.mjs` before status or instructions. Do not create a new change until the current one is complete and archived. When none remain, set `current_spec: none`. Implement one change, run the local checker and tests, validate strictly, archive without `--skip-specs`, and inspect the staged diff.
 
 Each completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit. Stop after commit 2.
 

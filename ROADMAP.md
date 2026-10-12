@@ -1,6 +1,6 @@
 # Workspace Governance Roadmap
 
-> **Status (as of 2026-10-01):** Phases 1–4 are shipped. Packages 1
+> **Portfolio snapshot (last reviewed 2026-10-01):** Phases 1–4 were recorded as shipped. Packages 1
 > (`registry-and-declaration-integrity`), 2 (`shared-rules-single-source`),
 > 3 (`portfolio-vocabulary-normalization`), 8 (`governance-front-door`),
 > 9 (`post-mvp-readiness`), 10 (`toolchain-decision-register`),
@@ -13,6 +13,13 @@
 > Remaining follow-ups: re-promote the pilot projects at their current
 > `HEAD`, replace the pilot-context `release_evidence` placeholders, and
 > replace the 9 scaffold `HANDOFF.md` bodies.
+
+**Local governance update (2026-10-12):** This repository has no active
+OpenSpec changes. Its local workflow permits one active change at a time and
+requires it to be archived before a subsequent change is created.
+`HANDOFF.md` records recent completion evidence; the archive is the source
+for completed contracts. The wider portfolio snapshot above has not been
+re-audited here.
 
 ## Phase 1 — Registry and mandatory checks
 

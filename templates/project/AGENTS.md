@@ -8,6 +8,16 @@
 - `main` is the only development branch. There is one owner and one agent at a time, so there is no concurrent-workload reason to branch; a branch only pollutes the commit line, invites conflicts, and gets forgotten unmerged. Do not open one "just to be safe". When a branch does exist because the owner designated it, the work is not finished until `main` carries it and the branch is deleted.
 - Do not use `rm` to delete anything; on this host it is a recoverable-delete shim that intercepts the call and can fail or leave the path behind. Clean up scratch work from Python: `tempfile.TemporaryDirectory()` as a context manager, or `shutil.rmtree(path, ignore_errors=True)`. Neither prompts.
 
+## Project facts
+
+- Stack: framework, language, versions — read from the manifest, kept current.
+- Toolchain: the package manager/build tool this repo uses; run its commands, never a competing tool's.
+- Verify: the declared verification command (`.project.json`) that must pass before completion.
+- Layout: first-level source directories, one line each with purpose and naming convention.
+
+Any directory, tool, or command change updates this block in the same commit —
+an outdated facts block misleads every agent more than a missing one.
+
 ## Claims and evidence
 
 - Build/test/skeleton success is not runtime or release evidence.
@@ -24,6 +34,7 @@
 
 ## Commit protocol
 
+- Keep at most one active OpenSpec change; complete and archive it before creating another.
 - Each completed OpenSpec spec/change requires exactly two commits: first the implementation/tests/archive commit, then a HANDOFF.md-only pointer/evidence commit. Stop after the second commit; do not push unless asked.
 
 Detailed rules: `.ai-rules/workflow.md` and `.ai-rules/completion.md`.

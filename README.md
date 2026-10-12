@@ -183,13 +183,14 @@ committed line in `gate-debt-exceptions.json` with its reason, and it is
 reported at WARNING so it stays visible. All three records fail closed: a
 missing or malformed one is an error, never read as "no debt".
 
-This repository also permits only one active OpenSpec change at a time.
+This repository permits only one active OpenSpec change at a time.
 `workspace_check.py` reports an ERROR when multiple change directories are
 active or when `HANDOFF.md`'s single `current_spec` pointer does not match the
 active directory (`OPENSPEC_CHANGE_SERIALITY`). A repository-state assertion
 in the required unit-test Gate blocks this repository in either case. Finish
-and archive the current change, or correct the pointer, before starting
-another.
+and archive the current change before creating another; set `current_spec:
+none` when no change is active. The seriality finding is scoped to this
+repository until the shared Gate runtime supports its finding code.
 
 ## Registry and declaration integrity
 

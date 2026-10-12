@@ -1,20 +1,5 @@
 $ python3 scripts/workspace_check.py --self-check
 Summary: errors=0 warnings=0
 
-$ python3 scripts/workspace_check.py --root .. --audit --json | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['summary'])"
-{"errors": 0, "warnings": 16}
-
-Warning breakdown (same run, counted from the findings list):
-  HANDOFF_SCAFFOLD: 9 (adopted projects still carrying the initializer scaffold body)
-  DEPLOYMENT_PROMOTION_STALE: 7 (promoted pilots whose HEAD moved after promotion; triage-only)
-
-Illustrative finding (shape of one unhealthy entry from the same JSON run,
-project name shown; see docs/vocabulary.md for what each code means):
-  {"code": "DEPLOYMENT_PROMOTION_STALE", "level": "WARNING", "project": "<id>",
-   "message": "promoted revision '<sha>' differs from project HEAD '<sha>';
-    re-promote at HEAD with scripts/promote_project.py <id> --evidence-ref <ref>"}
-
-How to reproduce offline (no sibling data leaves the checkout; pass a
-workspace root relative to this repository, never a machine-specific root):
-  python3 scripts/workspace_check.py --self-check
-  python3 scripts/workspace_check.py --root .. --audit --json
+Source revision: b05e5d4
+Captured: 2026-10-12 UTC
