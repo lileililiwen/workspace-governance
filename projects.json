@@ -50,6 +50,15 @@
       "adoption": "adopted"
     },
     {
+      "id": "mnemora",
+      "path": "mnemora",
+      "profile": "rust-product",
+      "role": "product",
+      "stack": "rust",
+      "lifecycle": "active",
+      "adoption": "adopted"
+    },
+    {
       "id": "openpanel",
       "path": "openpanel",
       "profile": "rust-product",

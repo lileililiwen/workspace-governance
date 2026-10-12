@@ -564,15 +564,20 @@ class MigrationPlanTests(unittest.TestCase):
         after = {item["id"] for item in self.live_registry}
         removed = {row["id"] for row in self.plan["registry"] if row["action"] == "remove"}
         added = {row["id"] for row in self.plan["registry"] if row["action"] == "add"}
+        added.add("mnemora")  # registered after the historical migration plan
         self.assertEqual(before - after, removed)
         self.assertEqual(after - before, added)
-        self.assertEqual(after, {row["id"] for row in self.plan["registry"] if row["action"] != "remove"})
+        self.assertEqual(
+            after,
+            {row["id"] for row in self.plan["registry"] if row["action"] != "remove"} | {"mnemora"},
+        )
         # No surviving id moved its path either; `path` is a resolution detail
         # the write had no licence to touch.
         paths = {item["id"]: item["path"] for item in self.live_registry}
         for row in self.plan["registry"]:
             if row["action"] != "remove":
                 self.assertEqual(paths[row["id"]], row["path"], row["id"])
+        self.assertEqual(paths["mnemora"], "mnemora")
 
     def test_the_four_unregistered_repositories_are_now_registered(self):
         live = {item["id"]: item for item in self.live_registry}
@@ -607,10 +612,10 @@ class MigrationPlanTests(unittest.TestCase):
         self.assertEqual(totals["registry_added"], 4)
         self.assertEqual(totals["registry_removed"], 1)
         self.assertEqual(totals["registry_axes"], 77)
-        # Applied: the live registry is the 77 re-axed entries plus the 4
-        # registrations, and every one of them carries both canonical axes.
-        self.assertEqual(len(self.live_registry), totals["registry_axes"] + totals["registry_added"])
-        self.assertEqual(len(self.live_registry), 81)
+        # The committed plan remains the historical 81-project migration.
+        # Mnemora was registered afterward from its existing declaration.
+        self.assertEqual(len(self.live_registry), totals["registry_axes"] + totals["registry_added"] + 1)
+        self.assertEqual(len(self.live_registry), 82)
         for entry in self.live_registry:
             self.assertIn(entry["role"], CANONICAL_ROLES, entry)
             self.assertIn(entry["stack"], CANONICAL_STACKS, entry)
@@ -850,8 +855,8 @@ class NoOutcomeChangeTests(unittest.TestCase):
         after = {entry["id"] for entry in self.entries}
         self.assertEqual(len(before), 78)
         self.assertEqual(before - after, {"jenkins-bootstrap"})
-        self.assertEqual(after - before, {"argoscope", "chronicleaf", "devloom", "kairovia"})
-        self.assertEqual(len(after), 81)
+        self.assertEqual(after - before, {"argoscope", "chronicleaf", "devloom", "kairovia", "mnemora"})
+        self.assertEqual(len(after), 82)
 
     def test_every_registry_entry_keeps_its_requirements(self):
         baseline = self.baseline
