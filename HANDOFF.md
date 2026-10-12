@@ -2,7 +2,27 @@
 
 ## Current state
 
-current_spec: cross-repo-adoption-grant
+current_spec: capability-adoption-gate
+
+## Completed: cross-repo adoption grant
+
+`cross-repo-adoption-grant` is archived at
+`openspec/changes/archive/2026-10-12-cross-repo-adoption-grant/`, with its
+contract at `openspec/specs/cross-repo-adoption-grant/spec.md`. The generated
+canonical Purpose was replaced with a summary of the bounded, single-use
+permission before commit.
+
+**Deferred scope.** The six unchecked tasks remain explicit follow-up work:
+grant issuance, the first consumer adoption, two consumer fixture
+consolidations, a Driftwatchdog gate-check adoption, capability-vocabulary
+unification, and a checked assessment-name rule. These are separate owner or
+sibling-project changes, outside this governance contract. OpenSpec warned
+that the proposal Why section exceeds 1000 characters; archive validation and
+the spec update completed.
+
+**Commits.** `482ccbb` contains the canonical spec and archive. This
+HANDOFF-only commit records the scope boundary and advances the pointer to
+`capability-adoption-gate`.
 
 ## Completed: README claim verification
 
