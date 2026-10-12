@@ -4,6 +4,49 @@
 
 current_spec: classify-dirty-gate-manifest-debt
 
+## Current package: restore governance verification baseline
+
+Change `restore-governance-test-baseline`, archived 2026-10-12 at
+`openspec/changes/archive/2026-10-12-restore-governance-test-baseline/`; its
+canonical spec was promoted to
+`openspec/specs/workspace-verification-baseline/spec.md`. Commit 1:
+`47ce2f5` (`fix(governance): restore verification baseline`). This
+HANDOFF-only commit completes the required pair.
+
+**Root causes and repairs.** The active Mnemora declaration existed with
+`id: mnemora`, `profile: rust-product`, `role: product`, and `stack: rust`, but
+`projects.json` had no matching entry. The local registry now records that
+declaration exactly; Mnemora's repository was not edited. The promotion-test
+sandbox coverage list also omitted three tracked governance records:
+`registry-remote-drift.json`, `tag-taxonomy.json`, and
+`ui-adoption-migration.json`. The fixture now copies all three into its
+temporary root. The historical 81-project taxonomy migration fixture remains
+unchanged; tests record Mnemora as a later registry addition.
+
+**Verification.** The regression tests first failed for both missing inputs.
+After the repair:
+
+| Command | Result |
+|---|---|
+| `python3 -m unittest tests.test_workspace_verification_baseline tests.test_identity_and_taxonomy tests.test_promote_project -v` | 94 tests, OK |
+| `python3 -m unittest discover -s tests -v` | 937 tests, OK; 2 skipped |
+| `python3 scripts/axis_migration.py --root /home/paul/code --governance-root . --check` | no outstanding rows |
+| `python3 scripts/workspace_check.py --self-check` | errors=0 warnings=0 |
+| `python3 scripts/auto_gate.py --self-check --no-deployment` | PASS, errors=0 warnings=0 |
+| `node scripts/check-openspec-change-names.mjs` | valid |
+| `openspec validate --all --strict --no-interactive` | 31 passed, 0 failed |
+| `git diff --check` | clean |
+
+The portfolio audit now reports 370 errors and 21 warnings. Mnemora has 23
+`SPEC_PURPOSE_PLACEHOLDER` errors in its archived capability specs; those are
+visible after registration and remain owned by the Mnemora repository. No
+sibling files were changed. Pre-existing dirty template files and the
+untracked `HANDOVER.md` and `driftwatch.toml` were preserved.
+
+**Pointer.** `current_spec` returns to `classify-dirty-gate-manifest-debt`,
+which is ✓ Complete and has no unchecked tasks. Its verification and archive
+cycle is next.
+
 ## Current package: UI convention guidance and the one-repository binder
 
 The rule existed and the checker existed; the door and the gate were missing.
