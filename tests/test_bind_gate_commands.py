@@ -265,6 +265,10 @@ class DetectionTests(RepoCase):
         self.write("package.json", json.dumps({"scripts": {"build": "tsc"}}))
         self.assertEqual(detect_shape(self.repo).label(), "node")
 
+    def test_pyproject_alone_labels_the_repository_python(self):
+        self.write("pyproject.toml", "[project]\nname = 'sample'\n")
+        self.assertEqual(detect_shape(self.repo).label(), "python")
+
     def test_the_workspace_flag_follows_the_cargo_manifest(self):
         self.write("Cargo.toml", "[workspace]\nmembers = [\"a\"]\n")
         shape = detect_shape(self.repo)

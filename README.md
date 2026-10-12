@@ -112,6 +112,18 @@ python3 scripts/bind_gate_commands.py --root /home/paul/code --apply
 python3 scripts/bind_gate_commands.py --root /home/paul/code --debt-only
 ```
 
+The default run is read-only and exits `3` while declared checks remain
+unresolved; it exits `0` when they are all bound and `2` when the workspace
+root or invocation is unusable. `--repo <name>` limits a run to named
+repositories, and `--verbose` prints each derived command with its evidence.
+The dry run still reports debt so owners can review it before `--apply`.
+
+The default run is read-only and exits `3` while declared checks remain
+unresolved; it exits `0` when they are all bound and `2` when the workspace
+root or invocation is unusable. `--repo <name>` limits a run to named
+repositories, and `--verbose` prints each derived command with its evidence.
+The dry-run still reports debt so owners can review it before `--apply`.
+
 ### It refuses rather than guesses
 
 The tool's rule is *a wrong command is worse than a listed gap*. A guessed

@@ -67,3 +67,39 @@ real finding rather than reporting one.
 - **WHEN** a Python, TypeScript, C#, or supported product file contains a
   recognized test-only module/file pattern
 - **THEN** the checker reports `product-test-code` as `FAIL`
+
+#### Scenario: A framework global in product scope
+
+- **WHEN** a `.ts` file in product scope contains `describe('x', () => {})`,
+  `it('y', () => {})` or `test('z', () => {})` on a bare identifier
+- **THEN** the checker reports one `product-test-code` finding at ERROR
+
+#### Scenario: A regular expression is not a test
+
+- **WHEN** a line contains `/pattern/.test(value)` or `PATTERN.test(value)`
+- **THEN** the checker reports nothing
+
+#### Scenario: A String method is not a test
+
+- **WHEN** a line contains `"text".test(value)`
+- **THEN** the checker reports nothing
+
+#### Scenario: An optional-chained member call is not a test
+
+- **WHEN** a line contains `re?.test(body)`
+- **THEN** the checker reports nothing
+
+#### Scenario: Prose about a test file is not a test
+
+- **WHEN** a comment line names a `*.test.ts` file
+- **THEN** the checker reports nothing
+
+#### Scenario: A longer identifier is not a test
+
+- **WHEN** a line contains `contest(1)` or `const latest = compute()`
+- **THEN** the checker reports nothing, because the identifier is not `test`
+
+#### Scenario: The rule is still live
+
+- **WHEN** the qualifier anchor were removed to silence the TypeScript cases
+- **THEN** the bare-call test asserting the global is reported would fail

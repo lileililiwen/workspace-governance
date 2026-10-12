@@ -75,7 +75,7 @@ wrong:
 The conclusion is the design constraint: **detection walks the disk and
 never reads the label.**
 
-## What
+## What Changes
 
 One generator, `scripts/bind_gate_commands.py`, which for every
 repository:

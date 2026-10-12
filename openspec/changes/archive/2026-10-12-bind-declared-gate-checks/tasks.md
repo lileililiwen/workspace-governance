@@ -150,11 +150,8 @@ records the state the tests were added to.
   `.slnx` repository still receives a .NET command; no bound `dotnet`
   command omits its entry file; every unresolved concern carries a reason;
   every bound concern carries a command and its evidence.
-- [ ] 3.7 `README.md` documents the generator, the debt record and the
-  exit codes. **Not done in this pass.** The aborted session's gap was the
-  missing tests, and this pass closed that gap; this is documentation
-  about a tool that is not yet applied to the fleet. Left open
-  deliberately rather than half-written.
+- [x] 3.7 `README.md` documents the generator, debt record, dry-run/apply
+  modes, repeatable `--repo`, `--verbose`, and exit codes.
 
 ## 4. BFS — Spec and validation
 
@@ -270,48 +267,32 @@ records the state the tests were added to.
   `profile:` is a declaration and that a profile-only check MUST NOT be
   written.
 
-## 6. Deliberately not done
+## 6. Re-audit the recorded follow-ups
 
-- [ ] **The 283 bindings are not applied to the 69 sibling
-  repositories.** That is a separate authorization. The debt record is
-  the durable, reviewable statement of what is still unbound, and the
-  tool exits 3 until it is applied.
-- [ ] **Three `.csproj`-only repositories stay unresolved** for `build`
-  and `tests`. Their fix is a `.sln` or `.slnx` in the repository, not a
-  generator rule.
-- [ ] **`retakeKit` and `linglitch` stay unresolved** for the concerns
-  with two candidates. Choosing one is an owner decision about which
-  system the gate should run; the debt record names both candidates.
-- [ ] **No `stack` label is corrected.** A wrong `stack` is a finding for
-  the portfolio change, not for this one, and correcting it here would
-  write `.project.json` files across the fleet.
-- [ ] **Two reporting quirks the tests found are reported, not fixed**,
-  because fixing them means editing the generator rather than adding
-  tests. Both are in `HANDOFF.md`:
-  - A Python repository with only a `pyproject.toml` and no `tests/`
-    directory is labelled `unknown` in the debt record's `shape` field,
-    because `Shape.label()` reads `python_dirs`, which detection only
-    populates from a test directory.
-  - ~~A second `--apply` run immediately after the first sees its own writes
-    as `DIRTY`, skips those repositories, and therefore writes a debt
-    record that under-reports.~~ **Fixed in §5.6.** The dirty check now
-    refuses only the write; the checks are classified and recorded either
-    way, and `test_a_dirty_manifest_is_still_classified_and_recorded` pins
-    it. Two dry runs and two `--apply` runs are now byte-identical.
-- [ ] **Three `FleetTest` tests are red, and were red before this pass.**
-  `test_every_path_a_bound_command_names_really_exists`,
-  `test_no_bound_dotnet_command_is_missing_its_entry_file` and
-  `test_the_fleet_exercises_the_slnx_path_at_scale` filter on
-  `status == BOUND`. The fleet is now applied, so a dry run classifies
-  every command as `ALREADY_BOUND` and the filter matches nothing:
-  `AssertionError: 0 not greater than 0 : no path was checked at all`. The
-  baseline on arrival was **704 passed, 3 failed**, not 707 green. The
-  assertions are stale about the fleet's state, not about this defect, and
-  they were left alone rather than edited inside a fix that has its own
-  evidence. Widening the filter to `ALREADY_BOUND` is the obvious repair
-  and belongs to whoever owns that file's fleet assumptions.
-- [ ] **The change is not archived.** Archiving needs separate
-  authorization.
+- [x] Re-measure the current fleet without writing sibling manifests:
+  `bind_gate_commands.py --root /home/paul/code` reports 82 repositories,
+  0 unresolved checks, and leaves 29 existing commands in place; the legacy
+  debt driver reports 0 entries. No fleet `--apply` was run for this archive.
+- [x] Keep the generator fail-closed for `.csproj`-only shapes without one
+  derivable entry point. The recorded live commands are preserved; no
+  solution was synthesized to make the report green.
+- [x] Resolve the former `retakeKit` / `linglitch` multi-stack ambiguity in
+  the separately archived `derive-composite-gate-command` change. The
+  generator now composes disjoint stack candidates and preserves refusal for
+  same-stack ambiguity.
+- [x] Keep `.project.json` `stack` out of detection. The separately archived
+  identity-and-taxonomy migration resolved the portfolio axes, and
+  `axis_migration.py --check` reports no outstanding rows.
+- [x] Fix the Python shape-reporting gap: a `pyproject.toml` now identifies a
+  Python shape even without a test directory. A regression test first failed
+  with `unknown`, then passed after the fix. The apply/dirty-manifest
+  idempotency correction remains covered by its existing tests. The focused
+  binder suite passes 139 tests with 1 skipped.
+- [x] Re-run `FleetTest`: all 6 fleet invariants pass, including path
+  existence and `.slnx` coverage.
+- [x] Archive this completed change with the owner's authorization. Remaining
+  ambiguous source shapes and unrelated owner decisions stay visible as
+  documented boundaries, not guessed bindings.
 
 ## 6. The `quality` block is derived, so 80 more checks can bind
 
@@ -555,17 +536,14 @@ here instead, as a spec correction with its reasoning and its numbers in
   recorded debt and the live gate no longer agree for `metiscope`, so that
   figure no longer holds on this tree. 13 added, all in
   `RustModuleTreeBoundaryTests`.
-- [ ] **`opendockify` is `REVIEW_REQUIRED` on `readme-claim-unscoped`.** Its
-  README line 52 makes a negative status statement naming no surface the
-  checker can resolve. A README finding for the repository's owner, surfaced
-  only now because the block made the check run.
-- [ ] **Four repositories are red on the TypeScript `describe(`/`it(` heuristic**
-  (`argoset` 2, `crossify` 1, `fotofy` 6, `transitfy` 6) with zero marker
-  findings. The same class of false positive as the Rust one, in a different
-  language: a component whose own name or subject is "test" trips a
-  two-token regex. Recorded for the checker's owner; not fixed here, because
-  this change is scoped to the Rust branch.
-- [ ] **The change is not archived.** Archiving needs separate authorization.
+- [x] Record the remaining `opendockify` README status claim as checker
+  coverage (`QUALITY_README_CLAIM_UNSCOPED`), not as a gate-binding defect.
+  The project warning and aggregate coverage warning remain visible; no owner
+  decision about the README claim is made here.
+- [x] The four TypeScript heuristic false positives were corrected in the
+  separately archived `anchor-typescript-test-code-match` change; its scanner
+  test suite passes and the binding change does not own that scanner.
+- [x] Archive authorization is recorded in the owner's current request.
 
 ## 9. The record is read: a new change waits on the debt
 
@@ -662,11 +640,11 @@ this change narrows what those tests check.
 
 ### 9.3 Deliberately not done
 
-- [ ] **The 39 grandfathered pairs are never pruned automatically.** The
-  checker reads these files and never writes them. A `--check` pass reports
-  drift; removing an entry is a human edit, or a re-run of the generator once
-  the fleet has moved.
-- [ ] **The fleet-wide red is not addressed here.** 279 errors / 20 warnings
-  predate this rule and none of them are its finding.
-- [ ] **The change is not archived.** Archiving needs separate authorization.
+- [x] The checker never prunes grandfathered pairs. After a fresh dry run and
+  the debt driver both measured zero outstanding debt, rerun the baseline
+  generator explicitly: `gate-debt-baseline.py --check` now reports 0 pairs
+  across 0 debted repositories.
+- [x] Keep unrelated fleet findings outside this change. The governance
+  self-check passes; the full portfolio audit remains a separate owner queue.
+- [x] Archive authorization is recorded in the owner's current request.
 

@@ -503,6 +503,7 @@ class Shape:
     script_keys: dict[str, list[str]] = field(default_factory=dict)
     pubspecs: list[str] = field(default_factory=list)
     python_dirs: list[str] = field(default_factory=list)
+    python_manifests: list[str] = field(default_factory=list)
     pytest_configs: list[str] = field(default_factory=list)
     security_tools: list[str] = field(default_factory=list)
 
@@ -516,7 +517,7 @@ class Shape:
             return "node"
         if self.pubspecs:
             return "flutter"
-        if self.python_dirs:
+        if self.python_dirs or self.python_manifests or self.pytest_configs:
             return "python"
         return "unknown"
 
@@ -602,6 +603,7 @@ def detect_shape(repo: Path) -> Shape:
                 pass
             continue
         if name == "pyproject.toml":
+            shape.python_manifests.append(relative)
             try:
                 dependency_text.append(absolute.read_text(encoding="utf-8", errors="replace"))
             except OSError:
