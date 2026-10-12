@@ -15,7 +15,7 @@ blocking:
   - REVIEW_REQUIRED
 notes:
   - The product_quality check runs `python3 scripts/product_code_quality.py .` from this repository root.
-  - Driftwatchdog Gate bindings are not yet active for this bootstrap; the declaration does not constitute a Gate run.
+  - Driftwatchdog executes the declared checks for this repository; a dry-run plan alone is not execution evidence.
 
 commands:
   # Generated from .project.json verification.command by workspace-governance/scripts/bind_verification_command.py.
@@ -30,5 +30,5 @@ commands:
   repository: 'git diff --check'
   tests: 'python3 -m unittest discover -s tests -v'
   product_quality: 'python3 scripts/product_code_quality.py .'
-  security: 'pip-audit'
+  security: 'pip-audit -r requirements-dev.txt'
   governance-quality: 'python3 ../workspace-governance/scripts/workspace_check.py --root .. --project workspace-governance --json'

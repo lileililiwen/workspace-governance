@@ -105,24 +105,23 @@ ambiguous: a real regression and a pre-existing gap produce the same report.
 
 ### Requirement: The repository's own debt is stated in full and in place
 
-This change records, for `workspace-governance`, every concern the gate reports as unbound:
-1 in total, as follows.
+The workspace-governance debt record SHALL contain every currently unbound
+required check for this repository and SHALL contain no check the gate reports
+as bound. The number of entries SHALL match the real gate's unbound set; the
+record is allowed to be empty when no checks are unbound.
 
-| concern | reason recorded in `gate-debt.json` |
-|---|---|
-| `security` | no Python security tool is declared in this repository's pyproject.toml or requirements*.txt, and a Python dependency audit is not in the standard library |
+The recorded baseline for this closure is zero: the `security` check has a
+written, scoped command and the real Gate passed it.
 
-The count MUST equal the number of unbound checks the gate reports for this
-repository, and the reasons MUST be the ones the committed record carries, not
-a restatement from memory. Concerns that are already bound MUST NOT be listed.
-A concern reported as bound everywhere in the portfolio MUST NOT appear here.
+Every non-empty debt entry MUST retain the reason from the generated record,
+not a restatement from memory.
 
-#### Scenario: The list is complete
+#### Scenario: The list is complete when debt exists
 
 - **WHEN** the gate reports an unbound check for this repository
 - **THEN** this change names it, with the reason the record carries
 
-#### Scenario: An already-bound concern is not listed
+#### Scenario: The list is empty when all checks are bound
 
-- **WHEN** a concern the gate resolves for this repository
-- **THEN** it does not appear in this change, and closing it is not a task
+- **WHEN** the gate reports no unbound checks for this repository
+- **THEN** the debt record contains no entry for this repository

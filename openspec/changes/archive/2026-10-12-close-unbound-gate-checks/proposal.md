@@ -36,7 +36,7 @@ repository — and said so instead of picking. Every reason in the table above i
 quoted from the debt record rather than restated, so this change and the record
 cannot disagree.
 
-## What closing them looks like
+## What Changes
 
 For each of the 1, the concrete work is below: which file to write, which
 key to add, or which command to put in `.ai-gate/gate.yaml`. Each has
