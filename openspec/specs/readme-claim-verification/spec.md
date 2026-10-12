@@ -1,7 +1,10 @@
 # readme-claim-verification Specification
 
 ## Purpose
-TBD - created by archiving change readme-claim-verification. Update Purpose after archive.
+Detect present-tense README claims that deny implementation, compare only
+the named surfaces against bounded evidence in the repository tree, and
+report contradictions or gaps in checker coverage without changing project
+evidence or adoption state.
 ## Requirements
 ### Requirement: A present-tense absence claim in a README is detectable
 
