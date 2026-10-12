@@ -2,7 +2,35 @@
 
 ## Current state
 
-current_spec: bind-declared-gate-checks
+current_spec: close-unbound-gate-checks
+
+## Completed: declared gate command binding
+
+`bind-declared-gate-checks` is archived at
+`openspec/changes/archive/2026-10-12-bind-declared-gate-checks/`. It adds the
+generator contract to `gate-command-binding` and updates the portfolio
+vocabulary and product-quality requirements. The task record was reconciled
+against current fleet state and links follow-up findings to their owning
+changes.
+
+The binder now labels a repository with `pyproject.toml` as Python even when
+it has no test directory; a regression test reproduced `unknown` before the
+fix. README documents dry-run/apply, debt reporting, repository selection,
+verbose evidence, and exit codes. The grandfathering baseline was regenerated
+after both the binder and debt driver measured zero outstanding debt.
+
+**Verification.** `python3 -m unittest discover -s tests -q` — 938 tests
+passed, 2 skipped; binder suite — 139 tests passed, 1 skipped; binder dry run
+over 82 repositories — 0 unresolved checks, 29 existing commands left in
+place, no writes; legacy debt driver — 0 entries; grandfathering baseline
+check — 0 pairs, current; axis migration check clean; workspace self-check —
+0 errors, 0 warnings; auto-gate — PASS; strict all-spec validation — 28
+passed; change names valid; diff check clean.
+
+**Commits.** `84483ae` contains the archive, README update, shape-reporting
+fix, regression test, and zero-debt grandfathering record. This HANDOFF-only
+commit records evidence and advances the pointer to
+`close-unbound-gate-checks`.
 
 ## Completed: TypeScript test matcher
 
