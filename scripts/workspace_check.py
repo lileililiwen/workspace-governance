@@ -17,6 +17,7 @@ from typing import Any
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 CHANGE_ID = PROJECT_ID
+OPENSPEC_CHANGE_SERIALITY = "OPENSPEC_CHANGE_SERIALITY"
 LIFECYCLES = {"active", "planning", "reference", "inventory", "archived"}
 
 
@@ -3075,6 +3076,86 @@ def validate_change_names(project_path: Path, findings: list[Finding], project_i
             finding(findings, "ERROR", "OPENSPEC_NAME", f"invalid active OpenSpec change name: {name}", project_id)
 
 
+def validate_openspec_seriality(
+    project_path: Path, findings: list[Finding], project_id: str
+) -> None:
+    """Require one active OpenSpec change and a matching local handoff pointer."""
+    if project_id != "workspace-governance":
+        return
+
+    changes = unarchived_changes(project_path)
+    if len(changes) > 1:
+        finding(
+            findings,
+            "ERROR",
+            OPENSPEC_CHANGE_SERIALITY,
+            "multiple active OpenSpec changes are not allowed; finish and archive "
+            f"the current change before starting another: {', '.join(changes)}",
+            project_id,
+        )
+        return
+
+    handoff_path = project_path / "HANDOFF.md"
+    if not handoff_path.exists():
+        if changes:
+            finding(
+                findings,
+                "ERROR",
+                OPENSPEC_CHANGE_SERIALITY,
+                f"HANDOFF.md is missing; current_spec must name the active change {changes[0]!r}",
+                project_id,
+            )
+        return
+    try:
+        handoff = handoff_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        expected = (
+            f"active change {changes[0]!r}"
+            if changes
+            else "stale current_spec state"
+        )
+        finding(
+            findings,
+            "ERROR",
+            OPENSPEC_CHANGE_SERIALITY,
+            f"HANDOFF.md cannot be read to verify {expected}: {exc}",
+            project_id,
+        )
+        return
+
+    pointers = re.findall(
+        r"^[ \t]*current_spec[ \t]*:[ \t]*(.*?)[ \t]*$",
+        handoff,
+        flags=re.MULTILINE,
+    )
+    normalized = [value.strip().strip("\"'").strip() for value in pointers]
+    if len(changes) == 1:
+        expected = changes[0]
+        if not normalized:
+            problem = "current_spec is missing; it must appear exactly once"
+        elif len(normalized) > 1:
+            problem = "current_spec appears more than once; it must appear exactly once"
+        elif normalized[0] != expected:
+            problem = f"current_spec is {normalized[0]!r}; it must name the active change {expected!r}"
+        else:
+            return
+    else:
+        if len(normalized) > 1:
+            problem = "current_spec appears more than once with no active change"
+        elif normalized and normalized[0].lower() not in {"", "none"}:
+            problem = f"current_spec {normalized[0]!r} is stale because no change is active"
+        else:
+            return
+
+    finding(
+        findings,
+        "ERROR",
+        OPENSPEC_CHANGE_SERIALITY,
+        f"{problem}; active changes: {', '.join(changes) if changes else 'none'}",
+        project_id,
+    )
+
+
 def live_unbound_gate_checks(project_path: Path) -> tuple[tuple[str, ...] | None, str | None]:
     """Read current unbound concerns with the binder's required-check rules.
 
@@ -3389,6 +3470,7 @@ def validate_project(
         finding(findings, "ERROR", "OPENSPEC_MISSING", "OpenSpec directory is required by this profile", project_id)
     if requires_openspec:
         validate_change_names(project_path, findings, project_id)
+    validate_openspec_seriality(project_path, findings, project_id)
     # Unconditional, unlike the rules above: a repository on any profile that
     # carries gate debt may not open a new change, and `inventory` is the
     # profile most of the debted repositories are on. `None` means the caller
